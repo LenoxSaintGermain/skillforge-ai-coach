@@ -3,8 +3,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea"; 
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import { useAI } from '@/contexts/AIContext';
 import { useUser } from '@/contexts/UserContext';
 import { ConversationItem } from '@/services/AICoachService';
@@ -43,7 +43,7 @@ const CoachChatPanel = ({
   const [isExpanded, setIsExpanded] = useState(initialExpanded);
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState<ConversationItem[]>([]);
-  const { aiCoachService } = useAI();
+  const { aiCoachService, jarvisCoachService, activeCoach, setActiveCoach } = useAI();
   const { currentUser } = useUser();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -55,7 +55,14 @@ const CoachChatPanel = ({
     if (!currentUser) return;
     
     const initializeCoach = async () => {
-      const welcomeMessage = await aiCoachService.initializeCoach(currentUser);
+      let welcomeMessage;
+      
+      if (activeCoach === 'jarvis') {
+        welcomeMessage = await jarvisCoachService.initializeJarvis(currentUser.name);
+      } else {
+        welcomeMessage = await aiCoachService.initializeCoach(currentUser);
+      }
+      
       setMessages([{ 
         role: 'assistant', 
         content: welcomeMessage, 
@@ -64,7 +71,7 @@ const CoachChatPanel = ({
     };
     
     initializeCoach();
-  }, [aiCoachService, currentUser]);
+  }, [aiCoachService, currentUser, jarvisCoachService, activeCoach]);
   
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -86,7 +93,13 @@ const CoachChatPanel = ({
     setInputValue('');
     
     // Get AI coach response
-    const response = await aiCoachService.processUserMessage(inputValue);
+    let response;
+    if (activeCoach === 'jarvis') {
+      response = await jarvisCoachService.processUserMessage(inputValue);
+    } else {
+      response = await aiCoachService.processUserMessage(inputValue);
+    }
+    
     const assistantMessage = {
       role: 'assistant' as const,
       content: response,
@@ -109,6 +122,35 @@ const CoachChatPanel = ({
     }
   };
   
+  const handleSwitchCoach = () => {
+    const newCoach = activeCoach === 'ai' ? 'jarvis' : 'ai';
+    setActiveCoach(newCoach);
+    
+    // Reset messages when switching coaches
+    setMessages([]);
+    
+    // Initialize the new coach
+    if (currentUser) {
+      const initializeNewCoach = async () => {
+        let welcomeMessage;
+        
+        if (newCoach === 'jarvis') {
+          welcomeMessage = await jarvisCoachService.initializeJarvis(currentUser.name);
+        } else {
+          welcomeMessage = await aiCoachService.initializeCoach(currentUser);
+        }
+        
+        setMessages([{ 
+          role: 'assistant', 
+          content: welcomeMessage, 
+          timestamp: new Date() 
+        }]);
+      };
+      
+      initializeNewCoach();
+    }
+  };
+  
   return (
     <div 
       className={`fixed bottom-4 right-4 z-50 flex flex-col ${className} ${expanded ? 'h-[500px] w-[350px]' : 'h-12 w-12'} 
@@ -116,12 +158,21 @@ const CoachChatPanel = ({
     >
       {/* Header/Toggle button */}
       {expanded ? (
-        <div className="flex bg-coach items-center justify-between p-3 rounded-t-lg text-white shadow-lg">
+        <div className={`flex items-center justify-between p-3 rounded-t-lg text-white shadow-lg ${activeCoach === 'jarvis' ? 'bg-skillforge-secondary' : 'bg-coach'}`}>
           <div className="flex items-center">
             <Brain size={20} className="mr-2" />
-            <h3 className="font-medium text-sm">AI Coach</h3>
+            <h3 className="font-medium text-sm">{activeCoach === 'jarvis' ? 'Jarvis' : 'AI Coach'}</h3>
           </div>
           <div className="flex items-center space-x-1">
+            <div className="mr-2 flex items-center space-x-1">
+              <span className="text-xs">AI</span>
+              <Switch 
+                checked={activeCoach === 'jarvis'} 
+                onCheckedChange={handleSwitchCoach}
+                className="data-[state=checked]:bg-white data-[state=unchecked]:bg-white"
+              />
+              <span className="text-xs">Jarvis</span>
+            </div>
             <Button size="sm" variant="ghost" onClick={toggleExpanded} className="h-6 w-6 p-0 text-white hover:bg-coach-dark">
               <Minimize size={16} />
             </Button>
@@ -134,7 +185,7 @@ const CoachChatPanel = ({
         <Button 
           onClick={toggleExpanded}
           size="icon" 
-          className="h-12 w-12 rounded-full bg-coach hover:bg-coach-dark shadow-lg animate-pulse-slow"
+          className={`h-12 w-12 rounded-full ${activeCoach === 'jarvis' ? 'bg-skillforge-secondary hover:bg-skillforge-secondary/90' : 'bg-coach hover:bg-coach-dark'} shadow-lg animate-pulse-slow`}
         >
           <MessageSquare size={20} className="text-white" />
         </Button>
@@ -159,13 +210,13 @@ const CoachChatPanel = ({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask your AI coach..."
+                placeholder={activeCoach === 'jarvis' ? "Ask Jarvis about Gemini..." : "Ask your AI coach..."}
                 className="flex-1"
               />
               <Button 
                 onClick={handleSendMessage} 
                 size="icon" 
-                className="bg-coach hover:bg-coach-dark"
+                className={activeCoach === 'jarvis' ? "bg-skillforge-secondary hover:bg-skillforge-secondary/90" : "bg-coach hover:bg-coach-dark"}
               >
                 <Send size={16} className="text-white" />
               </Button>

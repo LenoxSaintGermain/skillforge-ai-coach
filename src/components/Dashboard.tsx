@@ -3,8 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import ScenarioGenerator from "./ScenarioGenerator";
 import { useUser } from "@/contexts/UserContext";
-import { Brain, Target, BookOpen, Trophy, ArrowRight, Award } from "lucide-react";
+import { Brain, Target, BookOpen, Trophy, ArrowRight, Award, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 const SkillCard = ({ skill, progress }: { skill: string; progress: number }) => {
   return (
@@ -23,7 +24,12 @@ const SkillCard = ({ skill, progress }: { skill: string; progress: number }) => 
   );
 };
 
-const RecommendationCard = ({ title, description, icon }: { title: string; description: string; icon: React.ReactNode }) => {
+const RecommendationCard = ({ title, description, icon, onClick }: { 
+  title: string; 
+  description: string; 
+  icon: React.ReactNode;
+  onClick?: () => void;
+}) => {
   return (
     <Card className="flex flex-col">
       <CardHeader className="pb-2">
@@ -36,7 +42,7 @@ const RecommendationCard = ({ title, description, icon }: { title: string; descr
         <p className="text-sm text-muted-foreground">{description}</p>
       </CardContent>
       <div className="px-6 pb-4 mt-auto">
-        <Button variant="outline" size="sm" className="w-full">
+        <Button variant="outline" size="sm" className="w-full" onClick={onClick}>
           <span>Explore</span>
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
@@ -47,6 +53,7 @@ const RecommendationCard = ({ title, description, icon }: { title: string; descr
 
 const Dashboard = () => {
   const { currentUser } = useUser();
+  const navigate = useNavigate();
   
   if (!currentUser) {
     return (
@@ -98,6 +105,13 @@ const Dashboard = () => {
             <CardDescription>Personalized for your goals</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <RecommendationCard 
+              title="Gemini Training Program" 
+              description="Follow a structured syllabus to learn building with Google's Gemini AI from idea to prototype."
+              icon={<Sparkles className="h-4 w-4 text-skillforge-secondary" />}
+              onClick={() => navigate('/gemini-training')}
+            />
+            
             <RecommendationCard 
               title="Prompt Engineering" 
               description="Learn advanced techniques to craft effective prompts for AI models."

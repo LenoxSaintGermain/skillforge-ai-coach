@@ -8,6 +8,7 @@ import AppLayout from "./components/AppLayout";
 import Index from "./pages/Index";
 import ScenariosPage from "./pages/ScenariosPage";
 import SkillAssessmentPage from "./pages/SkillAssessmentPage";
+import GeminiTrainingPage from "./pages/GeminiTrainingPage";
 import NotFound from "./pages/NotFound";
 import { UserProvider } from "./contexts/UserContext";
 import { AIProvider } from "./contexts/AIContext";
@@ -27,6 +28,7 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/scenarios" element={<ScenariosPage />} />
                 <Route path="/assessment" element={<SkillAssessmentPage />} />
+                <Route path="/gemini-training" element={<GeminiTrainingPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               </Route>
               <Route path="*" element={<NotFound />} />
