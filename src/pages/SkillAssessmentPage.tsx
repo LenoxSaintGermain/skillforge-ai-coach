@@ -1,16 +1,16 @@
 
 import { UserProvider } from "@/contexts/UserContext";
 import { AIProvider } from "@/contexts/AIContext";
-import Dashboard from "@/components/Dashboard";
+import SkillAssessment from "@/components/SkillAssessment";
 
-const Index = () => {
+const SkillAssessmentPage = () => {
   return (
     <UserProvider>
       <AIProvider>
-        <Dashboard />
+        <SkillAssessment />
       </AIProvider>
     </UserProvider>
   );
 };
 
-export default Index;
+export default SkillAssessmentPage;

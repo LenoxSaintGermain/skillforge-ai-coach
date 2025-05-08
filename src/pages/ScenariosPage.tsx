@@ -1,16 +1,16 @@
 
 import { UserProvider } from "@/contexts/UserContext";
 import { AIProvider } from "@/contexts/AIContext";
-import Dashboard from "@/components/Dashboard";
+import ScenarioExplorer from "@/components/ScenarioExplorer";
 
-const Index = () => {
+const ScenariosPage = () => {
   return (
     <UserProvider>
       <AIProvider>
-        <Dashboard />
+        <ScenarioExplorer />
       </AIProvider>
     </UserProvider>
   );
 };
 
-export default Index;
+export default ScenariosPage;
