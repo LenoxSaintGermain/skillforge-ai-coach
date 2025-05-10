@@ -23,5 +23,17 @@ export interface Syllabus {
 export interface UserSyllabusProgress {
   currentPhase: number;
   completedTasks: number[];
+  completedPhases: number[];
   lastInteraction: Date;
+  notes?: string[];
+}
+
+export interface ScenarioProgress {
+  scenarioId: string;
+  completedTasks: number[];
+  startedAt: Date;
+  lastInteraction: Date;
+  completed: boolean;
+  completedAt?: Date;
+  notes?: string[];
 }

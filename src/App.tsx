@@ -7,6 +7,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AppLayout from "./components/AppLayout";
 import Index from "./pages/Index";
 import ScenariosPage from "./pages/ScenariosPage";
+import ScenarioDetailPage from "./pages/ScenarioDetailPage";
+import ScenarioGeneratorPage from "./pages/ScenarioGeneratorPage";
 import SkillAssessmentPage from "./pages/SkillAssessmentPage";
 import GeminiTrainingPage from "./pages/GeminiTrainingPage";
 import NotFound from "./pages/NotFound";
@@ -27,6 +29,8 @@ const App = () => (
               <Route element={<AppLayout />}>
                 <Route path="/" element={<Index />} />
                 <Route path="/scenarios" element={<ScenariosPage />} />
+                <Route path="/scenario/:id" element={<ScenarioDetailPage />} />
+                <Route path="/scenario/generate" element={<ScenarioGeneratorPage />} />
                 <Route path="/assessment" element={<SkillAssessmentPage />} />
                 <Route path="/gemini-training" element={<GeminiTrainingPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

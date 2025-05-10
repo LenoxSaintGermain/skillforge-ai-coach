@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,8 @@ import { Play, Clock, Search, Filter, ChevronRight, Puzzle } from 'lucide-react'
 const scenarioService = new ScenarioService();
 
 const ScenarioCard = ({ scenario }: { scenario: Scenario }) => {
+  const navigate = useNavigate();
+  
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="pb-2">
@@ -37,7 +40,10 @@ const ScenarioCard = ({ scenario }: { scenario: Scenario }) => {
         </div>
       </CardContent>
       <CardFooter className="pt-2">
-        <Button className="w-full bg-skillforge-primary hover:bg-skillforge-dark">
+        <Button 
+          className="w-full bg-skillforge-primary hover:bg-skillforge-dark"
+          onClick={() => navigate(`/scenario/${scenario.id}`)}
+        >
           <Play className="mr-2 h-4 w-4" />
           Start Scenario
         </Button>
@@ -130,7 +136,11 @@ const ScenarioExplorer = () => {
       )}
       
       <div className="flex justify-center pt-4">
-        <Button variant="outline" className="flex items-center">
+        <Button 
+          variant="outline" 
+          className="flex items-center"
+          onClick={() => navigate('/scenario/generate')}
+        >
           Generate Custom Scenario
           <ChevronRight className="ml-2 h-4 w-4" />
         </Button>

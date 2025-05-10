@@ -42,7 +42,9 @@ export class ScenarioService {
         resources: [
           'Customer support process documentation',
           'Historical support ticket data',
-          'AI customer support case studies'
+          'AI customer support case studies',
+          'Gemini API documentation for chatbot capabilities',
+          'Best practices for AI implementation in customer service'
         ],
         evaluationCriteria: [
           'Solution feasibility',
@@ -70,7 +72,10 @@ export class ScenarioService {
         resources: [
           'Product catalog data structure',
           'User search behavior analytics',
-          'Generative AI capabilities documentation'
+          'Generative AI capabilities documentation',
+          'Prompt engineering best practices guide',
+          'User interface guidelines for AI-powered search experiences',
+          'Sample conversations for natural language product queries'
         ],
         evaluationCriteria: [
           'Accuracy of product recommendations',
@@ -82,6 +87,36 @@ export class ScenarioService {
         skillsAddressed: ['Prompt Engineering', 'AI UX Design', 'Natural Language Processing'],
         difficultyLevel: 'Advanced',
         estimatedTime: '90 minutes'
+      },
+      {
+        id: '3',
+        title: 'AI-Powered Content Creation Strategy',
+        context: 'Your marketing team needs to create more engaging content across multiple channels but is constrained by limited resources. They want to explore how AI can amplify their content creation capabilities.',
+        challenge: 'Develop a comprehensive AI content strategy that helps the marketing team create more personalized, engaging content at scale while maintaining brand voice and quality.',
+        tasks: [
+          'Audit existing content creation workflows and identify opportunities for AI assistance',
+          'Research AI content generation tools suitable for different content types',
+          'Create guidelines for human-AI collaboration in content creation',
+          'Develop a quality control framework for AI-generated content',
+          'Design a pilot implementation plan for one content channel'
+        ],
+        resources: [
+          'Marketing content strategy documentation',
+          'Brand voice guidelines',
+          'AI content generation tool comparison',
+          'Case studies on successful AI content implementation',
+          'Content performance metrics from previous campaigns'
+        ],
+        evaluationCriteria: [
+          'Potential for increased content production',
+          'Maintenance of brand voice and quality',
+          'Practical implementation approach',
+          'Return on investment calculation',
+          'Risk mitigation strategies'
+        ],
+        skillsAddressed: ['AI Content Strategy', 'Marketing Automation', 'Brand Management'],
+        difficultyLevel: 'Intermediate',
+        estimatedTime: '75 minutes'
       }
     ];
   }
@@ -111,7 +146,10 @@ export class ScenarioService {
       resources: [
         'AI maturity model framework',
         'Industry-specific AI case studies',
-        'Ethical AI guidelines'
+        'Ethical AI guidelines',
+        'Vendor evaluation templates',
+        'Implementation planning resources',
+        'ROI calculation tools for AI initiatives'
       ],
       evaluationCriteria: [
         'Strategic alignment with business goals',
@@ -150,5 +188,13 @@ export class ScenarioService {
       ...scenario,
       id: scenario.id || `${Date.now()}`
     });
+  }
+  
+  /**
+   * Updates a user's progress in a scenario
+   */
+  public updateScenarioProgress(scenarioId: string, userId: string, completedTasks: number[]): void {
+    // In a real implementation, this would update a database
+    console.log(`Updating progress for scenario ${scenarioId}, user ${userId}: completed tasks ${completedTasks.join(', ')}`);
   }
 }
