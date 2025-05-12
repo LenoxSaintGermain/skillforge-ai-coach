@@ -1,4 +1,5 @@
 
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,30 +19,32 @@ import { AIProvider } from "./contexts/AIContext";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
       <UserProvider>
         <AIProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route element={<AppLayout />}>
-                <Route path="/" element={<Index />} />
-                <Route path="/scenarios" element={<ScenariosPage />} />
-                <Route path="/scenario/:id" element={<ScenarioDetailPage />} />
-                <Route path="/scenario/generate" element={<ScenarioGeneratorPage />} />
-                <Route path="/assessment" element={<SkillAssessmentPage />} />
-                <Route path="/gemini-training" element={<GeminiTrainingPage />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route element={<AppLayout />}>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/scenarios" element={<ScenariosPage />} />
+                  <Route path="/scenario/:id" element={<ScenarioDetailPage />} />
+                  <Route path="/scenario/generate" element={<ScenarioGeneratorPage />} />
+                  <Route path="/assessment" element={<SkillAssessmentPage />} />
+                  <Route path="/gemini-training" element={<GeminiTrainingPage />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
         </AIProvider>
       </UserProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+    </QueryClientProvider>
+  </React.StrictMode>
 );
 
 export default App;
