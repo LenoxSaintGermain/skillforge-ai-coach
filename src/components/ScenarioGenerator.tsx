@@ -133,7 +133,7 @@ const ScenarioGenerator = () => {
                 {generatedScenario.tasks.map((task, index) => (
                   <li key={index} className="flex items-start">
                     <span className="mr-2">•</span>
-                    <span>{task}</span>
+                    <span>{task.description}</span>
                   </li>
                 ))}
               </ul>
