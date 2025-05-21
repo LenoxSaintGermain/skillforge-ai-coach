@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Calendar, Clock, Users, MessageSquare } from 'lucide-react';
@@ -15,8 +15,10 @@ const scenarioService = new ScenarioService();
 const ScenarioDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [scenario, setScenario] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('workflow');
   const { setActiveCoach } = useAI();
   const { toast } = useToast();
   
@@ -28,7 +30,14 @@ const ScenarioDetailPage = () => {
       }
       setIsLoading(false);
     }
-  }, [id]);
+    
+    // Check for tab query parameter
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    if (tabParam && ['workflow', 'analytics', 'gemini'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [id, location]);
   
   const handleComplete = () => {
     toast({
@@ -36,7 +45,10 @@ const ScenarioDetailPage = () => {
       description: "Great work! You've completed this scenario.",
       duration: 5000,
     });
-    navigate('/scenarios');
+    // Stay on the page but switch to analytics tab
+    const newUrl = `/scenario/${id}?tab=analytics`;
+    navigate(newUrl);
+    setActiveTab('analytics');
   };
   
   const handleActivateJarvis = () => {
@@ -76,7 +88,7 @@ const ScenarioDetailPage = () => {
         Back to Scenarios
       </Button>
       
-      <Tabs defaultValue="workflow" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="flex justify-between items-center">
           <TabsList>
             <TabsTrigger value="workflow">Workflow</TabsTrigger>
@@ -123,7 +135,7 @@ const ScenarioDetailPage = () => {
                   </div>
                   <p className="text-lg">
                     {scenario.completionStats?.completedDate
-                      ? scenario.completionStats.completedDate.toLocaleDateString()
+                      ? new Date(scenario.completionStats.completedDate).toLocaleDateString()
                       : 'In Progress'}
                   </p>
                 </div>
@@ -163,6 +175,17 @@ const ScenarioDetailPage = () => {
                   <div className="bg-muted p-3 rounded-md">
                     <p className="text-sm italic">"{scenario.completionStats.userFeedback}"</p>
                   </div>
+                </div>
+              )}
+              
+              {scenario.completionStats?.percentComplete === 100 && (
+                <div className="mt-4 flex justify-center">
+                  <Button 
+                    className="bg-skillforge-primary hover:bg-skillforge-primary/90"
+                    onClick={() => navigate('/scenarios')}
+                  >
+                    Explore More Scenarios
+                  </Button>
                 </div>
               )}
             </div>

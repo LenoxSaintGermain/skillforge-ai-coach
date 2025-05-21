@@ -1,3 +1,4 @@
+
 import { User, LearningGoal } from '@/contexts/UserContext';
 
 export interface Scenario {
@@ -504,6 +505,17 @@ export class ScenarioService {
    */
   public getScenarioById(id: string): Scenario | undefined {
     return this.scenarios.find(s => s.id === id);
+  }
+  
+  /**
+   * Updates a scenario by ID with new data
+   */
+  public updateScenarioById(id: string, updatedScenario: Scenario): void {
+    const index = this.scenarios.findIndex(s => s.id === id);
+    if (index !== -1) {
+      this.scenarios[index] = updatedScenario;
+      console.log(`Scenario ${id} updated successfully`);
+    }
   }
   
   /**

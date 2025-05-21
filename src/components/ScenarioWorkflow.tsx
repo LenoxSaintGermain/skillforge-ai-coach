@@ -1,13 +1,14 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Scenario, ScenarioService } from '@/services/ScenarioService';
-import { ChevronRight, CheckCircle, Clock, BookOpen, Puzzle, Award } from 'lucide-react';
+import { ChevronRight, CheckCircle, Clock, BookOpen, Puzzle, Award, Star } from 'lucide-react';
 import { useAI } from '@/contexts/AIContext';
 import { useToast } from "@/components/ui/use-toast";
+import { useNavigate } from 'react-router-dom';
+import { Textarea } from "@/components/ui/textarea";
 
 interface ScenarioWorkflowProps {
   scenario: Scenario;
@@ -20,8 +21,15 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const [updatedScenario, setUpdatedScenario] = useState<Scenario>(scenario);
+  const [solutionText, setSolutionText] = useState('');
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackText, setFeedbackText] = useState('');
+  
   const { setActiveCoach } = useAI();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   useEffect(() => {
     // Initialize completed steps from scenario data
@@ -66,6 +74,72 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
       description: "Your AI coach is ready to help with this scenario.",
       duration: 3000,
     });
+  };
+  
+  const handleSubmitSolution = () => {
+    // Here we would handle submission logic
+    setIsSubmitted(true);
+    
+    // Update scenario as complete in the service
+    if (updatedScenario.completionStats) {
+      updatedScenario.completionStats.percentComplete = 100;
+      updatedScenario.completionStats.completedDate = new Date();
+      
+      // Update skill progress to 100%
+      if (updatedScenario.completionStats.skillProgress) {
+        updatedScenario.completionStats.skillProgress = 
+          updatedScenario.completionStats.skillProgress.map(skill => ({
+            ...skill,
+            progress: 100
+          }));
+      }
+      
+      // Mark all tasks as complete
+      updatedScenario.tasks = updatedScenario.tasks.map(task => ({
+        ...task,
+        isCompleted: true
+      }));
+      
+      // Save the updated scenario
+      scenarioService.updateScenarioById(updatedScenario.id, updatedScenario);
+    }
+    
+    toast({
+      title: "Solution submitted!",
+      description: "Your work has been submitted for evaluation.",
+      duration: 3000,
+    });
+    
+    // Show feedback dialog
+    setShowFeedbackDialog(true);
+  };
+  
+  const handleFeedbackSubmit = () => {
+    // Save user feedback
+    if (updatedScenario.completionStats) {
+      updatedScenario.completionStats.userFeedback = feedbackText;
+      
+      // Save the updated scenario
+      scenarioService.updateScenarioById(updatedScenario.id, updatedScenario);
+    }
+    
+    setShowFeedbackDialog(false);
+    
+    toast({
+      title: "Feedback submitted",
+      description: "Thank you for your feedback!",
+      duration: 3000,
+    });
+    
+    // Navigate to completion view or call onComplete
+    if (onComplete) {
+      onComplete();
+    }
+  };
+  
+  const handleViewResults = () => {
+    // Navigate to the analytics tab on the scenario detail page
+    navigate(`/scenario/${scenario.id}?tab=analytics`);
   };
   
   const steps = [
@@ -185,49 +259,131 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
       icon: <Award className="h-5 w-5" />,
       content: (
         <div className="space-y-4">
-          <h3 className="text-lg font-medium">Evaluation Criteria</h3>
-          <ul className="space-y-2">
-            {updatedScenario.evaluationCriteria.map((criteria, index) => (
-              <li key={index} className="text-sm flex items-center">
-                <span className="mr-2">•</span>
-                <span>{criteria}</span>
-              </li>
-            ))}
-          </ul>
-          
-          <div className="mt-6 space-y-4">
-            <h3 className="text-lg font-medium">Submit Your Solution</h3>
-            <p className="text-sm text-muted-foreground">
-              Submit a summary of your approach and implementation for this scenario.
-              Your submission will be evaluated based on the criteria above.
-            </p>
-            <textarea 
-              className="w-full h-32 p-2 border rounded-md" 
-              placeholder="Describe your solution approach and implementation..."
-            />
-            
-            <Button 
-              className="w-full" 
-              onClick={() => {
-                // Here we would handle submission logic
-                toast({
-                  title: "Solution submitted!",
-                  description: "Your work has been submitted for evaluation.",
-                  duration: 3000,
-                });
+          {!isSubmitted ? (
+            <>
+              <h3 className="text-lg font-medium">Evaluation Criteria</h3>
+              <ul className="space-y-2">
+                {updatedScenario.evaluationCriteria.map((criteria, index) => (
+                  <li key={index} className="text-sm flex items-center">
+                    <span className="mr-2">•</span>
+                    <span>{criteria}</span>
+                  </li>
+                ))}
+              </ul>
+              
+              <div className="mt-6 space-y-4">
+                <h3 className="text-lg font-medium">Submit Your Solution</h3>
+                <p className="text-sm text-muted-foreground">
+                  Submit a summary of your approach and implementation for this scenario.
+                  Your submission will be evaluated based on the criteria above.
+                </p>
+                <Textarea 
+                  className="w-full h-32 p-2 border rounded-md" 
+                  placeholder="Describe your solution approach and implementation..."
+                  value={solutionText}
+                  onChange={(e) => setSolutionText(e.target.value)}
+                />
                 
-                if (onComplete) {
-                  onComplete();
-                }
-              }}
-            >
-              Submit Solution
-            </Button>
-          </div>
+                <Button 
+                  className="w-full"
+                  disabled={!solutionText.trim()}
+                  onClick={handleSubmitSolution}
+                >
+                  Submit Solution
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-6">
+              <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mb-4">
+                <CheckCircle className="h-12 w-12 text-green-500" />
+              </div>
+              <h3 className="text-xl font-medium text-center mb-2">Congratulations!</h3>
+              <p className="text-center mb-6">
+                You've successfully completed this scenario and submitted your solution.
+              </p>
+              
+              <div className="w-full max-w-md space-y-3">
+                <Button 
+                  className="w-full bg-skillforge-primary hover:bg-skillforge-primary/90"
+                  onClick={handleViewResults}
+                >
+                  View Your Results
+                </Button>
+                
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => navigate('/scenarios')}
+                >
+                  Explore More Scenarios
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )
     }
   ];
+
+  // Feedback dialog
+  const FeedbackDialog = () => (
+    <Dialog open={showFeedbackDialog} onOpenChange={setShowFeedbackDialog}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Share your feedback</DialogTitle>
+          <DialogDescription>
+            How was your experience with this scenario? Your feedback helps us improve.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="py-4 space-y-4">
+          <div>
+            <label className="text-sm font-medium block mb-2">Rating</label>
+            <div className="flex space-x-2">
+              {[1, 2, 3, 4, 5].map((rating) => (
+                <button
+                  key={rating}
+                  type="button"
+                  onClick={() => setFeedbackRating(rating)}
+                  className={`p-1 rounded-full transition-colors ${
+                    feedbackRating >= rating 
+                      ? 'text-yellow-400 hover:text-yellow-500' 
+                      : 'text-gray-300 hover:text-gray-400'
+                  }`}
+                >
+                  <Star className="w-8 h-8 fill-current" />
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div>
+            <label htmlFor="feedback" className="text-sm font-medium block mb-2">
+              Comments (optional)
+            </label>
+            <Textarea
+              id="feedback"
+              placeholder="Tell us what you liked or how we can improve this scenario..."
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              className="w-full"
+              rows={4}
+            />
+          </div>
+          
+          <div className="flex justify-end space-x-2 pt-2">
+            <Button variant="outline" onClick={() => setShowFeedbackDialog(false)}>
+              Skip
+            </Button>
+            <Button onClick={handleFeedbackSubmit}>
+              Submit Feedback
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
   
   return (
     <div className="space-y-6">
@@ -283,9 +439,21 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
             <Button
               onClick={() => {
                 if (currentStep === steps.length - 1) {
-                  // Final step - handle completion
-                  if (onComplete) {
-                    onComplete();
+                  // Final step - if already submitted, handle completion
+                  if (isSubmitted) {
+                    // Navigate to scenarios or call onComplete
+                    if (onComplete) {
+                      onComplete();
+                    } else {
+                      navigate('/scenarios');
+                    }
+                  } else {
+                    // Otherwise highlight the submit solution button
+                    toast({
+                      title: "Submit your solution",
+                      description: "Please submit your solution to complete this scenario.",
+                      duration: 3000,
+                    });
                   }
                 } else {
                   // Move to next step
@@ -293,12 +461,14 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
                 }
               }}
             >
-              {currentStep === steps.length - 1 ? 'Complete' : 'Next'}
+              {currentStep === steps.length - 1 ? (isSubmitted ? 'Finish' : 'Complete') : 'Next'}
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
         </div>
       </div>
+      
+      <FeedbackDialog />
     </div>
   );
 };
