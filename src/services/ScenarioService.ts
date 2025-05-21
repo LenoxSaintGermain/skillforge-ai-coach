@@ -1,4 +1,3 @@
-
 import { User, LearningGoal } from '@/contexts/UserContext';
 
 export interface Scenario {
@@ -419,19 +418,28 @@ export class ScenarioService {
   }
   
   /**
-   * Generates a new scenario based on user profile and learning goals
+   * Generates a new scenario based on user profile, learning goals, and optional description
    */
-  public async generateScenario(userProfile: UserProfile, learningGoals: LearningGoal[]): Promise<Scenario> {
+  public async generateScenario(
+    userProfile: UserProfile, 
+    learningGoals: LearningGoal[],
+    description?: string
+  ): Promise<Scenario> {
     // In a real implementation, this would call an AI API to generate a scenario
-    // For now, we'll return a mock scenario based on the user's role and industry
+    // We'll incorporate the description in the scenario if provided
     
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 2000));
     
+    // Use description to influence the scenario if provided
+    const scenarioFocus = description 
+      ? `with focus on: ${description}`
+      : 'focusing on general AI adoption';
+    
     const newScenario: Scenario = {
       id: `${Date.now()}`,
-      title: `AI Strategy Development for ${userProfile.industry}`,
-      context: `As a ${userProfile.role} in the ${userProfile.industry} industry, you've been tasked with developing an AI strategy for your organization. The leadership team is interested in understanding how AI can create competitive advantages and improve operational efficiency.`,
+      title: `AI Strategy Development for ${userProfile.industry} ${description ? '- Customized' : ''}`,
+      context: `As a ${userProfile.role} in the ${userProfile.industry} industry, you've been tasked with developing an AI strategy ${scenarioFocus}. The leadership team is interested in understanding how AI can create competitive advantages and improve operational efficiency.`,
       challenge: `Create a comprehensive AI strategy document that identifies opportunities, prioritizes initiatives, addresses ethical considerations, and includes an implementation roadmap.`,
       tasks: [
         {
@@ -489,6 +497,16 @@ export class ScenarioService {
         coachInteractions: 0
       }
     };
+    
+    // If there's a description, adjust the skills addressed
+    if (description) {
+      // Add a skill based on the description (simplified for demo)
+      const customSkill = description.length > 30 
+        ? description.substring(0, 30) + "..." 
+        : description;
+      
+      newScenario.skillsAddressed.push(`${customSkill} Mastery`);
+    }
     
     return newScenario;
   }

@@ -14,6 +14,13 @@ const ScenarioGeneratorPage = () => {
         Back to Scenarios
       </Button>
       
+      <div className="mb-8 text-center">
+        <h1 className="text-3xl font-bold tracking-tight">AI Learning Scenario Generator</h1>
+        <p className="text-muted-foreground mt-2">
+          Create personalized AI learning experiences tailored to your role and industry
+        </p>
+      </div>
+      
       <ScenarioGenerator />
     </div>
   );
