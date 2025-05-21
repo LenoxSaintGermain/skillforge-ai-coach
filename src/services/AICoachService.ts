@@ -1,4 +1,3 @@
-
 import { User } from '@/contexts/UserContext';
 
 export interface ConversationItem {
@@ -77,6 +76,64 @@ export class AICoachService {
         'Explore AI implementation for personalized recommendations'
       ]
     };
+  }
+  
+  /**
+   * Gets a response from the AI Coach based on a prompt
+   */
+  public async getResponse(prompt: string): Promise<string> {
+    // Simple implementation that simulates AI response generation
+    console.log('AI Coach received prompt:', prompt);
+    
+    // Add the prompt to conversation history
+    this.addToConversationHistory('user', prompt);
+    
+    // Generate a simulated response based on the prompt
+    let response = '';
+    
+    // For industry name suggestions, generate a list based on the query
+    if (prompt.includes('List 5 specific industry names')) {
+      const query = prompt.match(/related to "([^"]+)"/)?.[1] || '';
+      response = this.generateIndustrySuggestions(query);
+    } else {
+      // Default generic response if not a specific prompt type
+      response = "I've processed your request and here's my response.";
+    }
+    
+    // Add response to conversation history
+    this.addToConversationHistory('assistant', response);
+    
+    return response;
+  }
+  
+  /**
+   * Generates industry name suggestions based on a query
+   */
+  private generateIndustrySuggestions(query: string): string {
+    const industries = {
+      'food': 'Food Manufacturing, Food Distribution, Food Service, Food Retail, Food Technology',
+      'tech': 'Software Development, Cloud Computing, Cybersecurity, Data Analytics, Artificial Intelligence',
+      'health': 'Healthcare Services, Pharmaceutical, Medical Devices, Telemedicine, Health Insurance',
+      'finance': 'Commercial Banking, Investment Management, Insurance, Financial Technology, Wealth Management',
+      'education': 'Higher Education, K-12 Education, Educational Technology, Corporate Training, Special Education',
+      'retail': 'E-commerce, Brick-and-mortar Retail, Omnichannel Retail, Luxury Retail, Discount Retail',
+      'manufacturing': 'Automotive Manufacturing, Electronics Manufacturing, Chemical Manufacturing, Textile Manufacturing, Industrial Equipment',
+      'hospitality': 'Hotels and Lodging, Food and Beverage Service, Event Management, Tourism, Cruise Industry',
+      'marketing': 'Digital Marketing, Content Marketing, Market Research, Advertising, Public Relations',
+      'sales': 'B2B Sales, Direct Sales, Account Management, Sales Operations, Channel Sales'
+    };
+    
+    const lowerQuery = query.toLowerCase();
+    
+    // Find matching industry category
+    for (const [key, value] of Object.entries(industries)) {
+      if (lowerQuery.includes(key)) {
+        return value;
+      }
+    }
+    
+    // Default suggestions if no match found
+    return 'Specialized Consulting, Professional Services, Custom Solutions, Strategic Advisory, Business Intelligence';
   }
   
   /**
