@@ -1,11 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Users, MessageSquare } from 'lucide-react';
 import ScenarioWorkflow from '@/components/ScenarioWorkflow';
 import { ScenarioService } from '@/services/ScenarioService';
 import CoachChatPanel from "@/components/CoachChatPanel";
+import { useAI } from '@/contexts/AIContext';
+import { useToast } from "@/components/ui/use-toast";
 
 const scenarioService = new ScenarioService();
 
@@ -14,6 +17,8 @@ const ScenarioDetailPage = () => {
   const navigate = useNavigate();
   const [scenario, setScenario] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { setActiveCoach } = useAI();
+  const { toast } = useToast();
   
   useEffect(() => {
     if (id) {
@@ -26,8 +31,21 @@ const ScenarioDetailPage = () => {
   }, [id]);
   
   const handleComplete = () => {
-    // Handle scenario completion, like saving progress
+    toast({
+      title: "Scenario Completed!",
+      description: "Great work! You've completed this scenario.",
+      duration: 5000,
+    });
     navigate('/scenarios');
+  };
+  
+  const handleActivateJarvis = () => {
+    setActiveCoach('jarvis');
+    toast({
+      title: "Jarvis Activated",
+      description: "Jarvis is now ready to assist you with Gemini training.",
+      duration: 3000,
+    });
   };
   
   if (isLoading) {
@@ -63,6 +81,7 @@ const ScenarioDetailPage = () => {
           <TabsList>
             <TabsTrigger value="workflow">Workflow</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="gemini">Gemini Training</TabsTrigger>
           </TabsList>
         </div>
         
@@ -80,32 +99,135 @@ const ScenarioDetailPage = () => {
               <div>
                 <h4 className="text-sm font-medium mb-1">Completion Status</h4>
                 <div className="w-full bg-muted rounded-full h-2.5">
-                  <div className="bg-primary h-2.5 rounded-full" style={{ width: '45%' }}></div>
+                  <div 
+                    className="bg-primary h-2.5 rounded-full" 
+                    style={{ width: `${scenario.completionStats?.percentComplete || 0}%` }}
+                  ></div>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">45% complete</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {scenario.completionStats?.percentComplete || 0}% complete
+                </p>
               </div>
               
               <div>
                 <h4 className="text-sm font-medium mb-1">Time Spent</h4>
-                <p className="text-2xl font-bold">27 minutes</p>
+                <p className="text-2xl font-bold">{scenario.completionStats?.timeSpent || '0 minutes'}</p>
                 <p className="text-sm text-muted-foreground">Out of estimated {scenario.estimatedTime}</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="border rounded-md p-4">
+                  <div className="flex items-center mb-2">
+                    <Calendar className="h-5 w-5 mr-2 text-skillforge-secondary" />
+                    <h4 className="font-medium">Completion Date</h4>
+                  </div>
+                  <p className="text-lg">
+                    {scenario.completionStats?.completedDate
+                      ? scenario.completionStats.completedDate.toLocaleDateString()
+                      : 'In Progress'}
+                  </p>
+                </div>
+                
+                <div className="border rounded-md p-4">
+                  <div className="flex items-center mb-2">
+                    <MessageSquare className="h-5 w-5 mr-2 text-skillforge-secondary" />
+                    <h4 className="font-medium">AI Coach Interactions</h4>
+                  </div>
+                  <p className="text-lg">{scenario.completionStats?.coachInteractions || 0}</p>
+                </div>
               </div>
               
               <div>
                 <h4 className="text-sm font-medium mb-1">Skills Development</h4>
-                <div className="grid grid-cols-2 gap-4 mt-2">
-                  {scenario.skillsAddressed.map((skill, index) => (
-                    <div key={index} className="bg-muted p-2 rounded-md">
-                      <p className="text-sm font-medium">{skill}</p>
-                      <div className="w-full bg-background rounded-full h-1.5 mt-1">
+                <div className="space-y-3 mt-2">
+                  {scenario.completionStats?.skillProgress.map((skill, index) => (
+                    <div key={index}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>{skill.skillName}</span>
+                        <span className="font-medium">{skill.progress}%</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-1.5">
                         <div 
                           className="bg-primary h-1.5 rounded-full" 
-                          style={{ width: `${Math.floor(Math.random() * 60) + 20}%` }}
+                          style={{ width: `${skill.progress}%` }}
                         ></div>
                       </div>
                     </div>
                   ))}
                 </div>
+              </div>
+              
+              {scenario.completionStats?.userFeedback && (
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Your Feedback</h4>
+                  <div className="bg-muted p-3 rounded-md">
+                    <p className="text-sm italic">"{scenario.completionStats.userFeedback}"</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="gemini" className="space-y-6">
+          <div className="bg-background border rounded-lg p-6">
+            <h3 className="text-xl font-semibold mb-4">Gemini Training Integration</h3>
+            <p className="mb-4">This scenario can help you practice building with Google's Gemini AI model. Activate Jarvis, your specialized Gemini training assistant, to guide you through the Gemini syllabus.</p>
+            
+            <div className="bg-skillforge-light p-4 rounded-lg mb-6">
+              <h4 className="text-skillforge-dark font-medium mb-2">Jarvis - Your Gemini Training Assistant</h4>
+              <p className="text-sm text-skillforge-dark/80 mb-4">
+                Jarvis will guide you through the "Building with Gemini: From Idea to Prototype" syllabus, helping you understand key concepts and complete practical exercises.
+              </p>
+              <Button 
+                className="bg-skillforge-secondary hover:bg-skillforge-secondary/90 text-white" 
+                onClick={handleActivateJarvis}
+              >
+                Activate Jarvis
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="border rounded-md p-4">
+                <h4 className="font-medium mb-2">Gemini Exploration</h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Explore Gemini's capabilities through guided exercises and real-world applications.
+                </p>
+                <ul className="text-sm space-y-1">
+                  <li className="flex items-center">
+                    <span className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-xs mr-2">✓</span>
+                    Introduction to Gemini API
+                  </li>
+                  <li className="flex items-center">
+                    <span className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-xs mr-2">✓</span>
+                    Basic prompting techniques
+                  </li>
+                  <li className="flex items-center">
+                    <span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 text-xs mr-2">-</span>
+                    Advanced prompt engineering
+                  </li>
+                </ul>
+              </div>
+              
+              <div className="border rounded-md p-4">
+                <h4 className="font-medium mb-2">Integration with Scenario</h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Apply Gemini's capabilities directly to this learning scenario.
+                </p>
+                <ul className="text-sm space-y-1">
+                  <li className="flex items-center">
+                    <span className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-xs mr-2">✓</span>
+                    Research assistance
+                  </li>
+                  <li className="flex items-center">
+                    <span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 text-xs mr-2">-</span>
+                    Solution prototyping
+                  </li>
+                  <li className="flex items-center">
+                    <span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 text-xs mr-2">-</span>
+                    Implementation planning
+                  </li>
+                </ul>
               </div>
             </div>
           </div>

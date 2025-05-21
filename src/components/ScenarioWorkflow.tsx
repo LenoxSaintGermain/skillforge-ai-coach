@@ -1,20 +1,72 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Scenario } from '@/services/ScenarioService';
+import { Scenario, ScenarioService } from '@/services/ScenarioService';
 import { ChevronRight, CheckCircle, Clock, BookOpen, Puzzle, Award } from 'lucide-react';
+import { useAI } from '@/contexts/AIContext';
+import { useToast } from "@/components/ui/use-toast";
 
 interface ScenarioWorkflowProps {
   scenario: Scenario;
   onComplete?: () => void;
 }
 
+const scenarioService = new ScenarioService();
+
 const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
+  const [updatedScenario, setUpdatedScenario] = useState<Scenario>(scenario);
+  const { setActiveCoach } = useAI();
+  const { toast } = useToast();
+  
+  useEffect(() => {
+    // Initialize completed steps from scenario data
+    const initialCompletedSteps = scenario.tasks
+      .filter(task => task.isCompleted)
+      .map(task => task.id);
+    
+    setCompletedSteps(initialCompletedSteps);
+    setUpdatedScenario(scenario);
+  }, [scenario]);
+  
+  const handleMarkTaskComplete = (taskId: string, isCompleted: boolean) => {
+    const newCompletedSteps = isCompleted 
+      ? [...completedSteps, taskId] 
+      : completedSteps.filter(id => id !== taskId);
+    
+    setCompletedSteps(newCompletedSteps);
+    
+    // Update the scenario service
+    scenarioService.updateScenarioProgress(scenario.id, "current-user", newCompletedSteps);
+    
+    // Refresh the scenario data
+    const updatedScenario = scenarioService.getScenarioById(scenario.id);
+    if (updatedScenario) {
+      setUpdatedScenario(updatedScenario);
+    }
+    
+    toast({
+      title: isCompleted ? "Task completed!" : "Task marked as incomplete",
+      description: "Your progress has been updated.",
+      duration: 3000,
+    });
+  };
+  
+  const handleOpenCoachChat = () => {
+    // Set active coach to AI coach
+    setActiveCoach('ai');
+    
+    // Display a toast message
+    toast({
+      title: "AI Coach activated",
+      description: "Your AI coach is ready to help with this scenario.",
+      duration: 3000,
+    });
+  };
   
   const steps = [
     {
@@ -24,18 +76,26 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
       content: (
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Scenario Context</h3>
-          <p>{scenario.context}</p>
+          <p>{updatedScenario.context}</p>
           
           <h3 className="text-lg font-medium">Challenge</h3>
-          <p>{scenario.challenge}</p>
+          <p>{updatedScenario.challenge}</p>
           
           <h3 className="text-lg font-medium">Skills You'll Develop</h3>
           <div className="flex flex-wrap gap-2 mt-2">
-            {scenario.skillsAddressed.map((skill, index) => (
+            {updatedScenario.skillsAddressed.map((skill, index) => (
               <span key={index} className="text-xs bg-skillforge-light text-skillforge-dark px-2 py-1 rounded-full">
                 {skill}
               </span>
             ))}
+          </div>
+          
+          <div className="mt-6">
+            <h3 className="text-lg font-medium">Estimated Completion Time</h3>
+            <div className="flex items-center">
+              <Clock className="h-5 w-5 mr-2 text-skillforge-primary" />
+              <span>{updatedScenario.estimatedTime}</span>
+            </div>
           </div>
         </div>
       )
@@ -48,32 +108,40 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Required Tasks</h3>
           <ul className="space-y-3">
-            {scenario.tasks.map((task, index) => (
+            {updatedScenario.tasks.map((task, index) => (
               <li key={index} className="flex items-start">
                 <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-primary mr-2">
-                  {completedSteps.includes(index) ? 
+                  {completedSteps.includes(task.id) ? 
                     <CheckCircle className="h-4 w-4 text-primary" /> : 
                     <span className="text-xs font-medium">{index + 1}</span>
                   }
                 </div>
                 <div>
-                  <p className="text-sm">{task}</p>
+                  <p className="text-sm">{task.description}</p>
                   <Button 
-                    variant="ghost" 
+                    variant={completedSteps.includes(task.id) ? "secondary" : "ghost"}
                     size="sm" 
                     className="mt-1 h-7 text-xs"
-                    onClick={() => {
-                      if (!completedSteps.includes(index)) {
-                        setCompletedSteps(prev => [...prev, index]);
-                      }
-                    }}
+                    onClick={() => handleMarkTaskComplete(task.id, !completedSteps.includes(task.id))}
                   >
-                    {completedSteps.includes(index) ? "Completed" : "Mark as complete"}
+                    {completedSteps.includes(task.id) ? "Completed ✓" : "Mark as complete"}
                   </Button>
                 </div>
               </li>
             ))}
           </ul>
+          
+          <div className="mt-4 p-4 bg-muted rounded-lg">
+            <p className="text-sm">
+              <strong>Progress:</strong> {updatedScenario.completionStats?.percentComplete || 0}% complete
+            </p>
+            <div className="w-full bg-background rounded-full h-2.5 mt-1">
+              <div 
+                className="bg-primary h-2.5 rounded-full" 
+                style={{ width: `${updatedScenario.completionStats?.percentComplete || 0}%` }}
+              ></div>
+            </div>
+          </div>
         </div>
       )
     },
@@ -85,7 +153,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Available Resources</h3>
           <ul className="space-y-2">
-            {scenario.resources.map((resource, index) => (
+            {updatedScenario.resources.map((resource, index) => (
               <li key={index} className="text-sm flex items-center">
                 <span className="mr-2">•</span>
                 <span>{resource}</span>
@@ -93,31 +161,21 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
             ))}
           </ul>
           
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="mt-2">
-                Request AI Coach Help
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>AI Coach Assistance</DialogTitle>
-                <DialogDescription>
-                  Ask your AI coach specific questions about this scenario.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 mt-4">
-                <p>Your AI coach can help with:</p>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>Understanding the context better</li>
-                  <li>Breaking down complex tasks</li>
-                  <li>Providing additional resources</li>
-                  <li>Guiding you through implementation steps</li>
-                </ul>
-                <Button className="w-full">Open Coach Chat</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <div className="mt-6 p-4 bg-muted rounded-lg">
+            <h4 className="font-medium mb-2">Need Help?</h4>
+            <p className="text-sm mb-3">
+              Ask your AI coach specific questions about this scenario. Your coach can provide guidance, additional resources, and help you work through challenging aspects.
+            </p>
+            <Button 
+              className="w-full bg-skillforge-primary hover:bg-skillforge-primary/90"
+              onClick={handleOpenCoachChat}
+            >
+              Chat with AI Coach
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              AI coach interactions so far: {updatedScenario.completionStats?.coachInteractions || 0}
+            </p>
+          </div>
         </div>
       )
     },
@@ -129,7 +187,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Evaluation Criteria</h3>
           <ul className="space-y-2">
-            {scenario.evaluationCriteria.map((criteria, index) => (
+            {updatedScenario.evaluationCriteria.map((criteria, index) => (
               <li key={index} className="text-sm flex items-center">
                 <span className="mr-2">•</span>
                 <span>{criteria}</span>
@@ -152,6 +210,12 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
               className="w-full" 
               onClick={() => {
                 // Here we would handle submission logic
+                toast({
+                  title: "Solution submitted!",
+                  description: "Your work has been submitted for evaluation.",
+                  duration: 3000,
+                });
+                
                 if (onComplete) {
                   onComplete();
                 }
@@ -169,12 +233,12 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">{scenario.title}</h2>
+          <h2 className="text-2xl font-bold">{updatedScenario.title}</h2>
           <div className="flex items-center text-sm text-muted-foreground mt-1">
             <Clock className="mr-1 h-4 w-4" />
-            <span>{scenario.estimatedTime}</span>
+            <span>{updatedScenario.estimatedTime}</span>
             <span className="mx-2">•</span>
-            <span>{scenario.difficultyLevel}</span>
+            <span>{updatedScenario.difficultyLevel}</span>
           </div>
         </div>
       </div>
@@ -185,11 +249,11 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
             <React.Fragment key={index}>
               <div 
                 className={`flex flex-col items-center ${currentStep === index ? 'text-primary' : 
-                  completedSteps.includes(index) ? 'text-primary/70' : 'text-muted-foreground'}`}
+                  completedSteps.length > 0 && index === 0 ? 'text-primary/70' : 'text-muted-foreground'}`}
               >
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center 
                   ${currentStep === index ? 'bg-primary text-white' : 
-                  completedSteps.includes(index) ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                  completedSteps.length > 0 && index === 0 ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
                   {step.icon}
                 </div>
                 <span className="text-xs mt-1">{step.title}</span>
@@ -197,7 +261,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
               
               {index < steps.length - 1 && (
                 <div className={`h-px flex-1 mx-2 ${
-                  completedSteps.includes(index) ? 'bg-primary/70' : 'bg-muted'
+                  index < currentStep ? 'bg-primary/70' : 'bg-muted'
                 }`} />
               )}
             </React.Fragment>
@@ -225,9 +289,6 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
                   }
                 } else {
                   // Move to next step
-                  if (!completedSteps.includes(currentStep)) {
-                    setCompletedSteps(prev => [...prev, currentStep]);
-                  }
                   setCurrentStep(prev => prev + 1);
                 }
               }}

@@ -19,14 +19,14 @@ import { AIProvider } from "./contexts/AIContext";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <UserProvider>
-        <AIProvider>
+  <QueryClientProvider client={queryClient}>
+    <UserProvider>
+      <AIProvider>
+        <BrowserRouter>
           <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+            <React.StrictMode>
+              <Toaster />
+              <Sonner />
               <Routes>
                 <Route element={<AppLayout />}>
                   <Route path="/" element={<Index />} />
@@ -39,12 +39,12 @@ const App = () => (
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </BrowserRouter>
+            </React.StrictMode>
           </TooltipProvider>
-        </AIProvider>
-      </UserProvider>
-    </QueryClientProvider>
-  </React.StrictMode>
+        </BrowserRouter>
+      </AIProvider>
+    </UserProvider>
+  </QueryClientProvider>
 );
 
 export default App;
