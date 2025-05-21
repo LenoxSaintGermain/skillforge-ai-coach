@@ -230,7 +230,7 @@ export class ScenarioService {
       {
         id: '4',
         title: 'Building a Generative AI Assistant with Gemini',
-        context: 'As organizations increasingly adopt AI assistants, there's a need to create specialized assistants that have deep knowledge of specific domains. In this scenario, you'll build an AI assistant using Google's Gemini model that is specialized for a particular industry.',
+        context: "As organizations increasingly adopt AI assistants, there's a need to create specialized assistants that have deep knowledge of specific domains. In this scenario, you'll build an AI assistant using Google's Gemini model that is specialized for a particular industry.",
         challenge: 'Design and build a proof-of-concept Gemini-powered AI assistant for a healthcare provider that can answer patient questions, schedule appointments, and provide basic medical information.',
         tasks: [
           {
