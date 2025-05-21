@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { CheckCircle, XCircle, HelpCircle, ArrowRight, Award } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface Question {
   id: string;
@@ -59,6 +60,7 @@ const SkillAssessment = () => {
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [showExplanation, setShowExplanation] = useState(false);
   const [assessmentComplete, setAssessmentComplete] = useState(false);
+  const navigate = useNavigate();
   
   const currentQuestion = sampleQuestions[currentQuestionIndex];
   const totalQuestions = sampleQuestions.length;
@@ -93,6 +95,11 @@ const SkillAssessment = () => {
       const selectedOption = question?.options.find(option => option.id === selectedOptionId);
       return selectedOption?.isCorrect || false;
     }).length;
+  };
+
+  const handleViewLearningPath = () => {
+    // Navigate to the Gemini Training page as a meaningful destination
+    navigate('/gemini-training');
   };
   
   if (assessmentComplete) {
@@ -159,7 +166,10 @@ const SkillAssessment = () => {
             </div>
           </CardContent>
           <CardFooter className="flex justify-end">
-            <Button className="bg-skillforge-primary hover:bg-skillforge-dark">
+            <Button 
+              className="bg-skillforge-primary hover:bg-skillforge-dark"
+              onClick={handleViewLearningPath}
+            >
               View Learning Path
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
