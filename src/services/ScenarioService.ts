@@ -1,4 +1,3 @@
-
 import { User, LearningGoal } from '@/contexts/UserContext';
 
 export interface Scenario {
@@ -289,6 +288,130 @@ export class ScenarioService {
           completedDate: new Date(2023, 5, 12),
           userFeedback: "This scenario helped me understand how to effectively adapt Gemini for specialized domains. The ethical considerations section was particularly valuable.",
           coachInteractions: 23
+        }
+      },
+      {
+        id: '5',
+        title: 'AI-Powered Resume Screening for Gordon Food Service HR',
+        context: 'As part of Gordon Food Service\'s HR team, you face the challenge of efficiently screening hundreds of resumes received for various positions across the organization. The current manual process is time-consuming and may lead to inconsistencies in candidate evaluation.',
+        challenge: 'Design and implement an AI-powered resume screening system that can efficiently process resumes, identify qualified candidates based on job requirements, and reduce time-to-hire while ensuring fair evaluation practices.',
+        tasks: [
+          {
+            id: 't5-1',
+            description: 'Analyze current resume screening processes and identify key pain points',
+            isCompleted: false
+          },
+          {
+            id: 't5-2',
+            description: 'Define objective criteria for candidate evaluation across different food service positions',
+            isCompleted: false
+          },
+          {
+            id: 't5-3',
+            description: 'Design an AI solution that extracts relevant information from resumes and matches against job requirements',
+            isCompleted: false
+          },
+          {
+            id: 't5-4',
+            description: 'Create a bias mitigation strategy to ensure fair candidate evaluation',
+            isCompleted: false
+          },
+          {
+            id: 't5-5',
+            description: 'Develop an implementation plan including integration with existing HR systems',
+            isCompleted: false
+          }
+        ],
+        resources: [
+          'Gordon Food Service HR process documentation',
+          'Current job requirement templates',
+          'Best practices for AI in recruitment',
+          'Ethical guidelines for AI in hiring',
+          'Case studies of AI resume screening implementations',
+          'Gemini API documentation for document processing capabilities'
+        ],
+        evaluationCriteria: [
+          'Effectiveness in identifying qualified candidates',
+          'Time savings compared to manual process',
+          'Bias reduction measures',
+          'Integration feasibility with existing systems',
+          'Privacy and compliance considerations'
+        ],
+        skillsAddressed: ['HR AI Implementation', 'Document Processing', 'Ethical AI Design', 'Recruitment Automation'],
+        difficultyLevel: 'Intermediate',
+        estimatedTime: '90 minutes',
+        completionStats: {
+          percentComplete: 0,
+          timeSpent: '0 minutes',
+          skillProgress: [
+            { skillName: 'HR AI Implementation', progress: 0 },
+            { skillName: 'Document Processing', progress: 0 },
+            { skillName: 'Ethical AI Design', progress: 0 },
+            { skillName: 'Recruitment Automation', progress: 0 }
+          ],
+          coachInteractions: 0
+        }
+      },
+      {
+        id: '6',
+        title: 'AI Sales Assistant for Gordon Food Service Account Managers',
+        context: 'Gordon Food Service account managers handle multiple restaurant and institutional accounts, needing to stay updated on product availability, pricing, customer preferences, and market trends. They struggle to provide timely, personalized service to all clients while managing their busy schedules.',
+        challenge: 'Create an AI sales assistant that integrates with Gordon Food Service\'s workflow to help account managers provide better service, increase order values, and strengthen customer relationships through intelligent recommendations and automated processes.',
+        tasks: [
+          {
+            id: 't6-1',
+            description: 'Map the current sales workflow and customer interaction points for Gordon Food Service account managers',
+            isCompleted: false
+          },
+          {
+            id: 't6-2',
+            description: 'Identify key data sources needed for intelligent product recommendations (inventory, purchase history, seasonal trends)',
+            isCompleted: false
+          },
+          {
+            id: 't6-3',
+            description: 'Design conversational AI capabilities to assist with customer inquiries and order taking',
+            isCompleted: false
+          },
+          {
+            id: 't6-4',
+            description: 'Create a system for proactive outreach based on predictive analysis of customer needs',
+            isCompleted: false
+          },
+          {
+            id: 't6-5',
+            description: 'Develop metrics to measure the effectiveness of the AI assistant on sales performance',
+            isCompleted: false
+          }
+        ],
+        resources: [
+          'Gordon Food Service product catalog',
+          'Sample customer order histories',
+          'Sales workflow documentation',
+          'Market trend reports for food service industry',
+          'Gemini API documentation for conversational AI',
+          'Best practices for AI in B2B sales'
+        ],
+        evaluationCriteria: [
+          'Projected increase in account manager efficiency',
+          'Quality of product recommendations',
+          'Effectiveness of conversational capabilities',
+          'Integration with existing sales tools',
+          'Customer experience impact'
+        ],
+        skillsAddressed: ['Sales AI Implementation', 'Predictive Analytics', 'Conversational AI Design', 'B2B Solution Architecture'],
+        difficultyLevel: 'Advanced',
+        estimatedTime: '100 minutes',
+        completionStats: {
+          percentComplete: 0,
+          timeSpent: '0 minutes',
+          skillProgress: [
+            { skillName: 'Sales AI Implementation', progress: 0 },
+            { skillName: 'Predictive Analytics', progress: 0 },
+            { skillName: 'Conversational AI Design', progress: 0 },
+            { skillName: 'B2B Solution Architecture', progress: 0 }
+          ],
+          coachInteractions: 0
         }
       }
     ];
