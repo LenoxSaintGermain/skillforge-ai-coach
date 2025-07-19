@@ -68,49 +68,165 @@ export class JarvisCoachService {
     this.addToConversationHistory('user', message);
     this.jarvisContext.lastUserQuery = message;
     
-    // Store the user message for future context
-    const phaseId = this.jarvisContext.currentPhaseId;
-    let response = '';
+    try {
+      // Build context for Jarvis
+      const recentHistory = this.conversationHistory.slice(-8);
+      const contextPrompt = this.buildJarvisContextualPrompt(message, recentHistory);
+      
+      const systemPrompt = `${this.systemPrompt}
+
+You are guiding a user through the "Building with Gemini: From Idea to Prototype" syllabus.
+
+Current user progress:
+- Current Phase: ${this.jarvisContext.currentPhaseId}
+- Progress in current phase: ${this.jarvisContext.userProgress.phaseProgress[this.jarvisContext.currentPhaseId].percentComplete}%
+- Concepts understanding: ${this.jarvisContext.userProgress.phaseProgress[this.jarvisContext.currentPhaseId].conceptsUnderstanding}%
+- Practical exercises completed: ${this.jarvisContext.userProgress.phaseProgress[this.jarvisContext.currentPhaseId].practicalExercisesCompleted}
+
+Phase overview:
+${this.getPhaseOverview(this.jarvisContext.currentPhaseId)}
+
+Always maintain your sophisticated, supportive coaching style while providing specific, actionable guidance based on the user's current phase and progress.`;
+
+      const response = await this.callGeminiAPI(contextPrompt, systemPrompt);
+      
+      // Update progress based on response context
+      this.updateProgressFromResponse(message, response);
+      
+      this.jarvisContext.previousResponses.push(response);
+      this.addToConversationHistory('assistant', response);
+      this.jarvisContext.userProgress.lastInteraction = new Date();
+      return response;
+
+    } catch (error) {
+      console.error('Error in Jarvis processUserMessage:', error);
+      
+      // Fallback to intent-based responses
+      let response = '';
+      
+      // Determine appropriate response based on message content and context
+      if (message.toLowerCase().includes('continue') || message.toLowerCase().includes('where i left off')) {
+        response = this.getContinueResponse();
+      } else if (message.toLowerCase().includes('review') || message.toLowerCase().includes('what i learned')) {
+        response = this.getReviewResponse();
+      } else if (message.toLowerCase().includes('phase 1') || (message.toLowerCase().includes('phase') && message.toLowerCase().includes('1'))) {
+        response = this.getPhaseInformation(1);
+        this.jarvisContext.currentPhaseId = 1;
+      } else if (message.toLowerCase().includes('phase 2') || (message.toLowerCase().includes('phase') && message.toLowerCase().includes('2'))) {
+        response = this.getPhaseInformation(2);
+        this.jarvisContext.currentPhaseId = 2;
+      } else if (message.toLowerCase().includes('phase 3') || (message.toLowerCase().includes('phase') && message.toLowerCase().includes('3'))) {
+        response = this.getPhaseInformation(3);
+        this.jarvisContext.currentPhaseId = 3;
+      } else if (message.toLowerCase().includes('phase 4') || (message.toLowerCase().includes('phase') && message.toLowerCase().includes('4'))) {
+        response = this.getPhaseInformation(4);
+        this.jarvisContext.currentPhaseId = 4;
+      } else if (message.toLowerCase().includes('phase 5') || (message.toLowerCase().includes('phase') && message.toLowerCase().includes('5'))) {
+        response = this.getPhaseInformation(5);
+        this.jarvisContext.currentPhaseId = 5;
+      } else if (message.toLowerCase().includes('yes') || message.toLowerCase().includes('ready') || message.toLowerCase().includes('let\'s start')) {
+        response = this.getTaskInstructions();
+      } else if (message.toLowerCase().includes('gemini') && message.toLowerCase().includes('api')) {
+        response = this.getGeminiAPIInfo();
+      } else if (message.toLowerCase().includes('progress')) {
+        response = this.getProgressUpdate();
+      } else if (message.toLowerCase().includes('help') || message.toLowerCase().includes('confused')) {
+        response = this.getHelpResponse();
+      } else if (message.toLowerCase().includes('complete') || message.toLowerCase().includes('finished') || message.toLowerCase().includes('done')) {
+        response = this.handleTaskCompletion();
+      } else {
+        response = this.getDefaultResponse();
+      }
+      
+      // Add response to history
+      this.jarvisContext.previousResponses.push(response);
+      this.addToConversationHistory('assistant', response);
+      this.jarvisContext.userProgress.lastInteraction = new Date();
+      return response;
+    }
+  }
+
+  /**
+   * Calls the Gemini API via edge function
+   */
+  private async callGeminiAPI(prompt: string, systemPrompt?: string): Promise<string> {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_ANON_KEY
+    );
+
+    const { data, error } = await supabase.functions.invoke('gemini-api', {
+      body: {
+        prompt,
+        systemPrompt,
+        temperature: 0.8,
+        maxTokens: 1500
+      }
+    });
+
+    if (error) {
+      throw new Error(`Gemini API error: ${error.message}`);
+    }
+
+    if (!data?.generatedText) {
+      throw new Error('No response from Gemini API');
+    }
+
+    return data.generatedText;
+  }
+
+  /**
+   * Builds a contextual prompt for Jarvis including conversation history
+   */
+  private buildJarvisContextualPrompt(currentMessage: string, recentHistory: ConversationItem[]): string {
+    let contextPrompt = '';
     
-    // Determine appropriate response based on message content and context
-    if (message.toLowerCase().includes('continue') || message.toLowerCase().includes('where i left off')) {
-      response = this.getContinueResponse();
-    } else if (message.toLowerCase().includes('review') || message.toLowerCase().includes('what i learned')) {
-      response = this.getReviewResponse();
-    } else if (message.toLowerCase().includes('phase 1') || (message.toLowerCase().includes('phase') && message.toLowerCase().includes('1'))) {
-      response = this.getPhaseInformation(1);
-      this.jarvisContext.currentPhaseId = 1;
-    } else if (message.toLowerCase().includes('phase 2') || (message.toLowerCase().includes('phase') && message.toLowerCase().includes('2'))) {
-      response = this.getPhaseInformation(2);
-      this.jarvisContext.currentPhaseId = 2;
-    } else if (message.toLowerCase().includes('phase 3') || (message.toLowerCase().includes('phase') && message.toLowerCase().includes('3'))) {
-      response = this.getPhaseInformation(3);
-      this.jarvisContext.currentPhaseId = 3;
-    } else if (message.toLowerCase().includes('phase 4') || (message.toLowerCase().includes('phase') && message.toLowerCase().includes('4'))) {
-      response = this.getPhaseInformation(4);
-      this.jarvisContext.currentPhaseId = 4;
-    } else if (message.toLowerCase().includes('phase 5') || (message.toLowerCase().includes('phase') && message.toLowerCase().includes('5'))) {
-      response = this.getPhaseInformation(5);
-      this.jarvisContext.currentPhaseId = 5;
-    } else if (message.toLowerCase().includes('yes') || message.toLowerCase().includes('ready') || message.toLowerCase().includes('let\'s start')) {
-      response = this.getTaskInstructions();
-    } else if (message.toLowerCase().includes('gemini') && message.toLowerCase().includes('api')) {
-      response = this.getGeminiAPIInfo();
-    } else if (message.toLowerCase().includes('progress')) {
-      response = this.getProgressUpdate();
-    } else if (message.toLowerCase().includes('help') || message.toLowerCase().includes('confused')) {
-      response = this.getHelpResponse();
-    } else if (message.toLowerCase().includes('complete') || message.toLowerCase().includes('finished') || message.toLowerCase().includes('done')) {
-      response = this.handleTaskCompletion();
-    } else {
-      response = this.getDefaultResponse();
+    if (recentHistory.length > 0) {
+      contextPrompt += "Recent conversation:\n";
+      recentHistory.forEach((item, index) => {
+        if (index < recentHistory.length - 1) {
+          contextPrompt += `${item.role}: ${item.content}\n`;
+        }
+      });
+      contextPrompt += "\n";
     }
     
-    // Add response to history
-    this.jarvisContext.previousResponses.push(response);
-    this.addToConversationHistory('assistant', response);
-    this.jarvisContext.userProgress.lastInteraction = new Date();
-    return response;
+    contextPrompt += `User's current message: ${currentMessage}`;
+    
+    return contextPrompt;
+  }
+
+  /**
+   * Updates user progress based on interaction patterns
+   */
+  private updateProgressFromResponse(userMessage: string, response: string): void {
+    const phaseId = this.jarvisContext.currentPhaseId;
+    const currentProgress = this.jarvisContext.userProgress.phaseProgress[phaseId];
+    
+    // Simple progress update logic based on interaction
+    if (userMessage.toLowerCase().includes('complete') || userMessage.toLowerCase().includes('finished')) {
+      currentProgress.percentComplete = Math.min(100, currentProgress.percentComplete + 15);
+      currentProgress.practicalExercisesCompleted += 1;
+    } else if (userMessage.length > 100) { // Detailed interaction
+      currentProgress.percentComplete = Math.min(100, currentProgress.percentComplete + 5);
+      currentProgress.conceptsUnderstanding = Math.min(100, currentProgress.conceptsUnderstanding + 3);
+    }
+  }
+
+  /**
+   * Gets phase overview for context
+   */
+  private getPhaseOverview(phaseId: number): string {
+    const phases = {
+      1: "Understanding GenAI and Gemini Fundamentals - Introduction to AI concepts and basic Gemini usage",
+      2: "Project Ideation and Design with AI Assistance - Using Gemini for research and project planning", 
+      3: "Building the Prototype - Implementing a GenAI solution with Gemini API",
+      4: "Enhancing and Evaluating the Prototype - Improving and testing the solution",
+      5: "Deployment and Responsible AI - Preparing for production and implementing best practices"
+    };
+    
+    return phases[phaseId] || "Unknown phase";
   }
   
   /**

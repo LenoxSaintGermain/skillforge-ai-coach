@@ -82,28 +82,77 @@ export class AICoachService {
    * Gets a response from the AI Coach based on a prompt
    */
   public async getResponse(prompt: string): Promise<string> {
-    // Simple implementation that simulates AI response generation
     console.log('AI Coach received prompt:', prompt);
     
     // Add the prompt to conversation history
     this.addToConversationHistory('user', prompt);
     
-    // Generate a simulated response based on the prompt
-    let response = '';
-    
-    // For industry name suggestions, generate a list based on the query
+    try {
+      // For industry name suggestions, use a specific system prompt
+      if (prompt.includes('List 5 specific industry names')) {
+        const query = prompt.match(/related to "([^"]+)"/)?.[1] || '';
+        const systemPrompt = "You are an industry expert. Provide exactly 5 specific industry names separated by commas, without any additional explanation or formatting.";
+        const response = await this.callGeminiAPI(`List 5 specific industry names related to "${query}"`, systemPrompt);
+        this.addToConversationHistory('assistant', response);
+        return response;
+      }
+
+      // Use appropriate AI model based on context
+      const systemPrompt = `You are Jarvis, an AI learning coach. You help users develop AI skills through personalized guidance, practical exercises, and expert knowledge. Be supportive, knowledgeable, and encouraging. Provide actionable advice and specific next steps.`;
+      
+      const response = await this.callGeminiAPI(prompt, systemPrompt);
+      this.addToConversationHistory('assistant', response);
+      return response;
+
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      // Fallback to mock response if API fails
+      const fallbackResponse = this.getFallbackResponse(prompt);
+      this.addToConversationHistory('assistant', fallbackResponse);
+      return fallbackResponse;
+    }
+  }
+
+  /**
+   * Calls the Gemini API via edge function
+   */
+  private async callGeminiAPI(prompt: string, systemPrompt?: string): Promise<string> {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_ANON_KEY
+    );
+
+    const { data, error } = await supabase.functions.invoke('gemini-api', {
+      body: {
+        prompt,
+        systemPrompt,
+        temperature: 0.7,
+        maxTokens: 1000
+      }
+    });
+
+    if (error) {
+      throw new Error(`Gemini API error: ${error.message}`);
+    }
+
+    if (!data?.generatedText) {
+      throw new Error('No response from Gemini API');
+    }
+
+    return data.generatedText;
+  }
+
+  /**
+   * Fallback response when API fails
+   */
+  private getFallbackResponse(prompt: string): string {
     if (prompt.includes('List 5 specific industry names')) {
       const query = prompt.match(/related to "([^"]+)"/)?.[1] || '';
-      response = this.generateIndustrySuggestions(query);
-    } else {
-      // Default generic response if not a specific prompt type
-      response = "I've processed your request and here's my response.";
+      return this.generateIndustrySuggestions(query);
     }
     
-    // Add response to conversation history
-    this.addToConversationHistory('assistant', response);
-    
-    return response;
+    return "I'm currently experiencing some connectivity issues. Let me provide you with some general guidance based on your query. For more detailed assistance, please try again in a moment or let me know how I can help with your AI learning journey.";
   }
   
   /**
@@ -166,39 +215,98 @@ export class AICoachService {
         this.userContext.lastInteractions.shift();
       }
     }
+
+    try {
+      // Build context from conversation history
+      const recentHistory = this.conversationHistory.slice(-10); // Last 10 interactions
+      const contextPrompt = this.buildContextualPrompt(message, recentHistory);
+      
+      const systemPrompt = `You are Jarvis, an AI learning coach specialized in helping users develop AI skills. 
+
+Your expertise includes:
+- Prompt engineering and optimization
+- AI solution design and architecture
+- Implementation planning for AI projects
+- Business process optimization with AI
+- Personalized learning path creation
+
+Your communication style:
+- Supportive and encouraging
+- Knowledgeable but accessible
+- Provides specific, actionable advice
+- Asks clarifying questions when needed
+- Offers concrete next steps
+
+Current user context:
+- Learning preferences: ${this.userContext.learningPreferences?.join(', ') || 'Not specified'}
+- Challenge areas: ${this.userContext.challengeAreas?.join(', ') || 'Not specified'}
+- Strengths: ${this.userContext.strengths?.join(', ') || 'Not specified'}
+- Current skill focus: ${this.learningJourney.currentSkillFocus.join(', ')}
+
+Progress metrics:
+${Object.entries(this.learningJourney.progressMetrics).map(([skill, progress]) => `- ${skill}: ${progress}%`).join('\n')}`;
+
+      const response = await this.callGeminiAPI(contextPrompt, systemPrompt);
+      this.addToConversationHistory('assistant', response);
+      return response;
+
+    } catch (error) {
+      console.error('Error processing user message:', error);
+      
+      // Fallback to intent-based responses
+      const messageIntent = this.analyzeMessageIntent(message);
+      let response = '';
+      
+      switch (messageIntent) {
+        case 'greeting':
+          response = this.generateGreetingResponse();
+          break;
+        case 'help_request':
+          response = this.generateHelpResponse();
+          break;
+        case 'scenario_inquiry':
+          response = this.generateScenarioResponse();
+          break;
+        case 'skill_inquiry':
+          response = this.generateSkillResponse(message);
+          break;
+        case 'progress_inquiry':
+          response = this.generateProgressResponse();
+          break;
+        case 'challenge_request':
+          response = this.generateChallengeResponse();
+          break;
+        case 'specific_concept':
+          response = this.generateConceptExplanation(message);
+          break;
+        default:
+          response = this.generateDefaultResponse();
+      }
+      
+      this.addToConversationHistory('assistant', response);
+      return response;
+    }
+  }
+
+  /**
+   * Builds a contextual prompt including conversation history
+   */
+  private buildContextualPrompt(currentMessage: string, recentHistory: ConversationItem[]): string {
+    let contextPrompt = '';
     
-    // Analyze message for intent and context
-    const messageIntent = this.analyzeMessageIntent(message);
-    let response = '';
-    
-    switch (messageIntent) {
-      case 'greeting':
-        response = this.generateGreetingResponse();
-        break;
-      case 'help_request':
-        response = this.generateHelpResponse();
-        break;
-      case 'scenario_inquiry':
-        response = this.generateScenarioResponse();
-        break;
-      case 'skill_inquiry':
-        response = this.generateSkillResponse(message);
-        break;
-      case 'progress_inquiry':
-        response = this.generateProgressResponse();
-        break;
-      case 'challenge_request':
-        response = this.generateChallengeResponse();
-        break;
-      case 'specific_concept':
-        response = this.generateConceptExplanation(message);
-        break;
-      default:
-        response = this.generateDefaultResponse();
+    if (recentHistory.length > 0) {
+      contextPrompt += "Previous conversation context:\n";
+      recentHistory.forEach((item, index) => {
+        if (index < recentHistory.length - 1) { // Don't include the current message
+          contextPrompt += `${item.role}: ${item.content}\n`;
+        }
+      });
+      contextPrompt += "\n";
     }
     
-    this.addToConversationHistory('assistant', response);
-    return response;
+    contextPrompt += `Current user message: ${currentMessage}`;
+    
+    return contextPrompt;
   }
   
   /**

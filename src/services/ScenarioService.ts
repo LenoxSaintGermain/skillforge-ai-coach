@@ -425,45 +425,189 @@ export class ScenarioService {
     learningGoals: LearningGoal[],
     description?: string
   ): Promise<Scenario> {
-    // In a real implementation, this would call an AI API to generate a scenario
-    // We'll incorporate the description in the scenario if provided
+    try {
+      console.log('Generating scenario with AI for:', userProfile);
+      
+      // Build the prompt for scenario generation
+      const prompt = this.buildScenarioPrompt(userProfile, learningGoals, description);
+      
+      // Call AI to generate the scenario
+      const generatedScenario = await this.callGeminiForScenario(prompt);
+      
+      // Parse and structure the response
+      const scenario = this.parseGeneratedScenario(generatedScenario);
+      
+      return scenario;
+      
+    } catch (error) {
+      console.error('Error generating scenario with AI:', error);
+      
+      // Fallback to basic scenario generation
+      return this.generateFallbackScenario(userProfile, learningGoals, description);
+    }
+  }
+
+  /**
+   * Builds the prompt for AI scenario generation
+   */
+  private buildScenarioPrompt(userProfile: UserProfile, learningGoals: LearningGoal[], description?: string): string {
+    const learningGoalsText = learningGoals.map(goal => goal.description).join(', ');
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Use description to influence the scenario if provided
+    return `Generate a comprehensive AI learning scenario for the following profile:
+
+Role: ${userProfile.role}
+Industry: ${userProfile.industry}
+AI Knowledge Level: ${userProfile.aiKnowledgeLevel}
+Learning Goals: ${learningGoalsText}
+${description ? `Additional Context: ${description}` : ''}
+
+Create a detailed scenario that includes:
+1. An engaging title that reflects the role and industry
+2. A realistic context that puts the learner in a professional situation
+3. A specific challenge that requires AI knowledge and skills
+4. 5 progressive tasks that guide learning (each with a clear description)
+5. 6-8 relevant resources to support learning
+6. 5 evaluation criteria for success
+7. 3-4 skills that will be developed
+8. Appropriate difficulty level (Beginner/Intermediate/Advanced)
+9. Estimated completion time (30-120 minutes)
+
+The scenario should be practical, engaging, and directly applicable to their work environment.
+
+Please format the response as a structured JSON object with the following structure:
+{
+  "title": "Scenario title",
+  "context": "Detailed background context",
+  "challenge": "Specific challenge to solve", 
+  "tasks": [
+    {"description": "Task 1 description"},
+    {"description": "Task 2 description"},
+    {"description": "Task 3 description"},
+    {"description": "Task 4 description"},
+    {"description": "Task 5 description"}
+  ],
+  "resources": ["Resource 1", "Resource 2", ...],
+  "evaluationCriteria": ["Criteria 1", "Criteria 2", ...],
+  "skillsAddressed": ["Skill 1", "Skill 2", ...],
+  "difficultyLevel": "Intermediate",
+  "estimatedTime": "90 minutes"
+}`;
+  }
+
+  /**
+   * Calls Gemini API to generate scenario
+   */
+  private async callGeminiForScenario(prompt: string): Promise<string> {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_ANON_KEY
+    );
+
+    const { data, error } = await supabase.functions.invoke('gemini-api', {
+      body: {
+        prompt,
+        systemPrompt: 'You are an expert AI education consultant who creates highly engaging, practical learning scenarios. Always return valid JSON format as requested.',
+        temperature: 0.8,
+        maxTokens: 2000
+      }
+    });
+
+    if (error) {
+      throw new Error(`Gemini API error: ${error.message}`);
+    }
+
+    if (!data?.generatedText) {
+      throw new Error('No response from Gemini API');
+    }
+
+    return data.generatedText;
+  }
+
+  /**
+   * Parses the AI-generated scenario response
+   */
+  private parseGeneratedScenario(generatedText: string): Scenario {
+    try {
+      // Try to extract JSON from the response
+      const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No JSON found in response');
+      }
+      
+      const parsedData = JSON.parse(jsonMatch[0]);
+      
+      // Create scenario with parsed data
+      const scenario: Scenario = {
+        id: `ai-generated-${Date.now()}`,
+        title: parsedData.title || 'AI-Generated Scenario',
+        context: parsedData.context || '',
+        challenge: parsedData.challenge || '',
+        tasks: (parsedData.tasks || []).map((task: any, index: number) => ({
+          id: `t-ai-${Date.now()}-${index}`,
+          description: task.description || task,
+          isCompleted: false
+        })),
+        resources: parsedData.resources || [],
+        evaluationCriteria: parsedData.evaluationCriteria || [],
+        skillsAddressed: parsedData.skillsAddressed || [],
+        difficultyLevel: parsedData.difficultyLevel || 'Intermediate',
+        estimatedTime: parsedData.estimatedTime || '90 minutes',
+        completionStats: {
+          percentComplete: 0,
+          timeSpent: '0 minutes',
+          skillProgress: (parsedData.skillsAddressed || []).map((skill: string) => ({
+            skillName: skill,
+            progress: 0
+          })),
+          coachInteractions: 0
+        }
+      };
+      
+      return scenario;
+      
+    } catch (parseError) {
+      console.error('Error parsing generated scenario:', parseError);
+      throw new Error('Failed to parse AI-generated scenario');
+    }
+  }
+
+  /**
+   * Fallback scenario generation when AI fails
+   */
+  private generateFallbackScenario(userProfile: UserProfile, learningGoals: LearningGoal[], description?: string): Scenario {
     const scenarioFocus = description 
       ? `with focus on: ${description}`
       : 'focusing on general AI adoption';
     
-    const newScenario: Scenario = {
-      id: `${Date.now()}`,
+    return {
+      id: `fallback-${Date.now()}`,
       title: `AI Strategy Development for ${userProfile.industry} ${description ? '- Customized' : ''}`,
       context: `As a ${userProfile.role} in the ${userProfile.industry} industry, you've been tasked with developing an AI strategy ${scenarioFocus}. The leadership team is interested in understanding how AI can create competitive advantages and improve operational efficiency.`,
       challenge: `Create a comprehensive AI strategy document that identifies opportunities, prioritizes initiatives, addresses ethical considerations, and includes an implementation roadmap.`,
       tasks: [
         {
-          id: `t-new-1`,
+          id: `t-fallback-1`,
           description: 'Conduct an AI readiness assessment for your organization',
           isCompleted: false
         },
         {
-          id: `t-new-2`,
+          id: `t-fallback-2`,
           description: 'Identify 3-5 high-impact AI use cases specific to your industry',
           isCompleted: false
         },
         {
-          id: `t-new-3`,
+          id: `t-fallback-3`,
           description: 'Develop evaluation criteria for AI vendors and solutions',
           isCompleted: false
         },
         {
-          id: `t-new-4`,
+          id: `t-fallback-4`,
           description: 'Create an ethical framework for AI implementation',
           isCompleted: false
         },
         {
-          id: `t-new-5`,
+          id: `t-fallback-5`,
           description: 'Design an implementation roadmap with clear milestones',
           isCompleted: false
         }
@@ -497,18 +641,6 @@ export class ScenarioService {
         coachInteractions: 0
       }
     };
-    
-    // If there's a description, adjust the skills addressed
-    if (description) {
-      // Add a skill based on the description (simplified for demo)
-      const customSkill = description.length > 30 
-        ? description.substring(0, 30) + "..." 
-        : description;
-      
-      newScenario.skillsAddressed.push(`${customSkill} Mastery`);
-    }
-    
-    return newScenario;
   }
   
   /**
