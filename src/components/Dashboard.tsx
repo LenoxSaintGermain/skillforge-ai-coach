@@ -73,7 +73,7 @@ const Dashboard = () => {
         <div className="flex items-center bg-skillforge-light text-skillforge-dark px-4 py-2 rounded-lg">
           <Trophy className="h-5 w-5 mr-2" />
           <span>AI Knowledge Level: </span>
-          <span className="font-medium ml-1">{currentUser.aiKnowledgeLevel}</span>
+          <span className="font-medium ml-1">{currentUser.ai_knowledge_level}</span>
         </div>
       </div>
       
@@ -85,9 +85,9 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {currentUser.learningGoals?.map((goal, index) => (
+              {currentUser.learning_goals?.map((goal, index) => (
                 <div key={index} className="space-y-2">
-                  <div className="text-sm font-medium">{goal.skillArea}</div>
+                  <div className="text-sm font-medium">{goal.skill_area}</div>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-muted-foreground">{goal.description}</span>
                     <span className="text-xs font-medium">{goal.progress}%</span>

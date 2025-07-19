@@ -1,77 +1,185 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface User {
-  id?: string;
+  id: string;
+  user_id: string;
   name: string;
   email?: string;
   role?: string;
   industry?: string;
-  aiKnowledgeLevel?: string;
-  learningGoals?: LearningGoal[];
-  lastLoginDate?: Date | null;
-  createdAt?: Date;
+  ai_knowledge_level?: string;
+  avatar_url?: string;
+  bio?: string;
+  learning_goals?: LearningGoal[];
+  achievements?: Achievement[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface LearningGoal {
   id: string;
+  user_id: string;
   description: string;
-  skillArea: string;
+  skill_area: string;
   progress: number;
+  target_date?: string;
+}
+
+export interface Achievement {
+  id: string;
+  achievement_type: string;
+  title: string;
+  description?: string;
+  badge_icon?: string;
+  earned_at: string;
 }
 
 interface UserContextType {
   currentUser: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  session: Session | null;
+  login: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
   logout: () => Promise<void>;
   updateUser: (userData: Partial<User>) => Promise<void>;
+  refreshUserData: () => Promise<void>;
 }
-
-const defaultUser: User = {
-  id: '1',
-  name: 'Demo User',
-  email: 'demo@skillforge.ai',
-  role: 'Product Manager',
-  industry: 'Technology',
-  aiKnowledgeLevel: 'Intermediate',
-  lastLoginDate: null,
-  learningGoals: [
-    { id: '1', description: 'Learn prompt engineering for business use cases', skillArea: 'Prompt Engineering', progress: 25 },
-    { id: '2', description: 'Understand AI model capabilities and limitations', skillArea: 'AI Fundamentals', progress: 40 },
-    { id: '3', description: 'Implement AI in product development', skillArea: 'Implementation', progress: 10 },
-  ]
-};
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(defaultUser);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Mock login function for demonstration
-  const login = async (email: string, password: string): Promise<void> => {
+  // Fetch user profile and related data
+  const fetchUserData = async (userId: string): Promise<User | null> => {
+    try {
+      // Fetch profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        return null;
+      }
+
+      // Fetch learning goals
+      const { data: learningGoals } = await supabase
+        .from('learning_goals')
+        .select('*')
+        .eq('user_id', userId);
+
+      // Fetch achievements
+      const { data: achievements } = await supabase
+        .from('achievements')
+        .select('*')
+        .eq('user_id', userId)
+        .order('earned_at', { ascending: false });
+
+      return {
+        ...profile,
+        learning_goals: learningGoals || [],
+        achievements: achievements || []
+      };
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      return null;
+    }
+  };
+
+  // Refresh user data
+  const refreshUserData = async () => {
+    if (session?.user?.id) {
+      const userData = await fetchUserData(session.user.id);
+      setCurrentUser(userData);
+    }
+  };
+
+  // Initialize auth state
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        
+        if (session?.user) {
+          const userData = await fetchUserData(session.user.id);
+          setCurrentUser(userData);
+        } else {
+          setCurrentUser(null);
+        }
+        
+        setIsLoading(false);
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) {
+        fetchUserData(session.user.id).then(setCurrentUser);
+      }
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Sign up function
+  const signUp = async (email: string, password: string, name: string) => {
     setIsLoading(true);
     try {
-      // Simulate API request delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setCurrentUser(defaultUser);
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            name: name
+          }
+        }
+      });
+      
+      return { error };
     } catch (error) {
-      console.error('Login error:', error);
-      throw error;
+      return { error };
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Mock logout function
+  // Login function
+  const login = async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      return { error };
+    } catch (error) {
+      return { error };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Logout function
   const logout = async (): Promise<void> => {
     setIsLoading(true);
     try {
-      // Simulate API request delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setCurrentUser(null);
+      await supabase.auth.signOut();
     } catch (error) {
       console.error('Logout error:', error);
       throw error;
@@ -80,13 +188,21 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Mock update user function
+  // Update user function
   const updateUser = async (userData: Partial<User>): Promise<void> => {
+    if (!currentUser) return;
+    
     setIsLoading(true);
     try {
-      // Simulate API request delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setCurrentUser(prev => prev ? { ...prev, ...userData } : null);
+      const { error } = await supabase
+        .from('profiles')
+        .update(userData)
+        .eq('user_id', currentUser.user_id);
+
+      if (error) throw error;
+      
+      // Refresh user data
+      await refreshUserData();
     } catch (error) {
       console.error('Update user error:', error);
       throw error;
@@ -98,11 +214,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <UserContext.Provider value={{ 
       currentUser, 
-      isAuthenticated: !!currentUser, 
-      isLoading, 
-      login, 
+      isAuthenticated: !!session?.user, 
+      isLoading,
+      session,
+      login,
+      signUp, 
       logout, 
-      updateUser 
+      updateUser,
+      refreshUserData
     }}>
       {children}
     </UserContext.Provider>

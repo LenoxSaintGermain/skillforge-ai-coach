@@ -108,10 +108,10 @@ const ScenarioGenerator = () => {
       const userProfile = {
         role,
         industry,
-        aiKnowledgeLevel: currentUser?.aiKnowledgeLevel || 'Beginner'
+        aiKnowledgeLevel: currentUser?.ai_knowledge_level || 'Beginner'
       };
       
-      const learningGoals = currentUser?.learningGoals || [];
+      const learningGoals = currentUser?.learning_goals || [];
       
       // Pass description to the scenario generation service
       const scenario = await scenarioService.generateScenario(userProfile, learningGoals, description);

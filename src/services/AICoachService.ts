@@ -117,11 +117,7 @@ export class AICoachService {
    * Calls the Gemini API via edge function
    */
   private async callGeminiAPI(prompt: string, systemPrompt?: string): Promise<string> {
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY
-    );
+    const { supabase } = await import('@/integrations/supabase/client');
 
     const { data, error } = await supabase.functions.invoke('gemini-api', {
       body: {
@@ -189,11 +185,11 @@ export class AICoachService {
    * Initializes coach with welcome message based on user status
    */
   public async initializeCoach(user: User): Promise<string> {
-    const isReturningUser = user.lastLoginDate !== null;
+    const isReturningUser = user.created_at !== null;
     
     let welcomeMessage;
     if (isReturningUser) {
-      welcomeMessage = `Welcome back, ${user.name}! I see you've been making progress on your AI learning journey. You're currently at ${user.aiKnowledgeLevel} level with strong skills in ${this.learningJourney.currentSkillFocus.join(', ')}. \n\nSince your last visit, you've advanced to ${this.learningJourney.progressMetrics['Prompt Engineering']}% in Prompt Engineering. Would you like to continue with your current scenario "Optimizing Customer Support with AI" or explore something new?`;
+      welcomeMessage = `Welcome back, ${user.name}! I see you've been making progress on your AI learning journey. You're currently at ${user.ai_knowledge_level} level with strong skills in ${this.learningJourney.currentSkillFocus.join(', ')}. \n\nSince your last visit, you've advanced to ${this.learningJourney.progressMetrics['Prompt Engineering']}% in Prompt Engineering. Would you like to continue with your current scenario "Optimizing Customer Support with AI" or explore something new?`;
     } else {
       welcomeMessage = `Welcome to AI SkillForge, ${user.name}! I'll be your AI coach to help you master AI skills relevant to your ${user.role} role. Based on your profile, I'd recommend starting with foundational AI concepts and then moving to practical applications in your industry. \n\nShall we begin with an assessment of your current AI knowledge, or would you prefer to dive right into a learning scenario?`;
     }

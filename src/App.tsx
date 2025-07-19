@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AppLayout from "./components/AppLayout";
 import Index from "./pages/Index";
+import AuthPage from "./pages/AuthPage";
 import ScenariosPage from "./pages/ScenariosPage";
 import ScenarioDetailPage from "./pages/ScenarioDetailPage";
 import ScenarioGeneratorPage from "./pages/ScenarioGeneratorPage";
@@ -29,6 +30,10 @@ const App = () => (
               <Toaster />
               <Sonner />
               <Routes>
+                {/* Auth page without layout */}
+                <Route path="/auth" element={<AuthPage />} />
+                
+                {/* App pages with layout */}
                 <Route element={<AppLayout />}>
                   <Route path="/" element={<Index />} />
                   <Route path="/scenarios" element={<ScenariosPage />} />

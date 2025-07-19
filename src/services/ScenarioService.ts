@@ -498,11 +498,7 @@ Please format the response as a structured JSON object with the following struct
    * Calls Gemini API to generate scenario
    */
   private async callGeminiForScenario(prompt: string): Promise<string> {
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY
-    );
+    const { supabase } = await import('@/integrations/supabase/client');
 
     const { data, error } = await supabase.functions.invoke('gemini-api', {
       body: {
