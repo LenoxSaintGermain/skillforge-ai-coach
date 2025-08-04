@@ -68,6 +68,32 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (profileError) {
         console.error('Error fetching profile:', profileError);
+        
+        // If profile doesn't exist, create a basic one
+        if (profileError.code === 'PGRST116') {
+          console.log('Creating basic profile for user:', userId);
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              user_id: userId,
+              name: 'New User',
+              ai_knowledge_level: 'Beginner'
+            })
+            .select()
+            .single();
+          
+          if (createError) {
+            console.error('Error creating profile:', createError);
+            return null;
+          }
+          
+          return {
+            ...newProfile,
+            learning_goals: [],
+            achievements: []
+          };
+        }
+        
         return null;
       }
 
@@ -107,26 +133,37 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         setSession(session);
         
         if (session?.user) {
-          const userData = await fetchUserData(session.user.id);
-          setCurrentUser(userData);
+          // Use setTimeout to prevent deadlock
+          setTimeout(async () => {
+            try {
+              const userData = await fetchUserData(session.user.id);
+              setCurrentUser(userData);
+            } catch (error) {
+              console.error('Error fetching user data:', error);
+              setCurrentUser(null);
+            } finally {
+              setIsLoading(false);
+            }
+          }, 0);
         } else {
           setCurrentUser(null);
+          setIsLoading(false);
         }
-        
-        setIsLoading(false);
       }
     );
 
-    // Check for existing session
+    // Check for existing session only once
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        fetchUserData(session.user.id).then(setCurrentUser);
+      if (!session) {
+        setIsLoading(false);
       }
+      // Auth state change will handle session cases
+    }).catch((error) => {
+      console.error('Error getting session:', error);
       setIsLoading(false);
     });
 
