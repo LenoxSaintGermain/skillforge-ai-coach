@@ -51,11 +51,12 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
     // Update the scenario service
     scenarioService.updateScenarioProgress(scenario.id, "current-user", newCompletedSteps);
     
-    // Refresh the scenario data
-    const updatedScenario = scenarioService.getScenarioById(scenario.id);
-    if (updatedScenario) {
-      setUpdatedScenario(updatedScenario);
-    }
+    // Refresh the scenario data - since getScenarioById is now async, just update local state
+    const refreshedScenario = { ...updatedScenario };
+    refreshedScenario.tasks.forEach(task => {
+      task.isCompleted = newCompletedSteps.includes(task.id);
+    });
+    setUpdatedScenario(refreshedScenario);
     
     toast({
       title: isCompleted ? "Task completed!" : "Task marked as incomplete",

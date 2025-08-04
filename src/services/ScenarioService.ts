@@ -640,6 +640,41 @@ Please format the response as a structured JSON object with the following struct
   }
   
   /**
+   * Convert database scenario format to our Scenario interface
+   */
+  private convertDbScenarioToScenario(dbScenario: any): Scenario {
+    const scenarioData = dbScenario.scenario_data || {};
+    
+    return {
+      id: dbScenario.id,
+      title: dbScenario.title,
+      context: scenarioData.introduction || dbScenario.description,
+      challenge: dbScenario.description,
+      tasks: scenarioData.tasks || [
+        {
+          id: 'task-1',
+          description: 'Complete the scenario objectives',
+          isCompleted: false
+        }
+      ],
+      resources: scenarioData.resources || ['Scenario resources will be provided'],
+      evaluationCriteria: scenarioData.expectedOutcomes || ['Successful completion of objectives'],
+      skillsAddressed: dbScenario.learning_objectives || ['AI Skills'],
+      difficultyLevel: dbScenario.difficulty_level || 'Beginner',
+      estimatedTime: `${dbScenario.estimated_duration || 30} minutes`,
+      completionStats: {
+        percentComplete: 0,
+        timeSpent: '0 minutes',
+        skillProgress: (dbScenario.learning_objectives || ['AI Skills']).map((skill: string) => ({
+          skillName: skill,
+          progress: 0
+        })),
+        coachInteractions: 0
+      }
+    };
+  }
+
+  /**
    * Gets all available scenarios
    */
   public getScenarios(): Scenario[] {
@@ -649,7 +684,24 @@ Please format the response as a structured JSON object with the following struct
   /**
    * Gets a scenario by ID
    */
-  public getScenarioById(id: string): Scenario | undefined {
+  public async getScenarioById(id: string): Promise<Scenario | undefined> {
+    // Try to fetch from database first
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: dbScenario, error } = await supabase
+        .from('scenarios')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (!error && dbScenario) {
+        return this.convertDbScenarioToScenario(dbScenario);
+      }
+    } catch (error) {
+      console.warn('Database not available for scenario fetch:', error);
+    }
+
+    // Fallback to hardcoded scenarios
     return this.scenarios.find(s => s.id === id);
   }
   
@@ -677,7 +729,57 @@ Please format the response as a structured JSON object with the following struct
   /**
    * Updates a user's progress in a scenario
    */
-  public updateScenarioProgress(scenarioId: string, userId: string, completedTasks: string[]): void {
+  public async updateScenarioProgress(scenarioId: string, userId: string, completedTasks: string[]): Promise<void> {
+    // Update in database if available
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Get user's current progress or create new record
+      const { data: existingProgress } = await supabase
+        .from('user_scenario_progress')
+        .select('*')
+        .eq('scenario_id', scenarioId)
+        .eq('user_id', userId)
+        .single();
+
+      const progressData = {
+        completed_tasks: completedTasks,
+        current_step: completedTasks.length,
+        total_steps: 4 // Default workflow steps
+      };
+
+      const totalTasks = 4; // Default number of tasks
+      const percentComplete = Math.round((completedTasks.length / totalTasks) * 100);
+
+      if (existingProgress) {
+        // Update existing progress
+        await supabase
+          .from('user_scenario_progress')
+          .update({
+            progress_data: progressData,
+            status: percentComplete === 100 ? 'completed' : 'in_progress',
+            ...(percentComplete === 100 && { completed_at: new Date().toISOString() })
+          })
+          .eq('id', existingProgress.id);
+      } else {
+        // Create new progress record
+        await supabase
+          .from('user_scenario_progress')
+          .insert({
+            user_id: userId,
+            scenario_id: scenarioId,
+            progress_data: progressData,
+            status: 'in_progress',
+            started_at: new Date().toISOString()
+          });
+      }
+      
+      console.log(`Updated progress for scenario ${scenarioId}, user ${userId}: completed tasks ${completedTasks.join(', ')}`);
+    } catch (error) {
+      console.warn('Failed to update scenario progress in database:', error);
+    }
+
+    // Also update local scenarios for immediate UI feedback
     const scenario = this.scenarios.find(s => s.id === scenarioId);
     
     if (scenario && scenario.completionStats) {
@@ -691,13 +793,11 @@ Please format the response as a structured JSON object with the following struct
         task.isCompleted = completedTasks.includes(task.id);
       });
       
-      // Simulate updating skill progress
+      // Update skill progress
       scenario.completionStats.skillProgress = scenario.completionStats.skillProgress.map(skill => ({
         ...skill,
         progress: Math.min(100, skill.progress + Math.floor(Math.random() * 15))
       }));
-      
-      console.log(`Updated progress for scenario ${scenarioId}, user ${userId}: completed tasks ${completedTasks.join(', ')}`);
     }
   }
 }
