@@ -800,4 +800,81 @@ Please format the response as a structured JSON object with the following struct
       }));
     }
   }
+
+  /**
+   * Gets user progress for a specific scenario
+   */
+  public async getUserScenarioProgress(scenarioId: string, userId: string): Promise<any> {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { data, error } = await supabase
+        .from('user_scenario_progress')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('scenario_id', scenarioId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error getting scenario progress:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Marks a scenario as completed
+   */
+  public async completeScenario(scenarioId: string, userId: string, solution?: string): Promise<void> {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { data, error } = await supabase
+        .from('user_scenario_progress')
+        .upsert({
+          user_id: userId,
+          scenario_id: scenarioId,
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          feedback: solution,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,scenario_id'
+        });
+
+      if (error) throw error;
+      
+      console.log('Scenario completed successfully:', data);
+    } catch (error) {
+      console.error('Error completing scenario:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Saves user feedback for a scenario
+   */
+  public async saveFeedback(scenarioId: string, userId: string, feedbackText: string, rating: number): Promise<void> {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { data, error } = await supabase
+        .from('user_scenario_progress')
+        .update({
+          feedback: feedbackText,
+          score: rating,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .eq('scenario_id', scenarioId);
+
+      if (error) throw error;
+      
+      console.log('Feedback saved successfully:', data);
+    } catch (error) {
+      console.error('Error saving feedback:', error);
+      throw error;
+    }
+  }
 }

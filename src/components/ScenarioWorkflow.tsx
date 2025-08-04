@@ -9,6 +9,7 @@ import { useAI } from '@/contexts/AIContext';
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
 import { Textarea } from "@/components/ui/textarea";
+import { useUser } from '@/contexts/UserContext';
 
 interface ScenarioWorkflowProps {
   scenario: Scenario;
@@ -26,43 +27,100 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackText, setFeedbackText] = useState('');
+  const [userProgress, setUserProgress] = useState<any>(null);
   
   const { setActiveCoach } = useAI();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { currentUser, isAuthenticated } = useUser();
   
   useEffect(() => {
-    // Initialize completed steps from scenario data
-    const initialCompletedSteps = scenario.tasks
-      .filter(task => task.isCompleted)
-      .map(task => task.id);
+    const loadScenarioProgress = async () => {
+      if (!currentUser || !isAuthenticated) return;
+      
+      try {
+        // Load user progress for this scenario
+        const progress = await scenarioService.getUserScenarioProgress(scenario.id, currentUser.user_id);
+        setUserProgress(progress);
+        
+        // Initialize completed steps from progress data
+        const completedTaskIds = progress?.progress_data?.completedTasks || [];
+        setCompletedSteps(completedTaskIds);
+        
+        // Update scenario with completion status
+        const updatedScenarioData = { ...scenario };
+        updatedScenarioData.tasks = updatedScenarioData.tasks.map(task => ({
+          ...task,
+          isCompleted: completedTaskIds.includes(task.id)
+        }));
+        
+        setUpdatedScenario(updatedScenarioData);
+        setIsSubmitted(progress?.status === 'completed');
+      } catch (error) {
+        console.error('Error loading scenario progress:', error);
+        // Initialize with default values
+        setCompletedSteps([]);
+        setUpdatedScenario(scenario);
+      }
+    };
     
-    setCompletedSteps(initialCompletedSteps);
-    setUpdatedScenario(scenario);
-  }, [scenario]);
+    loadScenarioProgress();
+  }, [scenario, currentUser, isAuthenticated]);
   
-  const handleMarkTaskComplete = (taskId: string, isCompleted: boolean) => {
+  const handleMarkTaskComplete = async (taskId: string, isCompleted: boolean) => {
+    if (!currentUser || !isAuthenticated) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to track your progress.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const newCompletedSteps = isCompleted 
       ? [...completedSteps, taskId] 
       : completedSteps.filter(id => id !== taskId);
     
     setCompletedSteps(newCompletedSteps);
     
-    // Update the scenario service
-    scenarioService.updateScenarioProgress(scenario.id, "current-user", newCompletedSteps);
-    
-    // Refresh the scenario data - since getScenarioById is now async, just update local state
-    const refreshedScenario = { ...updatedScenario };
-    refreshedScenario.tasks.forEach(task => {
-      task.isCompleted = newCompletedSteps.includes(task.id);
-    });
-    setUpdatedScenario(refreshedScenario);
-    
-    toast({
-      title: isCompleted ? "Task completed!" : "Task marked as incomplete",
-      description: "Your progress has been updated.",
-      duration: 3000,
-    });
+    try {
+      // Update progress in database
+      await scenarioService.updateScenarioProgress(scenario.id, currentUser.user_id, newCompletedSteps);
+      
+      // Update local scenario state
+      const refreshedScenario = { ...updatedScenario };
+      refreshedScenario.tasks.forEach(task => {
+        task.isCompleted = newCompletedSteps.includes(task.id);
+      });
+      
+      // Update completion stats
+      const totalTasks = refreshedScenario.tasks.length;
+      const completedCount = newCompletedSteps.length;
+      refreshedScenario.completionStats = {
+        ...refreshedScenario.completionStats,
+        percentComplete: Math.round((completedCount / totalTasks) * 100)
+      };
+      
+      setUpdatedScenario(refreshedScenario);
+      
+      toast({
+        title: isCompleted ? "Task completed!" : "Task marked as incomplete",
+        description: "Your progress has been saved.",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Error updating progress:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save progress. Please try again.",
+        variant: "destructive",
+      });
+      // Revert local state on error
+      setCompletedSteps(isCompleted 
+        ? completedSteps.filter(id => id !== taskId)
+        : [...completedSteps, taskId]
+      );
+    }
   };
   
   const handleOpenCoachChat = () => {
@@ -77,64 +135,85 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
     });
   };
   
-  const handleSubmitSolution = () => {
-    // Here we would handle submission logic
-    setIsSubmitted(true);
-    
-    // Update scenario as complete in the service
-    if (updatedScenario.completionStats) {
-      updatedScenario.completionStats.percentComplete = 100;
-      updatedScenario.completionStats.completedDate = new Date();
-      
-      // Update skill progress to 100%
-      if (updatedScenario.completionStats.skillProgress) {
-        updatedScenario.completionStats.skillProgress = 
-          updatedScenario.completionStats.skillProgress.map(skill => ({
-            ...skill,
-            progress: 100
-          }));
-      }
-      
+  const handleSubmitSolution = async () => {
+    if (!currentUser || !isAuthenticated) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to submit your solution.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
       // Mark all tasks as complete
-      updatedScenario.tasks = updatedScenario.tasks.map(task => ({
+      const allTaskIds = updatedScenario.tasks.map(task => task.id);
+      setCompletedSteps(allTaskIds);
+      
+      // Mark scenario as completed in database
+      await scenarioService.completeScenario(scenario.id, currentUser.user_id, solutionText);
+      
+      setIsSubmitted(true);
+      
+      // Update local state
+      const completedScenario = { ...updatedScenario };
+      completedScenario.tasks = completedScenario.tasks.map(task => ({
         ...task,
         isCompleted: true
       }));
       
-      // Save the updated scenario
-      scenarioService.updateScenarioById(updatedScenario.id, updatedScenario);
+      completedScenario.completionStats = {
+        ...completedScenario.completionStats,
+        percentComplete: 100,
+        completedDate: new Date()
+      };
+      
+      setUpdatedScenario(completedScenario);
+      
+      toast({
+        title: "Solution submitted!",
+        description: "Your work has been submitted for evaluation.",
+        duration: 3000,
+      });
+      
+      // Show feedback dialog
+      setShowFeedbackDialog(true);
+    } catch (error) {
+      console.error('Error submitting solution:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit solution. Please try again.",
+        variant: "destructive",
+      });
     }
-    
-    toast({
-      title: "Solution submitted!",
-      description: "Your work has been submitted for evaluation.",
-      duration: 3000,
-    });
-    
-    // Show feedback dialog
-    setShowFeedbackDialog(true);
   };
   
-  const handleFeedbackSubmit = () => {
-    // Save user feedback
-    if (updatedScenario.completionStats) {
-      updatedScenario.completionStats.userFeedback = feedbackText;
+  const handleFeedbackSubmit = async () => {
+    if (!currentUser || !isAuthenticated) return;
+
+    try {
+      // Save feedback to database
+      await scenarioService.saveFeedback(scenario.id, currentUser.user_id, feedbackText, feedbackRating);
       
-      // Save the updated scenario
-      scenarioService.updateScenarioById(updatedScenario.id, updatedScenario);
-    }
-    
-    setShowFeedbackDialog(false);
-    
-    toast({
-      title: "Feedback submitted",
-      description: "Thank you for your feedback!",
-      duration: 3000,
-    });
-    
-    // Navigate to completion view or call onComplete
-    if (onComplete) {
-      onComplete();
+      setShowFeedbackDialog(false);
+      
+      toast({
+        title: "Feedback submitted",
+        description: "Thank you for your feedback!",
+        duration: 3000,
+      });
+      
+      // Navigate to completion view or call onComplete
+      if (onComplete) {
+        onComplete();
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit feedback. Please try again.",
+        variant: "destructive",
+      });
     }
   };
   
