@@ -655,19 +655,33 @@ Please format the response as a structured JSON object with the following struct
   private convertDbScenarioToScenario(dbScenario: any): Scenario {
     const scenarioData = dbScenario.scenario_data || {};
     
-    return {
-      id: dbScenario.id,
-      title: dbScenario.title,
-      context: scenarioData.introduction || dbScenario.description,
-      challenge: dbScenario.description,
-      tasks: scenarioData.tasks || [
+    // Convert resources from objects to strings if they're objects
+    const resources = scenarioData.resources ? 
+      scenarioData.resources.map((resource: any) => 
+        typeof resource === 'string' ? resource : resource.title || resource.url || 'Resource'
+      ) : ['Scenario resources will be provided'];
+    
+    // Extract tasks properly
+    const tasks = scenarioData.tasks ? 
+      scenarioData.tasks.map((task: any) => ({
+        id: task.id || `task-${Math.random().toString(36).substr(2, 9)}`,
+        description: task.description || task.title || 'Complete task',
+        isCompleted: task.isCompleted || false
+      })) : [
         {
           id: 'task-1',
           description: 'Complete the scenario objectives',
           isCompleted: false
         }
-      ],
-      resources: scenarioData.resources || ['Scenario resources will be provided'],
+      ];
+    
+    return {
+      id: dbScenario.id,
+      title: dbScenario.title,
+      context: scenarioData.introduction || dbScenario.description,
+      challenge: dbScenario.description,
+      tasks: tasks,
+      resources: resources,
       evaluationCriteria: scenarioData.expectedOutcomes || ['Successful completion of objectives'],
       skillsAddressed: dbScenario.learning_objectives || ['AI Skills'],
       difficultyLevel: dbScenario.difficulty_level || 'Beginner',
