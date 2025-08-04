@@ -60,8 +60,8 @@ const ScenarioExplorer = () => {
   useEffect(() => {
     const loadScenarios = async () => {
       try {
-        // In a real app, this would fetch scenarios from an API
-        const allScenarios = scenarioService.getScenarios();
+        // Fetch scenarios from database via ScenarioService
+        const allScenarios = await scenarioService.getScenarios();
         setScenarios(allScenarios);
       } catch (error) {
         console.error('Error loading scenarios:', error);

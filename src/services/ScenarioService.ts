@@ -685,10 +685,30 @@ Please format the response as a structured JSON object with the following struct
   }
 
   /**
-   * Gets all available scenarios
+   * Gets all available scenarios from database first, fallback to hardcoded
    */
-  public getScenarios(): Scenario[] {
-    return [...this.scenarios];
+  public async getScenarios(): Promise<Scenario[]> {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: dbScenarios, error } = await supabase
+        .from('scenarios')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching scenarios from database:', error);
+        return [...this.scenarios]; // Fallback to hardcoded scenarios
+      }
+
+      if (dbScenarios && dbScenarios.length > 0) {
+        return dbScenarios.map(scenario => this.convertDbScenarioToScenario(scenario));
+      }
+
+      return [...this.scenarios]; // Fallback if no scenarios in database
+    } catch (error) {
+      console.error('Error in getScenarios:', error);
+      return [...this.scenarios]; // Fallback to hardcoded scenarios
+    }
   }
   
   /**

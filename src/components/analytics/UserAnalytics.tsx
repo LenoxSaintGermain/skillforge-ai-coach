@@ -66,6 +66,16 @@ const UserAnalytics = () => {
 
       if (progressError) {
         console.error('Error fetching progress data:', progressError);
+        // Set empty data instead of returning to prevent infinite loading
+        setAnalyticsData({
+          totalScenariosCompleted: 0,
+          totalTimeSpent: 0,
+          averageCompletionTime: 0,
+          skillProgress: [],
+          monthlyActivity: [],
+          difficultyDistribution: [],
+          recentCompletions: []
+        });
         return;
       }
 
