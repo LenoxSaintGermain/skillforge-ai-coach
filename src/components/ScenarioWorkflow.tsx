@@ -49,7 +49,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
         
         // Update scenario with completion status
         const updatedScenarioData = { ...scenario };
-        updatedScenarioData.tasks = updatedScenarioData.tasks.map(task => ({
+        updatedScenarioData.tasks = (updatedScenarioData.tasks || []).map(task => ({
           ...task,
           isCompleted: completedTaskIds.includes(task.id)
         }));
@@ -89,12 +89,12 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
       
       // Update local scenario state
       const refreshedScenario = { ...updatedScenario };
-      refreshedScenario.tasks.forEach(task => {
+      (refreshedScenario.tasks || []).forEach(task => {
         task.isCompleted = newCompletedSteps.includes(task.id);
       });
       
       // Update completion stats
-      const totalTasks = refreshedScenario.tasks.length;
+      const totalTasks = (refreshedScenario.tasks || []).length;
       const completedCount = newCompletedSteps.length;
       refreshedScenario.completionStats = {
         ...refreshedScenario.completionStats,
@@ -147,7 +147,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
 
     try {
       // Mark all tasks as complete
-      const allTaskIds = updatedScenario.tasks.map(task => task.id);
+      const allTaskIds = (updatedScenario.tasks || []).map(task => task.id);
       setCompletedSteps(allTaskIds);
       
       // Mark scenario as completed in database
@@ -157,7 +157,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
       
       // Update local state
       const completedScenario = { ...updatedScenario };
-      completedScenario.tasks = completedScenario.tasks.map(task => ({
+      completedScenario.tasks = (completedScenario.tasks || []).map(task => ({
         ...task,
         isCompleted: true
       }));
@@ -237,7 +237,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
           
           <h3 className="text-lg font-medium">Skills You'll Develop</h3>
           <div className="flex flex-wrap gap-2 mt-2">
-            {updatedScenario.skillsAddressed.map((skill, index) => (
+            {(updatedScenario.skillsAddressed || []).map((skill, index) => (
               <span key={index} className="text-xs bg-skillforge-light text-skillforge-dark px-2 py-1 rounded-full">
                 {skill}
               </span>
@@ -262,7 +262,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Required Tasks</h3>
           <ul className="space-y-3">
-            {updatedScenario.tasks.map((task, index) => (
+            {(updatedScenario.tasks || []).map((task, index) => (
               <li key={index} className="flex items-start">
                 <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-primary mr-2">
                   {completedSteps.includes(task.id) ? 
@@ -307,7 +307,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Available Resources</h3>
           <ul className="space-y-2">
-            {updatedScenario.resources.map((resource, index) => (
+            {(updatedScenario.resources || []).map((resource, index) => (
               <li key={index} className="text-sm flex items-center">
                 <span className="mr-2">•</span>
                 <span>{resource}</span>
@@ -343,7 +343,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
             <>
               <h3 className="text-lg font-medium">Evaluation Criteria</h3>
               <ul className="space-y-2">
-                {updatedScenario.evaluationCriteria.map((criteria, index) => (
+                {(updatedScenario.evaluationCriteria || []).map((criteria, index) => (
                   <li key={index} className="text-sm flex items-center">
                     <span className="mr-2">•</span>
                     <span>{criteria}</span>
