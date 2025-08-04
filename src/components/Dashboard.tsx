@@ -2,10 +2,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import ScenarioGenerator from "./ScenarioGenerator";
+import UserAnalytics from "./analytics/UserAnalytics";
 import { useUser } from "@/contexts/UserContext";
-import { Brain, Target, BookOpen, Trophy, ArrowRight, Award, Sparkles } from "lucide-react";
+import { Brain, Target, BookOpen, Trophy, ArrowRight, Award, Sparkles, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const SkillCard = ({ skill, progress }: { skill: string; progress: number }) => {
   return (
@@ -77,57 +79,80 @@ const Dashboard = () => {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="md:col-span-2 border-t-4 border-skillforge-secondary">
-          <CardHeader>
-            <CardTitle className="text-xl">Your Learning Progress</CardTitle>
-            <CardDescription>Track your skills development</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {currentUser.learning_goals?.map((goal, index) => (
-                <div key={index} className="space-y-2">
-                  <div className="text-sm font-medium">{goal.skill_area}</div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-muted-foreground">{goal.description}</span>
-                    <span className="text-xs font-medium">{goal.progress}%</span>
-                  </div>
-                  <Progress value={goal.progress} className="h-2" />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="generator">Scenario Generator</TabsTrigger>
+        </TabsList>
         
-        <Card className="border-t-4 border-skillforge-accent">
-          <CardHeader>
-            <CardTitle className="text-xl">Recommendations</CardTitle>
-            <CardDescription>Personalized for your goals</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <RecommendationCard 
-              title="Gemini Training Program" 
-              description="Follow a structured syllabus to learn building with Google's Gemini AI from idea to prototype."
-              icon={<Sparkles className="h-4 w-4 text-skillforge-secondary" />}
-              onClick={() => navigate('/gemini-training')}
-            />
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="md:col-span-2 border-t-4 border-skillforge-secondary">
+              <CardHeader>
+                <CardTitle className="text-xl">Your Learning Progress</CardTitle>
+                <CardDescription>Track your skills development</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {currentUser.learning_goals?.map((goal, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="text-sm font-medium">{goal.skill_area}</div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-muted-foreground">{goal.description}</span>
+                        <span className="text-xs font-medium">{goal.progress}%</span>
+                      </div>
+                      <Progress value={goal.progress} className="h-2" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
             
-            <RecommendationCard 
-              title="Prompt Engineering" 
-              description="Learn advanced techniques to craft effective prompts for AI models."
-              icon={<Brain className="h-4 w-4 text-skillforge-primary" />}
-            />
-            
-            <RecommendationCard 
-              title="AI Implementation" 
-              description="Explore strategies for integrating AI into product workflows."
-              icon={<Target className="h-4 w-4 text-skillforge-secondary" />}
-            />
-          </CardContent>
-        </Card>
-      </div>
-      
-      <ScenarioGenerator />
+            <Card className="border-t-4 border-skillforge-accent">
+              <CardHeader>
+                <CardTitle className="text-xl">Recommendations</CardTitle>
+                <CardDescription>Personalized for your goals</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <RecommendationCard 
+                  title="Gemini Training Program" 
+                  description="Follow a structured syllabus to learn building with Google's Gemini AI from idea to prototype."
+                  icon={<Sparkles className="h-4 w-4 text-skillforge-secondary" />}
+                  onClick={() => navigate('/gemini-training')}
+                />
+                
+                <RecommendationCard 
+                  title="Prompt Engineering" 
+                  description="Learn advanced techniques to craft effective prompts for AI models."
+                  icon={<Brain className="h-4 w-4 text-skillforge-primary" />}
+                />
+                
+                <RecommendationCard 
+                  title="AI Implementation" 
+                  description="Explore strategies for integrating AI into product workflows."
+                  icon={<Target className="h-4 w-4 text-skillforge-secondary" />}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="analytics" className="space-y-6">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold flex items-center">
+              <BarChart3 className="mr-2 h-6 w-6 text-skillforge-primary" />
+              Learning Analytics
+            </h2>
+            <p className="text-muted-foreground">Comprehensive insights into your AI learning journey</p>
+          </div>
+          <UserAnalytics />
+        </TabsContent>
+        
+        <TabsContent value="generator" className="space-y-6">
+          <ScenarioGenerator />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

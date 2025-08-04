@@ -437,13 +437,23 @@ export class ScenarioService {
       // Parse and structure the response
       const scenario = this.parseGeneratedScenario(generatedScenario);
       
+      // Save to database
+      await this.saveScenarioToDatabase(scenario, userProfile);
+      console.log('Generated and saved scenario:', scenario);
+      
       return scenario;
       
     } catch (error) {
       console.error('Error generating scenario with AI:', error);
       
       // Fallback to basic scenario generation
-      return this.generateFallbackScenario(userProfile, learningGoals, description);
+      const fallbackScenario = this.generateFallbackScenario(userProfile, learningGoals, description);
+      try {
+        await this.saveScenarioToDatabase(fallbackScenario, userProfile);
+      } catch (saveError) {
+        console.error('Error saving fallback scenario:', saveError);
+      }
+      return fallbackScenario;
     }
   }
 
@@ -724,6 +734,56 @@ Please format the response as a structured JSON object with the following struct
       ...scenario,
       id: scenario.id || `${Date.now()}`
     });
+  }
+
+  /**
+   * Save generated scenario to database
+   */
+  private async saveScenarioToDatabase(scenario: Scenario, userProfile: UserProfile): Promise<void> {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { error } = await supabase
+        .from('scenarios')
+        .insert({
+          id: scenario.id,
+          title: scenario.title,
+          description: scenario.challenge,
+          difficulty_level: scenario.difficultyLevel,
+          industry: userProfile.industry,
+          role: userProfile.role,
+          learning_objectives: scenario.skillsAddressed || [],
+          tags: scenario.skillsAddressed || [],
+          estimated_duration: this.parseEstimatedDuration(scenario.estimatedTime),
+          scenario_data: JSON.parse(JSON.stringify({
+            context: scenario.context,
+            challenge: scenario.challenge,
+            tasks: scenario.tasks.map(t => ({ id: t.id, description: t.description })),
+            resources: scenario.resources || [],
+            successCriteria: scenario.evaluationCriteria || [],
+            skillsAddressed: scenario.skillsAddressed
+          }))
+        });
+
+      if (error) {
+        console.error('Error saving scenario to database:', error);
+        throw error;
+      }
+
+      // Add to local scenarios array for immediate use
+      this.addScenario(scenario);
+    } catch (error) {
+      console.error('Failed to save scenario to database:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Helper to parse estimated duration from string to minutes
+   */
+  private parseEstimatedDuration(estimatedTime: string): number {
+    const match = estimatedTime.match(/(\d+)/);
+    return match ? parseInt(match[1]) : 60; // Default to 60 minutes
   }
   
   /**

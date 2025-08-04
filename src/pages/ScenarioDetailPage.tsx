@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Calendar, Clock, Users, MessageSquare } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import ScenarioWorkflow from '@/components/ScenarioWorkflow';
+import ScenarioAnalytics from '@/components/analytics/ScenarioAnalytics';
 import { ScenarioService } from '@/services/ScenarioService';
 import CoachChatPanel from "@/components/CoachChatPanel";
 import { useAI } from '@/contexts/AIContext';
@@ -105,91 +106,7 @@ const ScenarioDetailPage = () => {
         </TabsContent>
         
         <TabsContent value="analytics" className="space-y-6">
-          <div className="bg-background border rounded-lg p-6">
-            <h3 className="text-xl font-semibold mb-4">Progress Analytics</h3>
-            <div className="space-y-6">
-              <div>
-                <h4 className="text-sm font-medium mb-1">Completion Status</h4>
-                <div className="w-full bg-muted rounded-full h-2.5">
-                  <div 
-                    className="bg-primary h-2.5 rounded-full" 
-                    style={{ width: `${scenario.completionStats?.percentComplete || 0}%` }}
-                  ></div>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {scenario.completionStats?.percentComplete || 0}% complete
-                </p>
-              </div>
-              
-              <div>
-                <h4 className="text-sm font-medium mb-1">Time Spent</h4>
-                <p className="text-2xl font-bold">{scenario.completionStats?.timeSpent || '0 minutes'}</p>
-                <p className="text-sm text-muted-foreground">Out of estimated {scenario.estimatedTime}</p>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="border rounded-md p-4">
-                  <div className="flex items-center mb-2">
-                    <Calendar className="h-5 w-5 mr-2 text-skillforge-secondary" />
-                    <h4 className="font-medium">Completion Date</h4>
-                  </div>
-                  <p className="text-lg">
-                    {scenario.completionStats?.completedDate
-                      ? new Date(scenario.completionStats.completedDate).toLocaleDateString()
-                      : 'In Progress'}
-                  </p>
-                </div>
-                
-                <div className="border rounded-md p-4">
-                  <div className="flex items-center mb-2">
-                    <MessageSquare className="h-5 w-5 mr-2 text-skillforge-secondary" />
-                    <h4 className="font-medium">AI Coach Interactions</h4>
-                  </div>
-                  <p className="text-lg">{scenario.completionStats?.coachInteractions || 0}</p>
-                </div>
-              </div>
-              
-              <div>
-                <h4 className="text-sm font-medium mb-1">Skills Development</h4>
-                <div className="space-y-3 mt-2">
-                  {scenario.completionStats?.skillProgress.map((skill, index) => (
-                    <div key={index}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>{skill.skillName}</span>
-                        <span className="font-medium">{skill.progress}%</span>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-1.5">
-                        <div 
-                          className="bg-primary h-1.5 rounded-full" 
-                          style={{ width: `${skill.progress}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {scenario.completionStats?.userFeedback && (
-                <div>
-                  <h4 className="text-sm font-medium mb-1">Your Feedback</h4>
-                  <div className="bg-muted p-3 rounded-md">
-                    <p className="text-sm italic">"{scenario.completionStats.userFeedback}"</p>
-                  </div>
-                </div>
-              )}
-              
-              {scenario.completionStats?.percentComplete === 100 && (
-                <div className="mt-4 flex justify-center">
-                  <Button 
-                    className="bg-skillforge-primary hover:bg-skillforge-primary/90"
-                    onClick={() => navigate('/scenarios')}
-                  >
-                    Explore More Scenarios
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
+          <ScenarioAnalytics scenarioId={id} scenario={scenario} />
         </TabsContent>
         
         <TabsContent value="gemini" className="space-y-6">

@@ -13,6 +13,7 @@ import { Brain, Lightbulb, Clock, Puzzle, ArrowRight, PlusCircle, Search } from 
 import { Form, FormField, FormItem, FormControl, FormDescription } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { useAI } from '@/contexts/AIContext';
+import { useNavigate } from 'react-router-dom';
 
 // Initialize the scenario service
 const scenarioService = new ScenarioService();
@@ -26,6 +27,7 @@ interface CustomFormValues {
 const ScenarioGenerator = () => {
   const { currentUser } = useUser();
   const { aiCoachService } = useAI();
+  const navigate = useNavigate();
   const [role, setRole] = useState(currentUser?.role || '');
   const [industry, setIndustry] = useState(currentUser?.industry || '');
   const [description, setDescription] = useState('');
@@ -120,6 +122,12 @@ const ScenarioGenerator = () => {
       console.error('Error generating scenario:', error);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleStartScenario = () => {
+    if (generatedScenario?.id) {
+      navigate(`/scenario/${generatedScenario.id}`);
     }
   };
   
@@ -382,7 +390,10 @@ const ScenarioGenerator = () => {
             </div>
           </CardContent>
           <CardFooter className="flex justify-end">
-            <Button className="bg-skillforge-primary hover:bg-skillforge-dark">
+            <Button 
+              className="bg-skillforge-primary hover:bg-skillforge-dark"
+              onClick={handleStartScenario}
+            >
               Start Scenario
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
