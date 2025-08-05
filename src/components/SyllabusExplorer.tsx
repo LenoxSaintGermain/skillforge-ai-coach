@@ -9,6 +9,7 @@ import { geminiSyllabus } from '@/data/GeminiSyllabus';
 import { useAI } from '@/contexts/AIContext';
 import { SyllabusPhase } from '@/models/Syllabus';
 import { Brain, BookOpen, CheckCircle, ArrowRight } from 'lucide-react';
+import InteractiveLearningCanvas from './InteractiveLearningCanvas';
 
 const PhaseCard = ({ 
   phase, 
@@ -61,6 +62,7 @@ const PhaseCard = ({
 const SyllabusExplorer = () => {
   const { coachService, isServiceReady, error } = useAI();
   const [currentPhaseId, setCurrentPhaseId] = useState(1);
+  const [isLearningMode, setIsLearningMode] = useState(false);
   const [userProgress, setUserProgress] = useState(() => {
     return {
       currentPhase: 1,
@@ -83,6 +85,15 @@ const SyllabusExplorer = () => {
   };
   
   const currentPhase = geminiSyllabus.phases.find(phase => phase.id === currentPhaseId) || geminiSyllabus.phases[0];
+
+  if (isLearningMode && currentPhase) {
+    return (
+      <InteractiveLearningCanvas 
+        phase={currentPhase} 
+        onClose={() => setIsLearningMode(false)} 
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -154,9 +165,7 @@ const SyllabusExplorer = () => {
                 <Button 
                   variant="default" 
                   className="w-full"
-                  onClick={() => {
-                    console.log('🚀 Starting learning...');
-                  }}
+                  onClick={() => setIsLearningMode(true)}
                   disabled={!isServiceReady}
                 >
                   <span>{isServiceReady ? 'Start Learning' : 'Initializing...'}</span>
