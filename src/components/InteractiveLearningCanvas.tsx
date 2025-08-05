@@ -24,30 +24,56 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
   const [isCoachOpen, setIsCoachOpen] = useState(true);
   const [coachMessage, setCoachMessage] = useState("");
   const [userInput, setUserInput] = useState("");
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { coachService } = useAI();
 
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || isInitialized) return;
 
-    const canvas = new FabricCanvas(canvasRef.current, {
-      width: window.innerWidth - 400, // Leave space for coach panel
-      height: window.innerHeight - 100,
-      backgroundColor: "#ffffff",
-    });
+    const initCanvas = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Dispose existing canvas if any
+        if (fabricCanvas) {
+          fabricCanvas.dispose();
+        }
 
-    // Initialize drawing brush
-    canvas.freeDrawingBrush.color = activeColor;
-    canvas.freeDrawingBrush.width = 3;
+        const canvas = new FabricCanvas(canvasRef.current!, {
+          width: window.innerWidth - 400, // Leave space for coach panel
+          height: window.innerHeight - 100,
+          backgroundColor: "#ffffff",
+        });
 
-    setFabricCanvas(canvas);
-    
-    // Initialize with phase content
-    initializePhaseContent(canvas, phase);
+        // Initialize drawing brush
+        canvas.freeDrawingBrush.color = activeColor;
+        canvas.freeDrawingBrush.width = 3;
+
+        setFabricCanvas(canvas);
+        setIsInitialized(true);
+        
+        // Initialize with phase content
+        await initializePhaseContent(canvas, phase);
+        
+        setIsLoading(false);
+        toast("Interactive canvas ready!");
+      } catch (error) {
+        console.error("Canvas initialization failed:", error);
+        setIsLoading(false);
+        toast.error("Failed to initialize canvas");
+      }
+    };
+
+    initCanvas();
 
     return () => {
-      canvas.dispose();
+      if (fabricCanvas && !fabricCanvas.disposed) {
+        fabricCanvas.dispose();
+      }
+      setIsInitialized(false);
     };
-  }, []);
+  }, [phase.id]); // Only reinitialize when phase changes
 
   useEffect(() => {
     if (!fabricCanvas) return;
@@ -168,6 +194,17 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
   };
 
   const colors = ["#6366f1", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#06b6d4"];
+
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 bg-background z-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Initializing interactive canvas...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-background z-50 flex">
