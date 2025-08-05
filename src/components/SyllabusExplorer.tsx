@@ -59,14 +59,47 @@ const PhaseCard = ({
 };
 
 const SyllabusExplorer = () => {
-  const { jarvisCoachService, setActiveCoach } = useAI();
+  const { jarvisCoachService, setActiveCoach, isServiceReady, error } = useAI();
   const [currentPhaseId, setCurrentPhaseId] = useState(1);
-  const userProgress = jarvisCoachService.getProgress();
+  const [userProgress, setUserProgress] = useState(() => {
+    try {
+      return jarvisCoachService.getProgress();
+    } catch (error) {
+      console.error('Error getting user progress:', error);
+      return {
+        currentPhase: 1,
+        completedTasks: [],
+        lastInteraction: new Date(),
+        phaseProgress: {
+          1: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
+          2: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
+          3: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
+          4: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
+          5: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 }
+        }
+      };
+    }
+  });
   
   const handlePhaseSelect = (phaseId: number) => {
-    setCurrentPhaseId(phaseId);
-    jarvisCoachService.updateProgress(phaseId);
-    setActiveCoach('jarvis');
+    console.log(`📚 Selecting phase ${phaseId}`);
+    
+    try {
+      setCurrentPhaseId(phaseId);
+      
+      if (isServiceReady) {
+        jarvisCoachService.updateProgress(phaseId);
+        setUserProgress(jarvisCoachService.getProgress());
+      }
+      
+      setActiveCoach('jarvis');
+      console.log(`✅ Phase ${phaseId} selected and coach activated`);
+      
+    } catch (error) {
+      console.error('Error selecting phase:', error);
+      // Still switch to Jarvis even if progress update fails
+      setActiveCoach('jarvis');
+    }
   };
   
   const currentPhase = geminiSyllabus.phases.find(phase => phase.id === currentPhaseId) || geminiSyllabus.phases[0];
@@ -82,6 +115,22 @@ const SyllabusExplorer = () => {
         <CardHeader>
           <CardTitle>{geminiSyllabus.title}</CardTitle>
           <CardDescription>{geminiSyllabus.overallGoal}</CardDescription>
+          
+          {error && (
+            <div className="mt-3 p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg border border-yellow-300 dark:border-yellow-700">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                ⚠️ Some AI features may have limited functionality: {error}
+              </p>
+            </div>
+          )}
+          
+          {!isServiceReady && (
+            <div className="mt-3 p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                🤖 Initializing AI services...
+              </p>
+            </div>
+          )}
         </CardHeader>
       </Card>
       
@@ -125,9 +174,13 @@ const SyllabusExplorer = () => {
                 <Button 
                   variant="default" 
                   className="w-full"
-                  onClick={() => setActiveCoach('jarvis')}
+                  onClick={() => {
+                    console.log('🚀 Starting learning with Jarvis...');
+                    setActiveCoach('jarvis');
+                  }}
+                  disabled={!isServiceReady}
                 >
-                  <span>Start Learning with Jarvis</span>
+                  <span>{isServiceReady ? 'Start Learning with Jarvis' : 'Initializing...'}</span>
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </CardFooter>
@@ -149,9 +202,13 @@ const SyllabusExplorer = () => {
                 <Button 
                   variant="default" 
                   className="w-full"
-                  onClick={() => setActiveCoach('jarvis')}
+                  onClick={() => {
+                    console.log('🎯 Getting task guidance from Jarvis...');
+                    setActiveCoach('jarvis');
+                  }}
+                  disabled={!isServiceReady}
                 >
-                  <span>Get Task Guidance from Jarvis</span>
+                  <span>{isServiceReady ? 'Get Task Guidance from Jarvis' : 'Initializing...'}</span>
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </CardFooter>

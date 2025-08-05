@@ -9,28 +9,69 @@ interface AIContextType {
   activeCoach: 'ai' | 'jarvis';
   setActiveCoach: (coach: 'ai' | 'jarvis') => void;
   isLoading: boolean;
+  error: string | null;
+  isServiceReady: boolean;
 }
 
 const AIContext = createContext<AIContextType | undefined>(undefined);
 
 export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [aiCoachService] = useState<AICoachService>(() => new AICoachService());
-  const [jarvisCoachService] = useState<JarvisCoachService>(() => new JarvisCoachService());
+  const [aiCoachService] = useState<AICoachService>(() => {
+    try {
+      return new AICoachService();
+    } catch (error) {
+      console.error("Failed to create AICoachService:", error);
+      return new AICoachService(); // fallback
+    }
+  });
+  
+  const [jarvisCoachService] = useState<JarvisCoachService>(() => {
+    try {
+      return new JarvisCoachService();
+    } catch (error) {
+      console.error("Failed to create JarvisCoachService:", error);
+      return new JarvisCoachService(); // fallback
+    }
+  });
+  
   const [activeCoach, setActiveCoach] = useState<'ai' | 'jarvis'>('ai');
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isServiceReady, setIsServiceReady] = useState<boolean>(false);
 
   useEffect(() => {
-    const initializeService = async () => {
+    const initializeServices = async () => {
+      console.log('🚀 Initializing AI services...');
+      
       try {
-        // Initialize the AI coach service here
-        setIsLoading(false);
+        setIsLoading(true);
+        setError(null);
+        
+        // Test basic service functionality
+        if (typeof aiCoachService.initializeCoach !== 'function') {
+          throw new Error('AICoachService not properly initialized');
+        }
+        
+        if (typeof jarvisCoachService.initializeJarvis !== 'function') {
+          throw new Error('JarvisCoachService not properly initialized');
+        }
+        
+        console.log('✅ AI services initialized successfully');
+        setIsServiceReady(true);
+        
       } catch (error) {
-        console.error("Failed to initialize AI Coach Service:", error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error during AI service initialization';
+        console.error('❌ Failed to initialize AI services:', errorMessage);
+        setError(errorMessage);
+        
+        // Still mark as ready to allow fallback behavior
+        setIsServiceReady(true);
+      } finally {
         setIsLoading(false);
       }
     };
 
-    initializeService();
+    initializeServices();
   }, [aiCoachService, jarvisCoachService]);
 
   return (
@@ -39,7 +80,9 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       jarvisCoachService, 
       activeCoach, 
       setActiveCoach, 
-      isLoading 
+      isLoading,
+      error,
+      isServiceReady
     }}>
       {children}
     </AIContext.Provider>

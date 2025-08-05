@@ -43,7 +43,9 @@ const CoachChatPanel = ({
   const [isExpanded, setIsExpanded] = useState(initialExpanded);
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState<ConversationItem[]>([]);
-  const { aiCoachService, jarvisCoachService, activeCoach, setActiveCoach } = useAI();
+  const [initError, setInitError] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const { aiCoachService, jarvisCoachService, activeCoach, setActiveCoach, error, isServiceReady } = useAI();
   const { currentUser } = useUser();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -52,26 +54,53 @@ const CoachChatPanel = ({
   
   // Initialize coach on component mount
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || !isServiceReady) {
+      console.log('⏳ Waiting for user or services...', { currentUser: !!currentUser, isServiceReady });
+      return;
+    }
     
     const initializeCoach = async () => {
-      let welcomeMessage;
+      console.log(`🤖 Initializing ${activeCoach} coach for ${currentUser.name}...`);
       
-      if (activeCoach === 'jarvis') {
-        welcomeMessage = await jarvisCoachService.initializeJarvis(currentUser.name);
-      } else {
-        welcomeMessage = await aiCoachService.initializeCoach(currentUser);
+      try {
+        setIsInitializing(true);
+        setInitError(null);
+        
+        let welcomeMessage;
+        
+        if (activeCoach === 'jarvis') {
+          welcomeMessage = await jarvisCoachService.initializeJarvis(currentUser.name);
+        } else {
+          welcomeMessage = await aiCoachService.initializeCoach(currentUser);
+        }
+        
+        setMessages([{ 
+          role: 'assistant', 
+          content: welcomeMessage, 
+          timestamp: new Date() 
+        }]);
+        
+        console.log(`✅ ${activeCoach} coach initialized successfully`);
+        
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to initialize coach';
+        console.error(`❌ Failed to initialize ${activeCoach} coach:`, errorMessage);
+        setInitError(errorMessage);
+        
+        // Provide fallback message
+        const fallbackMessage = `Hello ${currentUser.name}! I'm having some connectivity issues, but I'm here to help. You can still ask me questions and I'll do my best to assist you.`;
+        setMessages([{ 
+          role: 'assistant', 
+          content: fallbackMessage, 
+          timestamp: new Date() 
+        }]);
+      } finally {
+        setIsInitializing(false);
       }
-      
-      setMessages([{ 
-        role: 'assistant', 
-        content: welcomeMessage, 
-        timestamp: new Date() 
-      }]);
     };
     
     initializeCoach();
-  }, [aiCoachService, currentUser, jarvisCoachService, activeCoach]);
+  }, [aiCoachService, currentUser, jarvisCoachService, activeCoach, isServiceReady]);
   
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -82,6 +111,8 @@ const CoachChatPanel = ({
   const handleSendMessage = async () => {
     if (!inputValue.trim() || !currentUser) return;
     
+    console.log(`📤 Sending message to ${activeCoach}:`, inputValue);
+    
     // Add user message to chat
     const userMessage = {
       role: 'user' as const,
@@ -90,23 +121,40 @@ const CoachChatPanel = ({
     };
     
     setMessages(prev => [...prev, userMessage]);
+    const currentMessage = inputValue;
     setInputValue('');
     
-    // Get AI coach response
-    let response;
-    if (activeCoach === 'jarvis') {
-      response = await jarvisCoachService.processUserMessage(inputValue);
-    } else {
-      response = await aiCoachService.processUserMessage(inputValue);
+    try {
+      // Get AI coach response
+      let response;
+      if (activeCoach === 'jarvis') {
+        response = await jarvisCoachService.processUserMessage(currentMessage);
+      } else {
+        response = await aiCoachService.processUserMessage(currentMessage);
+      }
+      
+      const assistantMessage = {
+        role: 'assistant' as const,
+        content: response,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, assistantMessage]);
+      console.log(`📥 Received response from ${activeCoach}`);
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get response';
+      console.error(`❌ Error processing message with ${activeCoach}:`, errorMessage);
+      
+      // Add error message to chat
+      const errorResponse = {
+        role: 'assistant' as const,
+        content: `I'm experiencing some technical difficulties. ${errorMessage.includes('blocked') ? 'It looks like a content blocker might be interfering.' : ''} Please try again in a moment.`,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, errorResponse]);
     }
-    
-    const assistantMessage = {
-      role: 'assistant' as const,
-      content: response,
-      timestamp: new Date(),
-    };
-    
-    setMessages(prev => [...prev, assistantMessage]);
   };
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -124,27 +172,48 @@ const CoachChatPanel = ({
   
   const handleSwitchCoach = () => {
     const newCoach = activeCoach === 'ai' ? 'jarvis' : 'ai';
-    setActiveCoach(newCoach);
+    console.log(`🔄 Switching from ${activeCoach} to ${newCoach}`);
     
-    // Reset messages when switching coaches
+    setActiveCoach(newCoach);
     setMessages([]);
+    setInitError(null);
     
     // Initialize the new coach
-    if (currentUser) {
+    if (currentUser && isServiceReady) {
       const initializeNewCoach = async () => {
-        let welcomeMessage;
-        
-        if (newCoach === 'jarvis') {
-          welcomeMessage = await jarvisCoachService.initializeJarvis(currentUser.name);
-        } else {
-          welcomeMessage = await aiCoachService.initializeCoach(currentUser);
+        try {
+          setIsInitializing(true);
+          let welcomeMessage;
+          
+          if (newCoach === 'jarvis') {
+            welcomeMessage = await jarvisCoachService.initializeJarvis(currentUser.name);
+          } else {
+            welcomeMessage = await aiCoachService.initializeCoach(currentUser);
+          }
+          
+          setMessages([{ 
+            role: 'assistant', 
+            content: welcomeMessage, 
+            timestamp: new Date() 
+          }]);
+          
+          console.log(`✅ Successfully switched to ${newCoach}`);
+          
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to switch coach';
+          console.error(`❌ Failed to switch to ${newCoach}:`, errorMessage);
+          setInitError(errorMessage);
+          
+          // Provide fallback message
+          const fallbackMessage = `Hello ${currentUser.name}! I'm your ${newCoach === 'jarvis' ? 'Jarvis' : 'AI'} coach. I'm having some connectivity issues, but I'm here to help.`;
+          setMessages([{ 
+            role: 'assistant', 
+            content: fallbackMessage, 
+            timestamp: new Date() 
+          }]);
+        } finally {
+          setIsInitializing(false);
         }
-        
-        setMessages([{ 
-          role: 'assistant', 
-          content: welcomeMessage, 
-          timestamp: new Date() 
-        }]);
       };
       
       initializeNewCoach();
@@ -196,6 +265,27 @@ const CoachChatPanel = ({
           {/* Chat messages */}
           <ScrollArea className="flex-1 bg-white dark:bg-gray-950 p-3 overflow-auto">
             <div className="flex flex-col">
+              {(error || initError) && (
+                <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg border border-yellow-300 dark:border-yellow-700">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    ⚠️ {error || initError}
+                  </p>
+                  {(error || initError)?.includes('blocked') && (
+                    <p className="text-xs text-yellow-600 dark:text-yellow-300 mt-1">
+                      This might be caused by a content blocker. The coach will still work with limited functionality.
+                    </p>
+                  )}
+                </div>
+              )}
+              
+              {isInitializing && (
+                <div className="mb-4 p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    🤖 Initializing {activeCoach === 'jarvis' ? 'Jarvis' : 'AI Coach'}...
+                  </p>
+                </div>
+              )}
+              
               {messages.map((message, index) => (
                 <ChatMessage key={index} message={message} />
               ))}
