@@ -26,7 +26,7 @@ interface CustomFormValues {
 
 const ScenarioGenerator = () => {
   const { currentUser } = useUser();
-  const { aiCoachService } = useAI();
+  const { coachService } = useAI();
   const navigate = useNavigate();
   const [role, setRole] = useState(currentUser?.role || '');
   const [industry, setIndustry] = useState(currentUser?.industry || '');
@@ -88,7 +88,7 @@ const ScenarioGenerator = () => {
       const prompt = `List 5 specific industry names related to "${query}", returned as a simple comma-separated list with no other text. Be specific and accurate.`;
       
       // Using AI coach service to get suggestions
-      const response = await aiCoachService.getResponse(prompt);
+      const response = await coachService.getResponse(prompt);
       
       // Parse response and set search results
       const industries = response.split(',').map(industry => industry.trim()).filter(Boolean);

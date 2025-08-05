@@ -29,7 +29,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
   const [feedbackText, setFeedbackText] = useState('');
   const [userProgress, setUserProgress] = useState<any>(null);
   
-  const { setActiveCoach } = useAI();
+  const { } = useAI();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { currentUser, isAuthenticated } = useUser();
@@ -124,13 +124,10 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
   };
   
   const handleOpenCoachChat = () => {
-    // Set active coach to AI coach
-    setActiveCoach('ai');
-    
     // Display a toast message
     toast({
-      title: "AI Coach activated",
-      description: "Your AI coach is ready to help with this scenario.",
+      title: "Coach activated",
+      description: "Your coach is ready to help with this scenario.",
       duration: 3000,
     });
   };

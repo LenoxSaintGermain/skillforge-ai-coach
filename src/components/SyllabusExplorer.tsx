@@ -59,47 +59,27 @@ const PhaseCard = ({
 };
 
 const SyllabusExplorer = () => {
-  const { jarvisCoachService, setActiveCoach, isServiceReady, error } = useAI();
+  const { coachService, isServiceReady, error } = useAI();
   const [currentPhaseId, setCurrentPhaseId] = useState(1);
   const [userProgress, setUserProgress] = useState(() => {
-    try {
-      return jarvisCoachService.getProgress();
-    } catch (error) {
-      console.error('Error getting user progress:', error);
-      return {
-        currentPhase: 1,
-        completedTasks: [],
-        lastInteraction: new Date(),
-        phaseProgress: {
-          1: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
-          2: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
-          3: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
-          4: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
-          5: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 }
-        }
-      };
-    }
+    return {
+      currentPhase: 1,
+      completedTasks: [],
+      lastInteraction: new Date(),
+      phaseProgress: {
+        1: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
+        2: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
+        3: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
+        4: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
+        5: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 }
+      }
+    };
   });
   
   const handlePhaseSelect = (phaseId: number) => {
     console.log(`📚 Selecting phase ${phaseId}`);
-    
-    try {
-      setCurrentPhaseId(phaseId);
-      
-      if (isServiceReady) {
-        jarvisCoachService.updateProgress(phaseId);
-        setUserProgress(jarvisCoachService.getProgress());
-      }
-      
-      setActiveCoach('jarvis');
-      console.log(`✅ Phase ${phaseId} selected and coach activated`);
-      
-    } catch (error) {
-      console.error('Error selecting phase:', error);
-      // Still switch to Jarvis even if progress update fails
-      setActiveCoach('jarvis');
-    }
+    setCurrentPhaseId(phaseId);
+    console.log(`✅ Phase ${phaseId} selected`);
   };
   
   const currentPhase = geminiSyllabus.phases.find(phase => phase.id === currentPhaseId) || geminiSyllabus.phases[0];
@@ -175,12 +155,11 @@ const SyllabusExplorer = () => {
                   variant="default" 
                   className="w-full"
                   onClick={() => {
-                    console.log('🚀 Starting learning with Jarvis...');
-                    setActiveCoach('jarvis');
+                    console.log('🚀 Starting learning...');
                   }}
                   disabled={!isServiceReady}
                 >
-                  <span>{isServiceReady ? 'Start Learning with Jarvis' : 'Initializing...'}</span>
+                  <span>{isServiceReady ? 'Start Learning' : 'Initializing...'}</span>
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </CardFooter>
@@ -203,12 +182,11 @@ const SyllabusExplorer = () => {
                   variant="default" 
                   className="w-full"
                   onClick={() => {
-                    console.log('🎯 Getting task guidance from Jarvis...');
-                    setActiveCoach('jarvis');
+                    console.log('🎯 Getting task guidance...');
                   }}
                   disabled={!isServiceReady}
                 >
-                  <span>{isServiceReady ? 'Get Task Guidance from Jarvis' : 'Initializing...'}</span>
+                  <span>{isServiceReady ? 'Get Task Guidance' : 'Initializing...'}</span>
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </CardFooter>

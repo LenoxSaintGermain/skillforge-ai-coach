@@ -8,7 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { useAI } from '@/contexts/AIContext';
 import { useUser } from '@/contexts/UserContext';
 import { ConversationItem } from '@/services/AICoachService';
-import { Brain, Send, X, Maximize, Minimize, MessageSquare } from 'lucide-react';
+import { Brain, Send, X, Minimize, MessageSquare } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 
 interface ChatMessageProps {
   message: ConversationItem;
@@ -45,9 +46,24 @@ const CoachChatPanel = ({
   const [messages, setMessages] = useState<ConversationItem[]>([]);
   const [initError, setInitError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
-  const { aiCoachService, jarvisCoachService, activeCoach, setActiveCoach, error, isServiceReady } = useAI();
+  const { coachService, error, isServiceReady } = useAI();
   const { currentUser } = useUser();
+  const location = useLocation();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Determine context based on current route
+  const getCoachContext = () => {
+    if (location.pathname.includes('gemini-training')) {
+      return 'Gemini AI training and best practices';
+    }
+    if (location.pathname.includes('scenarios')) {
+      return 'scenario-based learning';
+    }
+    if (location.pathname.includes('skill-assessment')) {
+      return 'skill assessment and evaluation';
+    }
+    return 'general AI coaching';
+  };
   
   // Handle controlled vs uncontrolled expansion state
   const expanded = controlledExpanded !== undefined ? controlledExpanded : isExpanded;
@@ -60,19 +76,14 @@ const CoachChatPanel = ({
     }
     
     const initializeCoach = async () => {
-      console.log(`🤖 Initializing ${activeCoach} coach for ${currentUser.name}...`);
+      const context = getCoachContext();
+      console.log(`🤖 Initializing coach for ${currentUser.name} with context: ${context}...`);
       
       try {
         setIsInitializing(true);
         setInitError(null);
         
-        let welcomeMessage;
-        
-        if (activeCoach === 'jarvis') {
-          welcomeMessage = await jarvisCoachService.initializeJarvis(currentUser.name);
-        } else {
-          welcomeMessage = await aiCoachService.initializeCoach(currentUser);
-        }
+        const welcomeMessage = await coachService.initializeCoach(currentUser, context);
         
         setMessages([{ 
           role: 'assistant', 
@@ -80,15 +91,16 @@ const CoachChatPanel = ({
           timestamp: new Date() 
         }]);
         
-        console.log(`✅ ${activeCoach} coach initialized successfully`);
+        console.log(`✅ Coach initialized successfully for ${context}`);
         
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to initialize coach';
-        console.error(`❌ Failed to initialize ${activeCoach} coach:`, errorMessage);
+        console.error(`❌ Failed to initialize coach:`, errorMessage);
         setInitError(errorMessage);
         
-        // Provide fallback message
-        const fallbackMessage = `Hello ${currentUser.name}! I'm having some connectivity issues, but I'm here to help. You can still ask me questions and I'll do my best to assist you.`;
+        // Provide contextual fallback message
+        const context = getCoachContext();
+        const fallbackMessage = `Hello ${currentUser.name}! I'm your coach for ${context}. I'm having some connectivity issues, but I'm here to help. You can still ask me questions and I'll do my best to assist you.`;
         setMessages([{ 
           role: 'assistant', 
           content: fallbackMessage, 
@@ -100,7 +112,7 @@ const CoachChatPanel = ({
     };
     
     initializeCoach();
-  }, [aiCoachService, currentUser, jarvisCoachService, activeCoach, isServiceReady]);
+  }, [coachService, currentUser, isServiceReady, location.pathname]);
   
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -111,7 +123,7 @@ const CoachChatPanel = ({
   const handleSendMessage = async () => {
     if (!inputValue.trim() || !currentUser) return;
     
-    console.log(`📤 Sending message to ${activeCoach}:`, inputValue);
+    console.log(`📤 Sending message to coach:`, inputValue);
     
     // Add user message to chat
     const userMessage = {
@@ -125,13 +137,7 @@ const CoachChatPanel = ({
     setInputValue('');
     
     try {
-      // Get AI coach response
-      let response;
-      if (activeCoach === 'jarvis') {
-        response = await jarvisCoachService.processUserMessage(currentMessage);
-      } else {
-        response = await aiCoachService.processUserMessage(currentMessage);
-      }
+      const response = await coachService.processUserMessage(currentMessage);
       
       const assistantMessage = {
         role: 'assistant' as const,
@@ -140,11 +146,11 @@ const CoachChatPanel = ({
       };
       
       setMessages(prev => [...prev, assistantMessage]);
-      console.log(`📥 Received response from ${activeCoach}`);
+      console.log(`📥 Received response from coach`);
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to get response';
-      console.error(`❌ Error processing message with ${activeCoach}:`, errorMessage);
+      console.error(`❌ Error processing message:`, errorMessage);
       
       // Add error message to chat
       const errorResponse = {
@@ -170,55 +176,6 @@ const CoachChatPanel = ({
     }
   };
   
-  const handleSwitchCoach = () => {
-    const newCoach = activeCoach === 'ai' ? 'jarvis' : 'ai';
-    console.log(`🔄 Switching from ${activeCoach} to ${newCoach}`);
-    
-    setActiveCoach(newCoach);
-    setMessages([]);
-    setInitError(null);
-    
-    // Initialize the new coach
-    if (currentUser && isServiceReady) {
-      const initializeNewCoach = async () => {
-        try {
-          setIsInitializing(true);
-          let welcomeMessage;
-          
-          if (newCoach === 'jarvis') {
-            welcomeMessage = await jarvisCoachService.initializeJarvis(currentUser.name);
-          } else {
-            welcomeMessage = await aiCoachService.initializeCoach(currentUser);
-          }
-          
-          setMessages([{ 
-            role: 'assistant', 
-            content: welcomeMessage, 
-            timestamp: new Date() 
-          }]);
-          
-          console.log(`✅ Successfully switched to ${newCoach}`);
-          
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to switch coach';
-          console.error(`❌ Failed to switch to ${newCoach}:`, errorMessage);
-          setInitError(errorMessage);
-          
-          // Provide fallback message
-          const fallbackMessage = `Hello ${currentUser.name}! I'm your ${newCoach === 'jarvis' ? 'Jarvis' : 'AI'} coach. I'm having some connectivity issues, but I'm here to help.`;
-          setMessages([{ 
-            role: 'assistant', 
-            content: fallbackMessage, 
-            timestamp: new Date() 
-          }]);
-        } finally {
-          setIsInitializing(false);
-        }
-      };
-      
-      initializeNewCoach();
-    }
-  };
   
   return (
     <div 
@@ -227,21 +184,12 @@ const CoachChatPanel = ({
     >
       {/* Header/Toggle button */}
       {expanded ? (
-        <div className={`flex items-center justify-between p-3 rounded-t-lg text-white shadow-lg ${activeCoach === 'jarvis' ? 'bg-skillforge-secondary' : 'bg-coach'}`}>
+        <div className="flex items-center justify-between p-3 rounded-t-lg text-white shadow-lg bg-coach">
           <div className="flex items-center">
             <Brain size={20} className="mr-2" />
-            <h3 className="font-medium text-sm">{activeCoach === 'jarvis' ? 'Jarvis' : 'AI Coach'}</h3>
+            <h3 className="font-medium text-sm">Coach</h3>
           </div>
           <div className="flex items-center space-x-1">
-            <div className="mr-2 flex items-center space-x-1">
-              <span className="text-xs">AI</span>
-              <Switch 
-                checked={activeCoach === 'jarvis'} 
-                onCheckedChange={handleSwitchCoach}
-                className="data-[state=checked]:bg-white data-[state=unchecked]:bg-white"
-              />
-              <span className="text-xs">Jarvis</span>
-            </div>
             <Button size="sm" variant="ghost" onClick={toggleExpanded} className="h-6 w-6 p-0 text-white hover:bg-coach-dark">
               <Minimize size={16} />
             </Button>
@@ -254,7 +202,7 @@ const CoachChatPanel = ({
         <Button 
           onClick={toggleExpanded}
           size="icon" 
-          className={`h-12 w-12 rounded-full ${activeCoach === 'jarvis' ? 'bg-skillforge-secondary hover:bg-skillforge-secondary/90' : 'bg-coach hover:bg-coach-dark'} shadow-lg animate-pulse-slow`}
+          className="h-12 w-12 rounded-full bg-coach hover:bg-coach-dark shadow-lg animate-pulse-slow"
         >
           <MessageSquare size={20} className="text-white" />
         </Button>
@@ -281,7 +229,7 @@ const CoachChatPanel = ({
               {isInitializing && (
                 <div className="mb-4 p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
                   <p className="text-sm text-blue-800 dark:text-blue-200">
-                    🤖 Initializing {activeCoach === 'jarvis' ? 'Jarvis' : 'AI Coach'}...
+                    🤖 Initializing Coach...
                   </p>
                 </div>
               )}
@@ -300,13 +248,13 @@ const CoachChatPanel = ({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={activeCoach === 'jarvis' ? "Ask Jarvis about Gemini..." : "Ask your AI coach..."}
+                placeholder={`Ask your coach about ${getCoachContext()}...`}
                 className="flex-1"
               />
               <Button 
                 onClick={handleSendMessage} 
                 size="icon" 
-                className={activeCoach === 'jarvis' ? "bg-skillforge-secondary hover:bg-skillforge-secondary/90" : "bg-coach hover:bg-coach-dark"}
+                className="bg-coach hover:bg-coach-dark"
               >
                 <Send size={16} className="text-white" />
               </Button>

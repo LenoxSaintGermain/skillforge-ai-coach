@@ -21,7 +21,7 @@ const ScenarioDetailPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('workflow');
-  const { setActiveCoach } = useAI();
+  const { } = useAI();
   const { toast } = useToast();
   
   useEffect(() => {
@@ -64,10 +64,9 @@ const ScenarioDetailPage = () => {
   };
   
   const handleActivateJarvis = () => {
-    setActiveCoach('jarvis');
     toast({
-      title: "Jarvis Activated",
-      description: "Jarvis is now ready to assist you with Gemini training.",
+      title: "Coach Activated",
+      description: "Your coach is now ready to assist you with Gemini training.",
       duration: 3000,
     });
   };
@@ -139,15 +138,15 @@ const ScenarioDetailPage = () => {
             <p className="mb-4">This scenario can help you practice building with Google's Gemini AI model. Activate Jarvis, your specialized Gemini training assistant, to guide you through the Gemini syllabus.</p>
             
             <div className="bg-skillforge-light p-4 rounded-lg mb-6">
-              <h4 className="text-skillforge-dark font-medium mb-2">Jarvis - Your Gemini Training Assistant</h4>
+              <h4 className="text-skillforge-dark font-medium mb-2">Your Gemini Training Coach</h4>
               <p className="text-sm text-skillforge-dark/80 mb-4">
-                Jarvis will guide you through the "Building with Gemini: From Idea to Prototype" syllabus, helping you understand key concepts and complete practical exercises.
+                Your coach will guide you through the "Building with Gemini: From Idea to Prototype" syllabus, helping you understand key concepts and complete practical exercises.
               </p>
               <Button 
                 className="bg-skillforge-secondary hover:bg-skillforge-secondary/90 text-white" 
                 onClick={handleActivateJarvis}
               >
-                Activate Jarvis
+                Activate Coach
               </Button>
             </div>
             

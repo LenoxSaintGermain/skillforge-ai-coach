@@ -184,14 +184,16 @@ export class AICoachService {
   /**
    * Initializes coach with welcome message based on user status
    */
-  public async initializeCoach(user: User): Promise<string> {
+  public async initializeCoach(user: User, context?: string): Promise<string> {
     const isReturningUser = user.created_at !== null;
     
     let welcomeMessage;
+    const contextMessage = context ? ` I'm here to help you with ${context}.` : '';
+    
     if (isReturningUser) {
-      welcomeMessage = `Welcome back, ${user.name}! I see you've been making progress on your AI learning journey. You're currently at ${user.ai_knowledge_level} level with strong skills in ${this.learningJourney.currentSkillFocus.join(', ')}. \n\nSince your last visit, you've advanced to ${this.learningJourney.progressMetrics['Prompt Engineering']}% in Prompt Engineering. Would you like to continue with your current scenario "Optimizing Customer Support with AI" or explore something new?`;
+      welcomeMessage = `Welcome back, ${user.name}! I see you've been making progress on your AI learning journey.${contextMessage} You're currently at ${user.ai_knowledge_level} level with strong skills in ${this.learningJourney.currentSkillFocus.join(', ')}. \n\nSince your last visit, you've advanced to ${this.learningJourney.progressMetrics['Prompt Engineering']}% in Prompt Engineering. How can I help you today?`;
     } else {
-      welcomeMessage = `Welcome to AI SkillForge, ${user.name}! I'll be your AI coach to help you master AI skills relevant to your ${user.role} role. Based on your profile, I'd recommend starting with foundational AI concepts and then moving to practical applications in your industry. \n\nShall we begin with an assessment of your current AI knowledge, or would you prefer to dive right into a learning scenario?`;
+      welcomeMessage = `Welcome to AI SkillForge, ${user.name}! I'm your AI coach to help you master AI skills relevant to your ${user.role} role.${contextMessage} Based on your profile, I'd recommend starting with foundational AI concepts and then moving to practical applications in your industry. \n\nHow can I assist you today?`;
     }
     
     this.addToConversationHistory('assistant', welcomeMessage);
