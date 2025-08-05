@@ -19,18 +19,29 @@ const ScenarioDetailPage = () => {
   const location = useLocation();
   const [scenario, setScenario] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('workflow');
   const { setActiveCoach } = useAI();
   const { toast } = useToast();
   
   useEffect(() => {
-    if (id) {
-      const foundScenario = scenarioService.getScenarioById(id);
-      if (foundScenario) {
-        setScenario(foundScenario);
+    const loadScenario = async () => {
+      if (id) {
+        try {
+          setIsLoading(true);
+          setError(null);
+          const foundScenario = await scenarioService.getScenarioById(id);
+          setScenario(foundScenario || null);
+        } catch (err) {
+          console.error('Error loading scenario:', err);
+          setError('Failed to load scenario');
+        } finally {
+          setIsLoading(false);
+        }
       }
-      setIsLoading(false);
-    }
+    };
+
+    loadScenario();
     
     // Check for tab query parameter
     const params = new URLSearchParams(location.search);
@@ -65,6 +76,19 @@ const ScenarioDetailPage = () => {
     return (
       <div className="container py-8 flex justify-center">
         <p>Loading scenario...</p>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="container py-8">
+        <h1 className="text-2xl font-bold mb-6">Error Loading Scenario</h1>
+        <p className="mb-4">{error}</p>
+        <Button onClick={() => navigate('/scenarios')}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Scenarios
+        </Button>
       </div>
     );
   }
