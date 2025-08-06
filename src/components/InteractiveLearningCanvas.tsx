@@ -37,25 +37,22 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
     height: Math.max(600, window.innerHeight - 100)
   }), []);
 
-  // Initialize canvas only
+  // Initialize canvas immediately without complex dependencies
   useEffect(() => {
-    if (!canvasRef.current || isCanvasReady) return;
+    if (!canvasRef.current) return;
 
     const initCanvas = () => {
       try {
-        // Clear any existing timeout
-        if (initTimeoutRef.current) {
-          clearTimeout(initTimeoutRef.current);
-        }
-
+        console.log("Initializing canvas...");
+        
         // Dispose existing canvas if any
         if (fabricCanvas && !fabricCanvas.disposed) {
           fabricCanvas.dispose();
         }
 
         const canvas = new FabricCanvas(canvasRef.current!, {
-          width: canvasDimensions.width,
-          height: canvasDimensions.height,
+          width: 800,
+          height: 600,
           backgroundColor: "#ffffff",
         });
 
@@ -63,12 +60,15 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
         canvas.freeDrawingBrush.color = activeColor;
         canvas.freeDrawingBrush.width = 3;
 
+        console.log("Canvas created successfully");
         setFabricCanvas(canvas);
         setIsCanvasReady(true);
         setCanvasError(null);
         
-        // Add basic phase content immediately (no API calls)
-        addPhaseContent(canvas, phase);
+        // Add basic phase content immediately
+        setTimeout(() => {
+          addPhaseContent(canvas, phase);
+        }, 100);
         
         toast("Canvas ready!");
       } catch (error) {
@@ -78,18 +78,16 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
       }
     };
 
-    initCanvas();
+    // Initialize immediately
+    const timeout = setTimeout(initCanvas, 100);
 
     return () => {
-      if (initTimeoutRef.current) {
-        clearTimeout(initTimeoutRef.current);
-      }
+      clearTimeout(timeout);
       if (fabricCanvas && !fabricCanvas.disposed) {
         fabricCanvas.dispose();
       }
-      setIsCanvasReady(false);
     };
-  }, [phase.id, canvasDimensions]);
+  }, []); // Remove complex dependencies
 
   // Initialize coach separately with timeout
   useEffect(() => {
