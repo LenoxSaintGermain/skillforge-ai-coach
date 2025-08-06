@@ -20,7 +20,7 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const initTimeoutRef = useRef<NodeJS.Timeout>();
-  const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
+  const fabricCanvasRef = useRef<FabricCanvas | null>(null);
   const [activeTool, setActiveTool] = useState<ToolType>("select");
   const [activeColor, setActiveColor] = useState("#6366f1");
   const [isCoachOpen, setIsCoachOpen] = useState(true);
@@ -37,57 +37,59 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
     height: Math.max(600, window.innerHeight - 100)
   }), []);
 
-  // Initialize canvas immediately without complex dependencies
+  // Initialize canvas robustly on mount
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current) {
+      return;
+    }
 
-    const initCanvas = () => {
-      try {
-        console.log("Initializing canvas...");
-        
-        // Dispose existing canvas if any
-        if (fabricCanvas && !fabricCanvas.disposed) {
-          fabricCanvas.dispose();
-        }
+    // This check prevents re-initialization if the canvas instance already exists.
+    if (fabricCanvasRef.current) {
+      return;
+    }
 
-        const canvas = new FabricCanvas(canvasRef.current!, {
-          width: 800,
-          height: 600,
-          backgroundColor: "#ffffff",
-        });
+    try {
+      console.log("Initializing canvas...");
 
-        // Initialize drawing brush
+      const canvas = new FabricCanvas(canvasRef.current, {
+        width: 800,
+        height: 600,
+        backgroundColor: "#ffffff",
+      });
+
+      fabricCanvasRef.current = canvas;
+
+      // Initialize drawing brush
+      if (canvas.freeDrawingBrush) {
         canvas.freeDrawingBrush.color = activeColor;
         canvas.freeDrawingBrush.width = 3;
-
-        console.log("Canvas created successfully");
-        setFabricCanvas(canvas);
-        setIsCanvasReady(true);
-        setCanvasError(null);
-        
-        // Add basic phase content immediately
-        setTimeout(() => {
-          addPhaseContent(canvas, phase);
-        }, 100);
-        
-        toast("Canvas ready!");
-      } catch (error) {
-        console.error("Canvas initialization failed:", error);
-        setCanvasError("Failed to initialize canvas");
-        toast.error("Canvas initialization failed");
       }
-    };
 
-    // Initialize immediately
-    const timeout = setTimeout(initCanvas, 100);
+      console.log("Canvas created successfully");
+      setIsCanvasReady(true);
+      setCanvasError(null);
+
+      addPhaseContent(canvas, phase);
+
+      toast("Canvas ready!");
+    } catch (error) {
+      console.error("Canvas initialization failed:", error);
+      setCanvasError("Failed to initialize canvas");
+      toast.error("Canvas initialization failed");
+    }
 
     return () => {
-      clearTimeout(timeout);
-      if (fabricCanvas && !fabricCanvas.disposed) {
-        fabricCanvas.dispose();
+      console.log("Cleaning up canvas effect...");
+      // Dispose the canvas, and critically, set the ref to null.
+      // This allows the canvas to be re-initialized if the component re-mounts in Strict Mode.
+      if (fabricCanvasRef.current && !fabricCanvasRef.current.disposed) {
+        console.log("Disposing canvas instance...");
+        fabricCanvasRef.current.dispose();
+        fabricCanvasRef.current = null;
       }
     };
-  }, []); // Remove complex dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
 
   // Initialize coach separately with timeout
   useEffect(() => {
@@ -143,14 +145,15 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
   }, [isCanvasReady, phase.title, phase.objective, coachService]);
 
   useEffect(() => {
-    if (!fabricCanvas) return;
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
 
-    fabricCanvas.isDrawingMode = activeTool === "draw";
+    canvas.isDrawingMode = activeTool === "draw";
     
-    if (activeTool === "draw" && fabricCanvas.freeDrawingBrush) {
-      fabricCanvas.freeDrawingBrush.color = activeColor;
+    if (activeTool === "draw" && canvas.freeDrawingBrush) {
+      canvas.freeDrawingBrush.color = activeColor;
     }
-  }, [activeTool, activeColor, fabricCanvas]);
+  }, [activeTool, activeColor]);
 
   // Simple content addition without API calls
   const addPhaseContent = useCallback((canvas: FabricCanvas, phase: SyllabusPhase) => {
@@ -185,8 +188,8 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
 
   const handleToolClick = useCallback((tool: ToolType) => {
     setActiveTool(tool);
-
-    if (!fabricCanvas) return;
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
 
     try {
       if (tool === "rectangle") {
@@ -199,7 +202,7 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
           stroke: "#1e293b",
           strokeWidth: 2,
         });
-        fabricCanvas.add(rect);
+        canvas.add(rect);
       } else if (tool === "circle") {
         const circle = new Circle({
           left: 200,
@@ -209,7 +212,7 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
           stroke: "#1e293b",
           strokeWidth: 2,
         });
-        fabricCanvas.add(circle);
+        canvas.add(circle);
       } else if (tool === "text") {
         const text = new Textbox("Click to edit", {
           left: 200,
@@ -217,29 +220,32 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
           fontSize: 20,
           fill: activeColor,
         });
-        fabricCanvas.add(text);
+        canvas.add(text);
       } else if (tool === "eraser") {
-        fabricCanvas.freeDrawingBrush.color = "#ffffff";
-        fabricCanvas.isDrawingMode = true;
+        if (canvas.freeDrawingBrush) {
+          canvas.freeDrawingBrush.color = "#ffffff";
+        }
+        canvas.isDrawingMode = true;
       }
     } catch (error) {
       console.error("Tool operation failed:", error);
       toast.error("Failed to add shape");
     }
-  }, [fabricCanvas, activeColor]);
+  }, [activeColor]);
 
   const handleClear = useCallback(() => {
-    if (!fabricCanvas) return;
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
     try {
-      fabricCanvas.clear();
-      fabricCanvas.backgroundColor = "#ffffff";
-      addPhaseContent(fabricCanvas, phase);
+      canvas.clear();
+      canvas.backgroundColor = "#ffffff";
+      addPhaseContent(canvas, phase);
       toast("Canvas cleared and reset!");
     } catch (error) {
       console.error("Clear operation failed:", error);
       toast.error("Failed to clear canvas");
     }
-  }, [fabricCanvas, phase, addPhaseContent]);
+  }, [phase, addPhaseContent]);
 
   const handleCoachInteraction = useCallback(async () => {
     if (!userInput.trim() || !isCoachReady) return;
@@ -254,7 +260,8 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
         setTimeout(() => reject(new Error("Response timeout")), 15000)
       );
 
-      const canvasState = fabricCanvas?.toJSON();
+      const canvas = fabricCanvasRef.current;
+      const canvasState = canvas?.toJSON();
       const responsePromise = coachService.processUserMessage(
         `${currentInput} [Canvas context: User is working on ${phase.title}. Canvas has ${canvasState?.objects?.length || 0} objects.]`
       );
@@ -266,7 +273,7 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
       setCoachMessage("Sorry, I'm having trouble responding right now. Try rephrasing your question or ask something else!");
       setUserInput(currentInput); // Restore input on error
     }
-  }, [userInput, isCoachReady, fabricCanvas, phase.title, coachService]);
+  }, [userInput, isCoachReady, phase.title, coachService]);
 
   const colors = ["#6366f1", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#06b6d4"];
 
