@@ -49,7 +49,7 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
   }), []);
 
   // Unified initialization effect for canvas and AI coach
-  useEffect(() => {
+  useLayoutEffect(() => {
     // Guard against multiple simultaneous initializations
     if (isInitializing.current || initializationStatus !== 'idle') {
       return;
@@ -59,10 +59,27 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
 
     const initialize = async () => {
       try {
+        // Wait for DOM element to be available with retry logic
+        const waitForCanvas = () => {
+          return new Promise<HTMLCanvasElement>((resolve, reject) => {
+            const checkCanvas = () => {
+              if (canvasRef.current) {
+                console.log("Canvas element found");
+                resolve(canvasRef.current);
+              } else {
+                console.log("Canvas element not found, retrying...");
+                setTimeout(checkCanvas, 10);
+              }
+            };
+            checkCanvas();
+            
+            // Timeout after 5 seconds
+            setTimeout(() => reject(new Error("Canvas element not found after timeout")), 5000);
+          });
+        };
+
         // 1. Initialize Canvas
-        if (!canvasRef.current) {
-          throw new Error("Canvas element not found.");
-        }
+        const canvasElement = await waitForCanvas();
         console.log("Initializing canvas...");
         const canvas = new FabricCanvas(canvasRef.current, {
           width: 800,
