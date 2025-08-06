@@ -352,8 +352,6 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
   }
 
   return (
-    // The main container is a flex layout. The coach side panel was previously a second flex item here.
-    // It has been removed to create a cleaner, more integrated, and multi-modal AI experience directly on the canvas.
     <div className="fixed inset-0 bg-background z-50 flex">
       {/* Canvas Area */}
       <div className="flex-1 relative">
@@ -439,9 +437,61 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
         <div ref={containerRef} className="w-full h-full overflow-hidden">
           <canvas ref={canvasRef} className="border-l border-border" />
         </div>
+
+        {/* Coach Message Overlay - Fixed positioning for better visibility */}
+        {isCoachOpen && (
+          <div className="absolute bottom-4 left-4 right-4 z-10">
+            <Card className="p-4 max-w-md mx-auto">
+              <div className="flex items-start gap-3">
+                <MessageCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-foreground mb-3 whitespace-pre-wrap break-words">
+                    {typeof coachMessage === 'string' ? coachMessage : 'Coach is ready to help!'}
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={userInput}
+                      onChange={(e) => setUserInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleCoachInteraction()}
+                      placeholder="Ask your coach..."
+                      className="flex-1 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      disabled={!isCoachReady}
+                    />
+                    <Button 
+                      size="sm" 
+                      onClick={handleCoachInteraction}
+                      disabled={!userInput.trim() || !isCoachReady}
+                    >
+                      Send
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setIsCoachOpen(false)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Toggle Coach Button when closed */}
+        {!isCoachOpen && (
+          <Button
+            variant="default"
+            size="sm"
+            className="absolute bottom-4 right-4 z-10"
+            onClick={() => setIsCoachOpen(true)}
+          >
+            <MessageCircle className="w-4 h-4 mr-2" />
+            Coach
+          </Button>
+        )}
       </div>
-
-
     </div>
   );
 };
