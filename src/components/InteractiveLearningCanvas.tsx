@@ -21,6 +21,7 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
   const containerRef = useRef<HTMLDivElement>(null);
   const initTimeoutRef = useRef<NodeJS.Timeout>();
   const fabricCanvasRef = useRef<FabricCanvas | null>(null);
+  const initializedPhaseRef = useRef<string | null>(null);
   const [activeTool, setActiveTool] = useState<ToolType>("select");
   const [activeColor, setActiveColor] = useState("#6366f1");
   const [isCoachOpen, setIsCoachOpen] = useState(true);
@@ -93,7 +94,13 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
 
   // Initialize coach separately with timeout
   useEffect(() => {
-    if (!isCanvasReady || isCoachReady) return;
+    // Guard: Only initialize if canvas is ready and coach hasn't been initialized for this phase
+    if (!isCanvasReady || initializedPhaseRef.current === phase.title) {
+      return;
+    }
+
+    // Mark this phase as having started initialization
+    initializedPhaseRef.current = phase.title;
 
     const initCoach = async () => {
       try {
