@@ -316,6 +316,8 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
   }
 
   return (
+    // The main container is a flex layout. The coach side panel was previously a second flex item here.
+    // It has been removed to create a cleaner, more integrated, and multi-modal AI experience directly on the canvas.
     <div className="fixed inset-0 bg-background z-50 flex">
       {/* Canvas Area */}
       <div className="flex-1 relative">
@@ -403,90 +405,7 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
         </div>
       </div>
 
-      {/* Coach Panel */}
-      {isCoachOpen && (
-        <div className="w-96 border-l border-border bg-background flex flex-col">
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <MessageCircle className="w-5 h-5" />
-              <h3 className="font-semibold">AI Learning Coach</h3>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsCoachOpen(false)}
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
 
-          <div className="flex-1 p-4 overflow-y-auto">
-            <Badge variant="outline" className="mb-4">
-              {phase.title}
-            </Badge>
-            
-            <div className="bg-muted p-4 rounded-lg mb-4">
-              <div className="flex items-start gap-2">
-                <div className={`w-2 h-2 rounded-full mt-2 ${isCoachReady ? 'bg-green-500' : 'bg-yellow-500 animate-pulse'}`} />
-                <p className="text-sm leading-relaxed flex-1">{coachMessage}</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">Key Concepts:</h4>
-                <div className="space-y-2">
-                  {phase.keyConceptsAndActivities.map((concept, index) => (
-                    <div key={index} className="text-sm">
-                      <strong>{concept.title}:</strong> {concept.description}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-medium mb-2">Core Task:</h4>
-                <p className="text-sm text-muted-foreground">
-                  {phase.corePracticalTask.description}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-4 border-t border-border">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleCoachInteraction()}
-                placeholder="Ask your coach anything..."
-                className="flex-1 px-3 py-2 text-sm border border-border rounded-md bg-background"
-              />
-              <Button 
-                size="sm" 
-                onClick={handleCoachInteraction}
-                disabled={!isCoachReady || !userInput.trim()}
-              >
-                Send
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Coach Toggle Button (when closed) */}
-      {!isCoachOpen && (
-        <Button
-          variant="default"
-          size="sm"
-          className="fixed bottom-4 right-4 z-10"
-          onClick={() => setIsCoachOpen(true)}
-        >
-          <MessageCircle className="w-4 h-4 mr-2" />
-          Coach
-        </Button>
-      )}
     </div>
   );
 };
