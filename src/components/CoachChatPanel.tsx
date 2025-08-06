@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -7,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { useAI } from '@/contexts/AIContext';
 import { useUser } from '@/contexts/UserContext';
-import { ConversationItem } from '@/services/AICoachService';
+import { ConversationItem, AIResponse } from '@/services/AICoachService';
 import { Brain, Send, X, Minimize, MessageSquare } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
@@ -28,6 +27,15 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
       </div>
     </div>
   );
+};
+
+// Helper function to extract text content from AIResponse
+const extractTextFromAIResponse = (response: AIResponse): string => {
+  const speechActions = response.actions.filter(action => action.type === 'speech');
+  if (speechActions.length > 0) {
+    return speechActions.map(action => action.content).join(' ');
+  }
+  return 'Coach response received';
 };
 
 interface CoachChatPanelProps {
@@ -83,7 +91,10 @@ const CoachChatPanel = ({
         setIsInitializing(true);
         setInitError(null);
         
-        const welcomeMessage = await coachService.initializeCoach(currentUser, context);
+        const response = await coachService.initializeCoach(currentUser, context);
+        
+        // Extract text content from AIResponse
+        const welcomeMessage = extractTextFromAIResponse(response);
         
         setMessages([{ 
           role: 'assistant', 
@@ -139,9 +150,12 @@ const CoachChatPanel = ({
     try {
       const response = await coachService.processUserMessage(currentMessage);
       
+      // Extract text content from AIResponse
+      const responseText = extractTextFromAIResponse(response);
+      
       const assistantMessage = {
         role: 'assistant' as const,
-        content: response,
+        content: responseText,
         timestamp: new Date(),
       };
       
@@ -175,7 +189,6 @@ const CoachChatPanel = ({
       setIsExpanded(!expanded);
     }
   };
-  
   
   return (
     <div 
