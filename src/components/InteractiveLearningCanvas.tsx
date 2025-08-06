@@ -33,6 +33,9 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
   const [userInput, setUserInput] = useState("");
   const [initializationStatus, setInitializationStatus] = useState<'idle' | 'initializing' | 'ready' | 'error'>('idle');
   const [canvasError, setCanvasError] = useState<string | null>(null);
+  const [isCoachOpen, setIsCoachOpen] = useState(false);
+  
+  const isCoachReady = initializationStatus === 'ready';
 
   useLayoutEffect(() => {
     phaseRef.current = phase;
