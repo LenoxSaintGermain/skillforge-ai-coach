@@ -8,6 +8,7 @@ import { useAI } from "@/contexts/AIContext";
 import { SyllabusPhase } from "@/models/Syllabus";
 import { User } from "@/contexts/UserContext";
 import { toast } from "sonner";
+import { AIResponse, Action } from "@/services/AICoachService";
 
 interface InteractiveLearningCanvasProps {
   phase: SyllabusPhase;
@@ -135,7 +136,7 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
           clearTimeout(initTimeoutRef.current);
         }
         
-        setCoachMessage(guidance);
+        handleAIActions(guidance);
         setIsCoachReady(true);
       } catch (error) {
         console.error("Coach initialization failed:", error);
@@ -169,6 +170,49 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
       canvas.freeDrawingBrush.color = activeColor;
     }
   }, [activeTool, activeColor]);
+
+  const handleAIActions = useCallback((response: AIResponse) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    response.actions.forEach(action => {
+      switch (action.type) {
+        case 'speech':
+          setCoachMessage(action.content);
+          break;
+        case 'canvas_object':
+          let newObject;
+          const defaultParams = {
+            left: Math.random() * (canvas.width ?? 800) * 0.8,
+            top: Math.random() * (canvas.height ?? 600) * 0.8,
+            fill: activeColor,
+          };
+          const params = { ...defaultParams, ...action.params };
+
+          switch (action.object) {
+            case 'rect':
+              newObject = new Rect({ ...params, width: 100, height: 100 });
+              break;
+            case 'circle':
+              newObject = new Circle({ ...params, radius: 50 });
+              break;
+            case 'text':
+              newObject = new Textbox(action.label || 'Text', { ...params, fontSize: 20 });
+              break;
+            default:
+              console.warn(`Unknown canvas object type: ${action.object}`);
+              return;
+          }
+          if (newObject) {
+            canvas.add(newObject);
+          }
+          break;
+        default:
+          console.warn(`Unknown action type: ${(action as any).type}`);
+      }
+    });
+    canvas.renderAll();
+  }, [activeColor]);
 
   // Simple content addition without API calls
   const addPhaseContent = useCallback((canvas: FabricCanvas, phase: SyllabusPhase) => {
@@ -270,25 +314,17 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
     setCoachMessage("Coach is thinking...");
 
     try {
-      // Add timeout for coach response
-      const timeoutPromise = new Promise<string>((_, reject) => 
-        setTimeout(() => reject(new Error("Response timeout")), 15000)
+      const response = await coachServiceRef.current.processUserMessage(
+        `${currentInput} [Canvas context: User is working on ${phaseRef.current.title}. Canvas has ${fabricCanvasRef.current?.getObjects().length || 0} objects.]`
       );
 
-      const canvas = fabricCanvasRef.current;
-      const canvasState = canvas?.toJSON();
-      const responsePromise = coachService.processUserMessage(
-        `${currentInput} [Canvas context: User is working on ${phase.title}. Canvas has ${canvasState?.objects?.length || 0} objects.]`
-      );
-
-      const response = await Promise.race([responsePromise, timeoutPromise]);
-      setCoachMessage(response);
+      handleAIActions(response);
     } catch (error) {
       console.error("Coach interaction failed:", error);
       setCoachMessage("Sorry, I'm having trouble responding right now. Try rephrasing your question or ask something else!");
       setUserInput(currentInput); // Restore input on error
     }
-  }, [userInput, isCoachReady, phase.title, coachService]);
+  }, [userInput, isCoachReady, handleAIActions]);
 
   const colors = ["#6366f1", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#06b6d4"];
 

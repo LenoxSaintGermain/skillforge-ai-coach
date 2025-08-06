@@ -1,5 +1,28 @@
 import { User } from '@/contexts/UserContext';
 
+// Defines the structured response from the AI Coach service.
+// This allows for a variety of actions to be sent to the UI,
+// such as displaying speech, creating canvas objects, or showing code.
+export type CanvasObject = 'rect' | 'circle' | 'text';
+
+export interface SpeechAction {
+  type: 'speech';
+  content: string;
+}
+
+export interface CanvasObjectAction {
+  type: 'canvas_object';
+  object: CanvasObject;
+  label?: string;
+  params?: any;
+}
+
+export type Action = SpeechAction | CanvasObjectAction;
+
+export interface AIResponse {
+  actions: Action[];
+}
+
 export interface ConversationItem {
   role: 'user' | 'system' | 'assistant';
   content: string;
@@ -184,7 +207,7 @@ export class AICoachService {
   /**
    * Initializes coach with welcome message based on user status
    */
-  public async initializeCoach(user: User, context?: string): Promise<string> {
+  public async initializeCoach(user: User, context?: string): Promise<AIResponse> {
     const isReturningUser = user.created_at !== null;
     
     let welcomeMessage;
@@ -197,13 +220,21 @@ export class AICoachService {
     }
     
     this.addToConversationHistory('assistant', welcomeMessage);
-    return welcomeMessage;
+
+    // Mocked structured response
+    return {
+      actions: [
+        { type: 'speech', content: welcomeMessage },
+        { type: 'canvas_object', object: 'rect', label: 'Web Server', params: { left: 100, top: 150, fill: '#6366f1', width: 150, height: 100 } },
+        { type: 'canvas_object', object: 'circle', label: 'User', params: { left: 400, top: 150, fill: '#10b981', radius: 50 } },
+      ]
+    };
   }
   
   /**
    * Processes user message and maintains continuous context
    */
-  public async processUserMessage(message: string): Promise<string> {
+  public async processUserMessage(message: string): Promise<AIResponse> {
     this.addToConversationHistory('user', message);
     
     // Track user interactions for context
@@ -215,74 +246,28 @@ export class AICoachService {
     }
 
     try {
-      // Build context from conversation history
-      const recentHistory = this.conversationHistory.slice(-10); // Last 10 interactions
-      const contextPrompt = this.buildContextualPrompt(message, recentHistory);
-      
-      const systemPrompt = `You are Jarvis, an AI learning coach specialized in helping users develop AI skills. 
-
-Your expertise includes:
-- Prompt engineering and optimization
-- AI solution design and architecture
-- Implementation planning for AI projects
-- Business process optimization with AI
-- Personalized learning path creation
-
-Your communication style:
-- Supportive and encouraging
-- Knowledgeable but accessible
-- Provides specific, actionable advice
-- Asks clarifying questions when needed
-- Offers concrete next steps
-
-Current user context:
-- Learning preferences: ${this.userContext.learningPreferences?.join(', ') || 'Not specified'}
-- Challenge areas: ${this.userContext.challengeAreas?.join(', ') || 'Not specified'}
-- Strengths: ${this.userContext.strengths?.join(', ') || 'Not specified'}
-- Current skill focus: ${this.learningJourney.currentSkillFocus.join(', ')}
-
-Progress metrics:
-${Object.entries(this.learningJourney.progressMetrics).map(([skill, progress]) => `- ${skill}: ${progress}%`).join('\n')}`;
-
-      const response = await this.callGeminiAPI(contextPrompt, systemPrompt);
-      this.addToConversationHistory('assistant', response);
-      return response;
+      // This part would normally call the Gemini API and get a structured response.
+      // For now, we are mocking the response.
+      const responseText = "Great question! Let's add a database to our architecture.";
+      this.addToConversationHistory('assistant', responseText);
+      return {
+        actions: [
+          { type: 'speech', content: responseText },
+          { type: 'canvas_object', object: 'rect', label: 'Database', params: { left: 100, top: 300, fill: '#f59e0b', width: 150, height: 75 } },
+        ]
+      };
 
     } catch (error) {
       console.error('Error processing user message:', error);
       
-      // Fallback to intent-based responses
-      const messageIntent = this.analyzeMessageIntent(message);
-      let response = '';
-      
-      switch (messageIntent) {
-        case 'greeting':
-          response = this.generateGreetingResponse();
-          break;
-        case 'help_request':
-          response = this.generateHelpResponse();
-          break;
-        case 'scenario_inquiry':
-          response = this.generateScenarioResponse();
-          break;
-        case 'skill_inquiry':
-          response = this.generateSkillResponse(message);
-          break;
-        case 'progress_inquiry':
-          response = this.generateProgressResponse();
-          break;
-        case 'challenge_request':
-          response = this.generateChallengeResponse();
-          break;
-        case 'specific_concept':
-          response = this.generateConceptExplanation(message);
-          break;
-        default:
-          response = this.generateDefaultResponse();
-      }
-      
-      this.addToConversationHistory('assistant', response);
-      return response;
+      const fallbackText = "I'm having trouble connecting right now, but let's try something. How about we add a text box to describe the issue?";
+      this.addToConversationHistory('assistant', fallbackText);
+      return {
+        actions: [
+          { type: 'speech', content: fallbackText },
+          { type: 'canvas_object', object: 'text', label: 'Issue Description', params: { left: 400, top: 300, fill: '#ef4444', text: 'Connectivity Issue' } },
+        ]
+      };
     }
   }
 
