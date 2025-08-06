@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Canvas as FabricCanvas, Circle, Rect, Textbox } from "fabric";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,6 +22,9 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
   const initTimeoutRef = useRef<NodeJS.Timeout>();
   const fabricCanvasRef = useRef<FabricCanvas | null>(null);
   const initializedPhaseRef = useRef<string | null>(null);
+  const phaseRef = useRef(phase);
+  const { coachService } = useAI();
+  const coachServiceRef = useRef(coachService);
   const [activeTool, setActiveTool] = useState<ToolType>("select");
   const [activeColor, setActiveColor] = useState("#6366f1");
   const [isCoachOpen, setIsCoachOpen] = useState(true);
@@ -30,7 +33,11 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
   const [isCanvasReady, setIsCanvasReady] = useState(false);
   const [isCoachReady, setIsCoachReady] = useState(false);
   const [canvasError, setCanvasError] = useState<string | null>(null);
-  const { coachService } = useAI();
+
+  useLayoutEffect(() => {
+    phaseRef.current = phase;
+    coachServiceRef.current = coachService;
+  });
 
   // Memoize canvas dimensions
   const canvasDimensions = useMemo(() => ({
@@ -94,13 +101,14 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
 
   // Initialize coach separately with timeout
   useEffect(() => {
+    const currentPhase = phaseRef.current;
     // Guard: Only initialize if canvas is ready and coach hasn't been initialized for this phase
-    if (!isCanvasReady || initializedPhaseRef.current === phase.title) {
+    if (!isCanvasReady || initializedPhaseRef.current === currentPhase.title) {
       return;
     }
 
     // Mark this phase as having started initialization
-    initializedPhaseRef.current = phase.title;
+    initializedPhaseRef.current = currentPhase.title;
 
     const initCoach = async () => {
       try {
@@ -117,9 +125,9 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
           email: "user@example.com" 
         };
         
-        const guidance = await coachService.initializeCoach(
+        const guidance = await coachServiceRef.current.initializeCoach(
           mockUser,
-          `Starting interactive learning for: ${phase.title}. ${phase.objective}`
+          `Starting interactive learning for: ${currentPhase.title}. ${currentPhase.objective}`
         );
         
         // Clear timeout if successful
@@ -131,7 +139,7 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
         setIsCoachReady(true);
       } catch (error) {
         console.error("Coach initialization failed:", error);
-        setCoachMessage(`Welcome to ${phase.title}! Let's explore this topic together using the interactive canvas.`);
+        setCoachMessage(`Welcome to ${currentPhase.title}! Let's explore this topic together using the interactive canvas.`);
         setIsCoachReady(true);
         
         if (initTimeoutRef.current) {
@@ -149,7 +157,7 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
         clearTimeout(initTimeoutRef.current);
       }
     };
-  }, [isCanvasReady, phase.title, phase.objective, coachService]);
+  }, [isCanvasReady]);
 
   useEffect(() => {
     const canvas = fabricCanvasRef.current;
