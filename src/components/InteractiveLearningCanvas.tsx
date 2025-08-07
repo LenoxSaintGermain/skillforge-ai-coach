@@ -24,6 +24,7 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
   const fabricCanvasRef = useRef<FabricCanvas | null>(null);
   const initializedPhaseRef = useRef<string | null>(null);
   const isInitializing = useRef(false);
+  const coachInitialized = useRef(false);
   const phaseRef = useRef(phase);
   const { coachService } = useAI();
   const coachServiceRef = useRef(coachService);
@@ -91,24 +92,9 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
         console.log("Canvas created successfully");
         toast("Canvas ready!");
 
-        // 2. Initialize AI Coach
-        console.log("Initializing AI Coach...");
-        const mockUser: User = { 
-          id: "user", 
-          user_id: "user", 
-          name: "User", 
-          email: "user@example.com" 
-        };
-        const guidance = await coachServiceRef.current.initializeCoach(
-          mockUser,
-          `Starting interactive learning for: ${phaseRef.current.title}. ${phaseRef.current.objective}`
-        );
-        handleAIActions(guidance);
-        console.log("AI Coach initialized successfully");
-
-        // 3. Set status to ready
+        // 2. Set status to ready
         setInitializationStatus('ready');
-        
+
       } catch (error) {
         console.error("Initialization failed:", error);
         setCanvasError(error instanceof Error ? error.message : "An unknown error occurred");
@@ -133,6 +119,38 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // This effect should run only once.
+
+  // Effect for AI Coach Initialization
+  useEffect(() => {
+    if (coachInitialized.current || initializationStatus !== 'ready') {
+      return;
+    }
+    coachInitialized.current = true;
+
+    const initializeAI = async () => {
+      try {
+        console.log("Initializing AI Coach...");
+        const mockUser: User = {
+          id: "user",
+          user_id: "user",
+          name: "User",
+          email: "user@example.com"
+        };
+        const guidance = await coachServiceRef.current.initializeCoach(
+          mockUser,
+          `Starting interactive learning for: ${phaseRef.current.title}. ${phaseRef.current.objective}`
+        );
+        handleAIActions(guidance);
+        console.log("AI Coach initialized successfully");
+      } catch (error) {
+        console.error("AI Coach initialization failed:", error);
+        // Update state to reflect AI-specific error if needed
+      }
+    };
+
+    initializeAI();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initializationStatus]);
 
   // Effect to handle tool and color changes
   useEffect(() => {
