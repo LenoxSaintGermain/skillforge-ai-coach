@@ -54,21 +54,37 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
     isInitializing.current = true;
     setInitializationStatus('initializing');
 
+    let animationFrameId: number;
+    let attemptCount = 0;
+    const maxAttempts = 100;
+
+    const pollForCanvas = () => {
+      if (canvasRef.current) {
+        initialize();
+      } else {
+        attemptCount++;
+        if (attemptCount > maxAttempts) {
+          console.error("Canvas element not found after multiple attempts.");
+          setCanvasError("Canvas element could not be found in the DOM.");
+          setInitializationStatus('error');
+          isInitializing.current = false;
+        } else {
+          animationFrameId = requestAnimationFrame(pollForCanvas);
+        }
+      }
+    };
+
     const initialize = async () => {
       try {
         // 1. Initialize Canvas
-        if (!canvasRef.current) {
-          throw new Error("Canvas element not found.");
-        }
         console.log("Initializing canvas...");
-        const canvas = new FabricCanvas(canvasRef.current, {
+        const canvas = new FabricCanvas(canvasRef.current!, {
           width: 800,
           height: 600,
           backgroundColor: "#ffffff",
         });
         fabricCanvasRef.current = canvas;
         if (canvas.freeDrawingBrush) {
-          canvas.freeDrawingBrush.color = activeColor;
           canvas.freeDrawingBrush.width = 3;
         }
         addPhaseContent(canvas, phaseRef.current);
@@ -103,10 +119,11 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
       }
     };
 
-    initialize();
+    pollForCanvas();
 
     return () => {
       console.log("Cleaning up initialization effect...");
+      cancelAnimationFrame(animationFrameId);
       isInitializing.current = false;
       if (fabricCanvasRef.current && !fabricCanvasRef.current.disposed) {
         console.log("Disposing canvas instance...");
@@ -117,13 +134,14 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // This effect should run only once.
 
+  // Effect to handle tool and color changes
   useEffect(() => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
 
     canvas.isDrawingMode = activeTool === "draw";
     
-    if (activeTool === "draw" && canvas.freeDrawingBrush) {
+    if (canvas.freeDrawingBrush) {
       canvas.freeDrawingBrush.color = activeColor;
     }
   }, [activeTool, activeColor]);
