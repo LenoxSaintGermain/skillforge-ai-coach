@@ -116,66 +116,66 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
     canvas.renderAll();
   }, [activeColor]);
 
-  // Unified, robust initialization for canvas and AI coach
-  useEffect(() => {
-    if (isInitializing.current || initializationStatus !== 'idle') {
+  // Simple, synchronous canvas initialization using useLayoutEffect
+  useLayoutEffect(() => {
+    if (isInitializing.current) {
       return;
     }
-    isInitializing.current = true;
-    setInitializationStatus('initializing');
 
-    const initialize = async () => {
+    const initializeCanvas = () => {
+      if (!canvasRef.current) {
+        console.error("Canvas ref not available");
+        setCanvasError("Canvas element not found");
+        setInitializationStatus('error');
+        return;
+      }
+
       try {
-        // Wait for DOM to be ready and check multiple times
-        let attempts = 0;
-        const maxAttempts = 10;
-        
-        while (!canvasRef.current && attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          attempts++;
-        }
-        
-        if (!canvasRef.current) {
-          throw new Error("Canvas element not found after waiting.");
-        }
-        
+        isInitializing.current = true;
+        setInitializationStatus('initializing');
+
+        console.log("Initializing canvas...");
         const canvas = new FabricCanvas(canvasRef.current, {
-          width: 800,
-          height: 600,
+          width: canvasDimensions.width,
+          height: canvasDimensions.height,
           backgroundColor: "#ffffff",
         });
+
         fabricCanvasRef.current = canvas;
+        
         if (canvas.freeDrawingBrush) {
           canvas.freeDrawingBrush.width = 3;
+          canvas.freeDrawingBrush.color = activeColor;
         }
-        addPhaseContent(canvas, phaseRef.current);
-        toast("Canvas ready!");
 
-        // 2. Set status to ready (so coach can initialize)
+        addPhaseContent(canvas, phaseRef.current);
         setInitializationStatus('ready');
+        toast("Canvas ready!");
+        console.log("Canvas initialized successfully");
 
       } catch (error) {
-        console.error("Initialization failed:", error);
-        setCanvasError(error instanceof Error ? error.message : "An unknown error occurred");
+        console.error("Canvas initialization failed:", error);
+        setCanvasError(error instanceof Error ? error.message : "Canvas initialization failed");
         setInitializationStatus('error');
       } finally {
         isInitializing.current = false;
       }
     };
 
-    // Use a small timeout to ensure the DOM is fully ready
-    const timer = setTimeout(initialize, 200);
+    initializeCanvas();
 
     return () => {
-      clearTimeout(timer);
-      isInitializing.current = false;
       if (fabricCanvasRef.current && !fabricCanvasRef.current.disposed) {
-        fabricCanvasRef.current.dispose();
-        fabricCanvasRef.current = null;
+        try {
+          fabricCanvasRef.current.dispose();
+          fabricCanvasRef.current = null;
+        } catch (error) {
+          console.error("Canvas disposal error:", error);
+        }
       }
+      isInitializing.current = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once
+  }, [canvasDimensions, addPhaseContent, activeColor]);
 
   // Effect for AI Coach Initialization
   useEffect(() => {
