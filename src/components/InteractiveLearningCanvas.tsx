@@ -126,10 +126,19 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
 
     const initialize = async () => {
       try {
-        // 1. Initialize Canvas
-        if (!canvasRef.current) {
-          throw new Error("Canvas element not found.");
+        // Wait for DOM to be ready and check multiple times
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        while (!canvasRef.current && attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
         }
+        
+        if (!canvasRef.current) {
+          throw new Error("Canvas element not found after waiting.");
+        }
+        
         const canvas = new FabricCanvas(canvasRef.current, {
           width: 800,
           height: 600,
@@ -155,7 +164,7 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
     };
 
     // Use a small timeout to ensure the DOM is fully ready
-    const timer = setTimeout(initialize, 100);
+    const timer = setTimeout(initialize, 200);
 
     return () => {
       clearTimeout(timer);

@@ -15,17 +15,36 @@ import { AIResponse } from '@/services/AICoachService';
 
 // Helper to robustly extract displayable text from AI responses
 const extractTextFromAIResponse = (response: AIResponse | string): string => {
-  if (typeof response === 'string') {
-    return response;
-  }
-  if (response && Array.isArray(response.actions)) {
-    const speechAction = response.actions.find(action => action.type === 'speech');
-    if (speechAction && typeof speechAction.content === 'string') {
+  try {
+    if (typeof response === 'string') {
+      return response;
+    }
+    
+    // Handle null, undefined, or non-object responses
+    if (!response || typeof response !== 'object') {
+      console.warn("Invalid AIResponse:", response);
+      return "Coach is ready to help!";
+    }
+    
+    // Ensure response has actions array
+    if (!Array.isArray(response.actions)) {
+      console.warn("AIResponse missing actions array:", response);
+      return "Coach has responded.";
+    }
+    
+    // Find speech action and validate content
+    const speechAction = response.actions.find(action => action && action.type === 'speech');
+    if (speechAction && speechAction.type === 'speech' && typeof speechAction.content === 'string') {
       return speechAction.content;
     }
+    
+    // Fallback: return a safe message
+    console.warn("No valid speech action found in response");
+    return "Coach has responded.";
+  } catch (error) {
+    console.error("Error extracting text from AIResponse:", error);
+    return "Coach is ready to help!";
   }
-  console.warn("Could not extract speech from AIResponse:", response);
-  return "Coach has responded."; // Fallback text
 };
 
 interface ChatMessageProps {
@@ -35,10 +54,13 @@ interface ChatMessageProps {
 const ChatMessage = ({ message }: ChatMessageProps) => {
   const isUser = message.role === 'user';
   
+  // Ensure message content is always a string
+  const safeContent = typeof message.content === 'string' ? message.content : 'Message received';
+  
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
       <div className={`max-w-[80%] ${isUser ? 'bg-skillforge-primary text-white' : 'bg-gray-100 dark:bg-gray-800'} rounded-lg px-4 py-2`}>
-        <p className="text-sm">{message.content}</p>
+        <p className="text-sm">{safeContent}</p>
         <p className="text-xs text-gray-400 mt-1">
           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </p>
@@ -67,6 +89,7 @@ const CoachChatPanel = ({
   const { currentUser } = useUser();
   const location = useLocation();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const initializationRef = useRef<{ userId?: string; context?: string }>({});
   
   // Determine context based on current route
   const getCoachContext = () => {
@@ -85,20 +108,32 @@ const CoachChatPanel = ({
   // Handle controlled vs uncontrolled expansion state
   const expanded = controlledExpanded !== undefined ? controlledExpanded : isExpanded;
   
-  // Initialize coach on component mount
+  // Initialize coach on component mount - prevent duplicate initializations
   useEffect(() => {
     if (!currentUser || !isServiceReady) {
       console.log('⏳ Waiting for user or services...', { currentUser: !!currentUser, isServiceReady });
       return;
     }
     
+    const context = getCoachContext();
+    const initKey = `${currentUser.id}-${context}`;
+    
+    // Prevent duplicate initialization for same user/context
+    if (initializationRef.current.userId === currentUser.id && 
+        initializationRef.current.context === context) {
+      console.log('🔄 Coach already initialized for this user/context');
+      return;
+    }
+    
     const initializeCoach = async () => {
-      const context = getCoachContext();
       console.log(`🤖 Initializing coach for ${currentUser.name} with context: ${context}...`);
       
       try {
         setIsInitializing(true);
         setInitError(null);
+        
+        // Mark as initializing to prevent duplicates
+        initializationRef.current = { userId: currentUser.id, context };
         
         const welcomeMessageResponse = await coachService.initializeCoach(currentUser, context);
         const welcomeMessageText = extractTextFromAIResponse(welcomeMessageResponse);
@@ -116,8 +151,10 @@ const CoachChatPanel = ({
         console.error(`❌ Failed to initialize coach:`, errorMessage);
         setInitError(errorMessage);
         
+        // Reset initialization ref on error
+        initializationRef.current = {};
+        
         // Provide contextual fallback message
-        const context = getCoachContext();
         const fallbackMessage = `Hello ${currentUser.name}! I'm your coach for ${context}. I'm having some connectivity issues, but I'm here to help. You can still ask me questions and I'll do my best to assist you.`;
         setMessages([{ 
           role: 'assistant', 
@@ -130,7 +167,7 @@ const CoachChatPanel = ({
     };
     
     initializeCoach();
-  }, [coachService, currentUser, isServiceReady, location.pathname]);
+  }, [coachService, currentUser, isServiceReady]); // Removed location.pathname
   
   useEffect(() => {
     if (messagesEndRef.current) {
