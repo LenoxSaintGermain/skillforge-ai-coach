@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -6,9 +7,26 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { useAI } from '@/contexts/AIContext';
 import { useUser } from '@/contexts/UserContext';
-import { ConversationItem, AIResponse } from '@/services/AICoachService';
+import { ConversationItem } from '@/services/AICoachService';
 import { Brain, Send, X, Minimize, MessageSquare } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+
+import { AIResponse } from '@/services/AICoachService';
+
+// Helper to robustly extract displayable text from AI responses
+const extractTextFromAIResponse = (response: AIResponse | string): string => {
+  if (typeof response === 'string') {
+    return response;
+  }
+  if (response && Array.isArray(response.actions)) {
+    const speechAction = response.actions.find(action => action.type === 'speech');
+    if (speechAction && typeof speechAction.content === 'string') {
+      return speechAction.content;
+    }
+  }
+  console.warn("Could not extract speech from AIResponse:", response);
+  return "Coach has responded."; // Fallback text
+};
 
 interface ChatMessageProps {
   message: ConversationItem;
@@ -27,15 +45,6 @@ const ChatMessage = ({ message }: ChatMessageProps) => {
       </div>
     </div>
   );
-};
-
-// Helper function to extract text content from AIResponse
-const extractTextFromAIResponse = (response: AIResponse): string => {
-  const speechActions = response.actions.filter(action => action.type === 'speech');
-  if (speechActions.length > 0) {
-    return speechActions.map(action => action.content).join(' ');
-  }
-  return 'Coach response received';
 };
 
 interface CoachChatPanelProps {
@@ -91,14 +100,12 @@ const CoachChatPanel = ({
         setIsInitializing(true);
         setInitError(null);
         
-        const response = await coachService.initializeCoach(currentUser, context);
-        
-        // Extract text content from AIResponse
-        const welcomeMessage = extractTextFromAIResponse(response);
+        const welcomeMessageResponse = await coachService.initializeCoach(currentUser, context);
+        const welcomeMessageText = extractTextFromAIResponse(welcomeMessageResponse);
         
         setMessages([{ 
           role: 'assistant', 
-          content: welcomeMessage, 
+          content: welcomeMessageText,
           timestamp: new Date() 
         }]);
         
@@ -149,8 +156,7 @@ const CoachChatPanel = ({
     
     try {
       const response = await coachService.processUserMessage(currentMessage);
-      
-      // Extract text content from AIResponse
+      console.log("AI Response Received:", response);
       const responseText = extractTextFromAIResponse(response);
       
       const assistantMessage = {
@@ -190,6 +196,7 @@ const CoachChatPanel = ({
     }
   };
   
+
   return (
     <div 
       className={`fixed bottom-4 right-4 z-50 flex flex-col ${className} ${expanded ? 'h-[500px] w-[350px]' : 'h-12 w-12'} 

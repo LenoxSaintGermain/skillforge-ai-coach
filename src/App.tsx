@@ -1,5 +1,6 @@
 
 import React from "react";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -29,23 +30,25 @@ const App = () => (
             <React.StrictMode>
               <Toaster />
               <Sonner />
-              <Routes>
-                {/* Auth page without layout */}
-                <Route path="/auth" element={<AuthPage />} />
-                
-                {/* App pages with layout */}
-                <Route element={<AppLayout />}>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/scenarios" element={<ScenariosPage />} />
-                  <Route path="/scenario/:id" element={<ScenarioDetailPage />} />
-                  <Route path="/scenario/generate" element={<ScenarioGeneratorPage />} />
-                  <Route path="/assessment" element={<SkillAssessmentPage />} />
-                  <Route path="/gemini-training" element={<GeminiTrainingPage />} />
-                  <Route path="/resources" element={<ResourcesPage />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                </Route>
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <ErrorBoundary>
+                <Routes>
+                  {/* Auth page without layout */}
+                  <Route path="/auth" element={<AuthPage />} />
+
+                  {/* App pages with layout */}
+                  <Route element={<AppLayout />}>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/scenarios" element={<ScenariosPage />} />
+                    <Route path="/scenario/:id" element={<ScenarioDetailPage />} />
+                    <Route path="/scenario/generate" element={<ScenarioGeneratorPage />} />
+                    <Route path="/assessment" element={<SkillAssessmentPage />} />
+                    <Route path="/gemini-training" element={<GeminiTrainingPage />} />
+                    <Route path="/resources" element={<ResourcesPage />} />
+                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  </Route>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </ErrorBoundary>
             </React.StrictMode>
           </TooltipProvider>
         </BrowserRouter>
