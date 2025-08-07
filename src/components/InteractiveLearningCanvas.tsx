@@ -48,105 +48,36 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
     height: Math.max(600, window.innerHeight - 100)
   }), []);
 
-  // Unified initialization effect for canvas and AI coach
-  useLayoutEffect(() => {
-    // Guard against multiple simultaneous initializations
-    if (isInitializing.current || initializationStatus !== 'idle') {
-      return;
+  // Simple content addition without API calls
+  const addPhaseContent = useCallback((canvas: FabricCanvas, phase: SyllabusPhase) => {
+    try {
+      // Add phase title
+      const title = new Textbox(phase.title, {
+        left: 50,
+        top: 50,
+        fontSize: 32,
+        fill: "#1e293b",
+        fontWeight: "bold",
+        selectable: false,
+      });
+      canvas.add(title);
+
+      // Add objective
+      const objective = new Textbox(`Objective: ${phase.objective}`, {
+        left: 50,
+        top: 120,
+        fontSize: 16,
+        fill: "#475569",
+        width: Math.min(600, canvas.width - 100),
+        selectable: false,
+      });
+      canvas.add(objective);
+
+      canvas.renderAll();
+    } catch (error) {
+      console.error("Failed to add phase content:", error);
     }
-    isInitializing.current = true;
-    setInitializationStatus('initializing');
-
-    const initialize = async () => {
-      try {
-        // Wait for DOM element to be available with retry logic
-        const waitForCanvas = () => {
-          return new Promise<HTMLCanvasElement>((resolve, reject) => {
-            const checkCanvas = () => {
-              if (canvasRef.current) {
-                console.log("Canvas element found");
-                resolve(canvasRef.current);
-              } else {
-                console.log("Canvas element not found, retrying...");
-                setTimeout(checkCanvas, 10);
-              }
-            };
-            checkCanvas();
-            
-            // Timeout after 5 seconds
-            setTimeout(() => reject(new Error("Canvas element not found after timeout")), 5000);
-          });
-        };
-
-        // 1. Initialize Canvas
-        const canvasElement = await waitForCanvas();
-        console.log("Initializing canvas...");
-        const canvas = new FabricCanvas(canvasRef.current, {
-          width: 800,
-          height: 600,
-          backgroundColor: "#ffffff",
-        });
-        fabricCanvasRef.current = canvas;
-        if (canvas.freeDrawingBrush) {
-          canvas.freeDrawingBrush.color = activeColor;
-          canvas.freeDrawingBrush.width = 3;
-        }
-        addPhaseContent(canvas, phaseRef.current);
-        console.log("Canvas created successfully");
-        toast("Canvas ready!");
-
-        // 2. Initialize AI Coach
-        console.log("Initializing AI Coach...");
-        const mockUser: User = { 
-          id: "user", 
-          user_id: "user", 
-          name: "User", 
-          email: "user@example.com" 
-        };
-        const guidance = await coachServiceRef.current.initializeCoach(
-          mockUser,
-          `Starting interactive learning for: ${phaseRef.current.title}. ${phaseRef.current.objective}`
-        );
-        handleAIActions(guidance);
-        console.log("AI Coach initialized successfully");
-
-        // 3. Set status to ready
-        setInitializationStatus('ready');
-        
-      } catch (error) {
-        console.error("Initialization failed:", error);
-        setCanvasError(error instanceof Error ? error.message : "An unknown error occurred");
-        setInitializationStatus('error');
-        toast.error("Initialization failed");
-      } finally {
-        isInitializing.current = false;
-      }
-    };
-
-    initialize();
-
-    return () => {
-      console.log("Cleaning up initialization effect...");
-      isInitializing.current = false;
-      if (fabricCanvasRef.current && !fabricCanvasRef.current.disposed) {
-        console.log("Disposing canvas instance...");
-        fabricCanvasRef.current.dispose();
-        fabricCanvasRef.current = null;
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // This effect should run only once.
-
-  useEffect(() => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas) return;
-
-    canvas.isDrawingMode = activeTool === "draw";
-    
-    if (activeTool === "draw" && canvas.freeDrawingBrush) {
-      canvas.freeDrawingBrush.color = activeColor;
-    }
-  }, [activeTool, activeColor]);
+  }, []);
 
   const handleAIActions = useCallback((response: AIResponse) => {
     const canvas = fabricCanvasRef.current;
@@ -191,36 +122,79 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
     canvas.renderAll();
   }, [activeColor]);
 
-  // Simple content addition without API calls
-  const addPhaseContent = useCallback((canvas: FabricCanvas, phase: SyllabusPhase) => {
-    try {
-      // Add phase title
-      const title = new Textbox(phase.title, {
-        left: 50,
-        top: 50,
-        fontSize: 32,
-        fill: "#1e293b",
-        fontWeight: "bold",
-        selectable: false,
-      });
-      canvas.add(title);
+  // Initialize canvas after component mounts
+  useLayoutEffect(() => {
+    // Simple timeout to ensure DOM is ready
+    const timer = setTimeout(() => {
+      if (canvasRef.current && initializationStatus === 'idle') {
+        setInitializationStatus('initializing');
+        
+        try {
+          console.log("Initializing canvas...");
+          const canvas = new FabricCanvas(canvasRef.current, {
+            width: 800,
+            height: 600,
+            backgroundColor: "#ffffff",
+          });
+          fabricCanvasRef.current = canvas;
+          if (canvas.freeDrawingBrush) {
+            canvas.freeDrawingBrush.color = activeColor;
+            canvas.freeDrawingBrush.width = 3;
+          }
+          addPhaseContent(canvas, phaseRef.current);
+          console.log("Canvas created successfully");
+          toast("Canvas ready!");
+          setInitializationStatus('ready');
+        } catch (error) {
+          console.error("Canvas initialization failed:", error);
+          setCanvasError(error instanceof Error ? error.message : "Canvas initialization failed");
+          setInitializationStatus('error');
+        }
+      }
+    }, 100);
 
-      // Add objective
-      const objective = new Textbox(`Objective: ${phase.objective}`, {
-        left: 50,
-        top: 120,
-        fontSize: 16,
-        fill: "#475569",
-        width: Math.min(600, canvas.width - 100),
-        selectable: false,
-      });
-      canvas.add(objective);
+    return () => clearTimeout(timer);
+  }, [activeColor, addPhaseContent]);
 
-      canvas.renderAll();
-    } catch (error) {
-      console.error("Failed to add phase content:", error);
+  // Initialize AI coach separately
+  useLayoutEffect(() => {
+    if (initializationStatus === 'ready' && coachMessage === "Welcome! Your AI coach is initializing...") {
+      const initializeAI = async () => {
+        try {
+          console.log("Initializing AI Coach...");
+          const mockUser: User = { 
+            id: "user", 
+            user_id: "user", 
+            name: "User", 
+            email: "user@example.com" 
+          };
+          const guidance = await coachServiceRef.current.initializeCoach(
+            mockUser,
+            `Starting interactive learning for: ${phaseRef.current.title}. ${phaseRef.current.objective}`
+          );
+          handleAIActions(guidance);
+          console.log("AI Coach initialized successfully");
+        } catch (error) {
+          console.error("AI Coach initialization failed:", error);
+          setCoachMessage("AI Coach is having trouble starting. You can still use the canvas!");
+        }
+      };
+      
+      initializeAI();
     }
-  }, []);
+  }, [initializationStatus, coachMessage, handleAIActions]);
+
+  useEffect(() => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    canvas.isDrawingMode = activeTool === "draw";
+    
+    if (activeTool === "draw" && canvas.freeDrawingBrush) {
+      canvas.freeDrawingBrush.color = activeColor;
+    }
+  }, [activeTool, activeColor]);
+
 
   const handleToolClick = useCallback((tool: ToolType) => {
     setActiveTool(tool);
