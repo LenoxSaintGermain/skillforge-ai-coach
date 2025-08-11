@@ -143,6 +143,18 @@
   transition: all 0.2s ease;
 }
 
+/* Explored concept styling */
+.llm-concept-explored {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-left: 4px solid #0ea5e9;
+}
+
+.llm-concept-explored h3::after {
+  content: " ✓";
+  color: #0ea5e9;
+  font-weight: bold;
+}
+
 .llm-interactive:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);

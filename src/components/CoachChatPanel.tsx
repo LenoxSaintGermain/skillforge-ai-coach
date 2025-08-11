@@ -250,7 +250,7 @@ const CoachChatPanel = ({
             <Button size="sm" variant="ghost" onClick={toggleExpanded} className="h-6 w-6 p-0 text-white hover:bg-coach-dark">
               <Minimize size={16} />
             </Button>
-            <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-white hover:bg-coach-dark">
+            <Button size="sm" variant="ghost" onClick={toggleExpanded} className="h-6 w-6 p-0 text-white hover:bg-coach-dark">
               <X size={16} />
             </Button>
           </div>
