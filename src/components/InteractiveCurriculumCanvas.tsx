@@ -47,6 +47,12 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
   const [userInput, setUserInput] = useState('');
   const [isCoachOpen, setIsCoachOpen] = useState(false);
   
+  // New state for interactive content management
+  const [contentState, setContentState] = useState<'overview' | 'concept-detail'>('overview');
+  const [selectedConcept, setSelectedConcept] = useState<string | null>(null);
+  const [exploredConcepts, setExploredConcepts] = useState<Set<string>>(new Set());
+  const [contentCache, setContentCache] = useState<Map<string, string>>(new Map());
+  
   const [curriculumContext, setCurriculumContext] = useState<CurriculumContext>({
     currentPhase: phase.id,
     interactionHistory: [],
@@ -142,7 +148,7 @@ Key Concepts: ${phase.keyConceptsAndActivities.map(concept => concept.title).joi
 Generate an engaging, interactive visualization using the exact CSS classes above.`;
   }, []);
 
-  // Simplified click handler with minimal processing
+  // Enhanced click handler with content state management
   const handleContentClick = useCallback(async (event: MouseEvent) => {
     let targetElement = event.target as HTMLElement;
 
@@ -158,19 +164,158 @@ Generate an engaging, interactive visualization using the exact CSS classes abov
     if (!targetElement || !targetElement.dataset.interactionId) return;
 
     event.preventDefault();
+    setIsLoading(true);
 
-    // Simple feedback without heavy processing
     const interactionId = targetElement.dataset.interactionId;
     
-    if (interactionId.includes('concept')) {
-      toast.info('Concept selected: ' + (targetElement.textContent || '').substring(0, 50));
-    } else if (interactionId.includes('task')) {
-      toast.info('Task selected: ' + (targetElement.textContent || '').substring(0, 50));
-    } else if (interactionId.includes('coach')) {
-      setIsCoachOpen(true);
-      setCoachMessage('How can I help you with this topic?');
+    try {
+      if (interactionId.includes('explore')) {
+        // Extract concept index from interaction ID
+        const conceptIndex = interactionId.split('-').pop();
+        const concept = phase.keyConceptsAndActivities[parseInt(conceptIndex || '0')];
+        
+        if (concept) {
+          setSelectedConcept(concept.title);
+          setExploredConcepts(prev => new Set([...prev, concept.title]));
+          
+          // Check cache first
+          const cacheKey = `concept-${phase.id}-${conceptIndex}`;
+          if (contentCache.has(cacheKey)) {
+            setLlmContent(contentCache.get(cacheKey)!);
+            setContentState('concept-detail');
+          } else {
+            // Generate detailed content for the concept
+            const detailPrompt = `Generate detailed interactive content for the concept "${concept.title}". 
+            Include:
+            - Comprehensive explanation with examples
+            - Practical exercises or mini-tasks
+            - Visual diagrams if applicable
+            - Interactive elements for deeper exploration
+            - Navigation back to overview
+            
+            Description: ${concept.description}
+            Phase context: ${phase.title}`;
+            
+            const detailedContent = await callGeminiForGeneration(detailPrompt) || generateFallbackContent();
+            setContentCache(prev => new Map([...prev, [cacheKey, detailedContent]]));
+            setLlmContent(detailedContent);
+            setContentState('concept-detail');
+          }
+        }
+      } else if (interactionId.includes('back-to-overview')) {
+        // Return to overview
+        setContentState('overview');
+        setSelectedConcept(null);
+        const overviewContent = generateFallbackContent();
+        setLlmContent(overviewContent);
+      } else if (interactionId.includes('task')) {
+        toast.info('Task selected: ' + (targetElement.textContent || '').substring(0, 50));
+      } else if (interactionId.includes('coach')) {
+        setIsCoachOpen(true);
+        setCoachMessage('How can I help you with this topic?');
+      }
+      
+      // Record interaction
+      const newInteraction: InteractionData = {
+        id: interactionId,
+        type: interactionId.split('-')[2] || 'unknown',
+        value: targetElement.textContent?.substring(0, 100),
+        timestamp: new Date(),
+        phaseContext: phase.id
+      };
+      
+      setCurriculumContext(prev => ({
+        ...prev,
+        interactionHistory: [...prev.interactionHistory.slice(-9), newInteraction]
+      }));
+      
+    } catch (error) {
+      console.error('Content interaction failed:', error);
+      toast.error('Failed to load content. Try again.');
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  }, [phase, contentCache]);
+
+  // Generate fallback content when API fails
+  const generateFallbackContent = useCallback((): string => {
+    const conceptsWithStatus = phase.keyConceptsAndActivities.map((concept, index) => {
+      const isExplored = exploredConcepts.has(concept.title);
+      return `
+        <div class="llm-concept ${isExplored ? 'llm-concept-explored' : ''}" data-interaction-id="phase-${phase.id}-concept-${index}">
+          <h3>${concept.title} ${isExplored ? '✓' : ''}</h3>
+          <p>${concept.description}</p>
+          <button class="llm-button ${isExplored ? 'llm-button-secondary' : ''}" data-interaction-id="phase-${phase.id}-explore-${index}">
+            ${isExplored ? 'Review Concept' : 'Explore This Concept'}
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="llm-container">
+        <h1 class="llm-title" data-interaction-id="phase-${phase.id}-title-main">${phase.title}</h1>
+        
+        <div class="llm-highlight">
+          <p><strong>Objective:</strong> ${phase.objective}</p>
+          <div class="llm-progress">
+            <span>Progress: ${exploredConcepts.size}/${phase.keyConceptsAndActivities.length} concepts explored</span>
+            <div style="width: 100%; height: 8px; background-color: #e2e8f0; border-radius: 4px; margin-top: 8px;">
+              <div style="width: ${(exploredConcepts.size / phase.keyConceptsAndActivities.length) * 100}%; height: 100%; background-color: #3b82f6; border-radius: 4px; transition: width 0.3s ease;"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="llm-concept-grid">
+          ${conceptsWithStatus}
+        </div>
+
+        <div class="llm-connection"></div>
+
+        <div class="llm-task" data-interaction-id="phase-${phase.id}-task-main">
+          <h3>Core Practical Task</h3>
+          <p><strong>Description:</strong> ${phase.corePracticalTask.description}</p>
+          <p><strong>Details:</strong> ${phase.corePracticalTask.taskDetails}</p>
+          <button class="llm-button" data-interaction-id="phase-${phase.id}-start-task">
+            Start This Task
+          </button>
+        </div>
+
+        <div class="llm-connection"></div>
+        
+        <div style="text-align: center; margin-top: 2rem;">
+          <button class="llm-button" data-interaction-id="phase-${phase.id}-coach-help">
+            Ask AI Coach for Help
+          </button>
+        </div>
+      </div>
+    `;
+  }, [phase, exploredConcepts]);
+
+  // Call Gemini API for HTML generation
+  const callGeminiForGeneration = useCallback(async (prompt: string): Promise<string> => {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { data, error } = await supabase.functions.invoke('gemini-api', {
+        body: {
+          prompt,
+          systemPrompt: buildSystemPrompt(phase),
+          temperature: 0.7,
+          maxTokens: 2000
+        }
+      });
+
+      if (error) {
+        throw new Error(`API error: ${error.message}`);
+      }
+
+      return data?.generatedText || '';
+    } catch (error) {
+      console.error('Gemini API call failed:', error);
+      return generateFallbackContent();
+    }
+  }, [phase, buildSystemPrompt, generateFallbackContent]);
 
   // Build contextual prompt for interactions
   const buildInteractionPrompt = useCallback((
@@ -205,75 +350,6 @@ RESPONSE REQUIREMENTS:
 Generate the updated interactive visualization:`;
   }, [phase, buildSystemPrompt]);
 
-  // Call Gemini API for HTML generation
-  const callGeminiForGeneration = useCallback(async (prompt: string): Promise<string> => {
-    try {
-      const { supabase } = await import('@/integrations/supabase/client');
-      
-      const { data, error } = await supabase.functions.invoke('gemini-api', {
-        body: {
-          prompt,
-          systemPrompt: buildSystemPrompt(phase),
-          temperature: 0.7,
-          maxTokens: 2000
-        }
-      });
-
-      if (error) {
-        throw new Error(`API error: ${error.message}`);
-      }
-
-      return data?.generatedText || '';
-    } catch (error) {
-      console.error('Gemini API call failed:', error);
-      return generateFallbackContent();
-    }
-  }, [phase, buildSystemPrompt]);
-
-  // Generate fallback content when API fails
-  const generateFallbackContent = useCallback((): string => {
-    return `
-      <div class="llm-container">
-        <h1 class="llm-title" data-interaction-id="phase-${phase.id}-title-main">${phase.title}</h1>
-        
-        <div class="llm-highlight">
-          <p><strong>Objective:</strong> ${phase.objective}</p>
-        </div>
-        
-        <div class="llm-concept-grid">
-          ${phase.keyConceptsAndActivities.map((concept, index) => `
-            <div class="llm-concept" data-interaction-id="phase-${phase.id}-concept-${index}">
-              <h3>${concept.title}</h3>
-              <p>${concept.description}</p>
-              <button class="llm-button" data-interaction-id="phase-${phase.id}-explore-${index}">
-                Explore This Concept
-              </button>
-            </div>
-          `).join('')}
-        </div>
-
-        <div class="llm-connection"></div>
-
-        <div class="llm-task" data-interaction-id="phase-${phase.id}-task-main">
-          <h3>Core Practical Task</h3>
-          <p><strong>Description:</strong> ${phase.corePracticalTask.description}</p>
-          <p><strong>Details:</strong> ${phase.corePracticalTask.taskDetails}</p>
-          <button class="llm-button" data-interaction-id="phase-${phase.id}-start-task">
-            Start This Task
-          </button>
-        </div>
-
-        <div class="llm-connection"></div>
-        
-        <div style="text-align: center; margin-top: 2rem;">
-          <button class="llm-button" data-interaction-id="phase-${phase.id}-coach-help">
-            Ask AI Coach for Help
-          </button>
-        </div>
-      </div>
-    `;
-  }, [phase]);
-
   // Removed script execution for safety and performance
 
   // Initialize the canvas with static content immediately
@@ -299,7 +375,7 @@ Generate the updated interactive visualization:`;
     } finally {
       isInitializing.current = false;
     }
-  }, [phase]);
+  }, [phase, generateFallbackContent]);
 
   // Set up click event listener for the content area
   useEffect(() => {

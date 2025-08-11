@@ -90,6 +90,16 @@
   animation: llmBounceIn 0.3s ease-out;
 }
 
+.llm-concept-explored {
+  background: linear-gradient(135deg, hsl(var(--accent) / 0.2), hsl(var(--accent) / 0.1));
+  border-color: hsl(var(--accent) / 0.5);
+}
+
+.llm-button-secondary {
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+}
+
 .llm-concept h3 {
   font-size: 1.125rem;
   font-weight: 600;
