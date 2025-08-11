@@ -6,6 +6,7 @@ import { useAI } from "@/contexts/AIContext";
 import { SyllabusPhase } from "@/models/Syllabus";
 import { User } from "@/contexts/UserContext";
 import { toast } from "sonner";
+import "@/styles/llm-curriculum.css";
 
 interface InteractiveCurriculumCanvasProps {
   phase: SyllabusPhase;
