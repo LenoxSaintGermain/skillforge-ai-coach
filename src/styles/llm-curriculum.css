@@ -10,6 +10,55 @@
   animation: llmFadeIn 0.5s ease-in-out;
 }
 
+/* Text and Input Elements */
+.llm-text {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+  color: hsl(var(--foreground));
+  line-height: 1.6;
+  max-width: 65ch;
+}
+
+.llm-subtitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  margin: 1rem 0 0.5rem 0;
+}
+
+.llm-input,
+.llm-textarea {
+  margin: 0.5rem 0;
+  padding: 0.75rem;
+  width: 100%;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  background: hsl(var(--background));
+  font-family: inherit;
+  color: hsl(var(--foreground));
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.llm-input:focus,
+.llm-textarea:focus {
+  border-color: hsl(var(--primary));
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+}
+
+.llm-code {
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  font-family: 'Courier New', monospace;
+  border: 1px solid hsl(var(--border));
+}
+
 .llm-title {
   font-size: 1.875rem;
   font-weight: 700;
@@ -71,6 +120,22 @@
   background: hsl(var(--primary) / 0.9);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px hsl(var(--primary) / 0.3);
+}
+
+.llm-button:active {
+  transform: translateY(0px);
+  box-shadow: 0 2px 6px hsl(var(--primary) / 0.2);
+}
+
+/* Interactive Elements */
+.llm-interactive {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.llm-interactive:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .llm-connection {

@@ -60,61 +60,79 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
 
   // System prompt for curriculum-specific AI generation
   const buildSystemPrompt = useCallback((phase: SyllabusPhase): string => {
-    return `You are an Intelligent Curriculum Visualizer and Tutor. Your role is to generate interactive HTML content for learning ${phase.title}.
+    return `**Role:**
+You are "Jarvis", an expert AI Curriculum Visualizer and Interactive Learning Coach. Your mission is to create engaging, visual learning experiences for ${phase.title}.
 
-CRITICAL STYLING RULES:
-1. Generate ONLY raw HTML content - no <html>, <head>, or <body> tags
-2. Use ONLY these predefined CSS classes (MANDATORY):
-   - llm-container: Main content wrapper (ALWAYS use this as the root)
-   - llm-title: Large headings (use h1, h2 with this class)
+**User Context:**
+- **Current Phase:** ${phase.title} (Phase ${phase.id})
+- **Learning Objective:** ${phase.objective}
+- **User Preferences:** Visual learner seeking interactive, concept-driven content
+- **Complexity Level:** Intermediate (adaptable based on interaction patterns)
+
+**Instructions:**
+1. **Interactive HTML Output:** Your entire response MUST be ONLY HTML content (no markdown, no explanations)
+2. **Styling Contract:** Use ONLY these predefined CSS classes:
+   - llm-container: Main content wrapper (ALWAYS use as root)
+   - llm-title, llm-subtitle: Headings (h1, h2, h3 with these classes)
+   - llm-text: Body text paragraphs
    - llm-concept: Individual concept cards (use with div)
    - llm-concept-grid: Grid container for concepts
    - llm-button: Interactive buttons (use with button tag)
+   - llm-input, llm-textarea: Form inputs for user responses
+   - llm-code: Code examples and syntax highlighting
    - llm-connection: Visual connection lines between elements
    - llm-highlight: Important highlighted information boxes
    - llm-task: Practical task sections
    - llm-progress: Progress indicators
-   - llm-flow-container: Flow diagram container
-   - llm-flow-node: Individual flow nodes
-   - llm-mindmap: Mind map container
-   - llm-timeline: Timeline container
-   - llm-architecture: Architecture diagram grid
+   - llm-interactive: Hover-enabled elements
+   - llm-flow-container, llm-flow-node: Flow diagrams
+   - llm-mindmap: Mind map visualizations
+   - llm-timeline: Timeline components
+   - llm-architecture: Architecture diagrams
 
-3. MANDATORY: Add data-interaction-id attribute to ALL interactive elements
+3. **Interactivity Rules (CRITICAL):**
+   - ALL clickable elements MUST have data-interaction-id attribute
    - Format: "phase-${phase.id}-[element-type]-[unique-id]"
-   - Examples: "phase-1-concept-genai", "phase-2-task-research", "phase-3-button-explore"
+   - For form inputs: Add data-value-from="input_id" to buttons that collect input
+   - Examples: "phase-1-concept-genai", "phase-2-quiz-submit", "phase-3-input-response"
 
-4. STRUCTURE REQUIREMENTS:
-   - ALWAYS start with: <div class="llm-container">
-   - Use llm-title for the main phase title
-   - Use llm-concept-grid container with llm-concept cards for key concepts
-   - Use llm-task for the practical task section
-   - Include llm-button elements for interactivity
+4. **Dynamic Response Patterns:**
+   - Create quizzes with input fields and submit buttons
+   - Include exploration paths that branch based on user interest
+   - Add progressive disclosure (click to reveal more details)
+   - Use data-value-from for collecting user input before processing
 
-5. Visual Style Guidelines:
-   - Create logical visual hierarchies and connections
-   - Include interactive elements that users can click to explore
-   - Show relationships between concepts visually
-   - Use proper heading structure (h1 for title, h3 for concept titles)
+5. **User Experience Guidelines:**
+   - Start with overview, then allow drilling down into specifics
+   - Create clear visual hierarchies with proper heading structure
+   - Include interactive elements that respond to user exploration patterns
+   - Show relationships between concepts visually using connections
 
-EXAMPLE STRUCTURE:
+**EXAMPLE STRUCTURES:**
+
+Basic Layout:
 <div class="llm-container">
   <h1 class="llm-title" data-interaction-id="phase-X-title-main">Phase Title</h1>
   <div class="llm-highlight">
-    <p><strong>Objective:</strong> Phase objective here</p>
+    <p class="llm-text"><strong>Objective:</strong> Phase objective here</p>
   </div>
   <div class="llm-concept-grid">
-    <div class="llm-concept" data-interaction-id="phase-X-concept-1">
+    <div class="llm-concept llm-interactive" data-interaction-id="phase-X-concept-1">
       <h3>Concept Title</h3>
-      <p>Description here</p>
+      <p class="llm-text">Description here</p>
       <button class="llm-button" data-interaction-id="phase-X-explore-1">Explore</button>
     </div>
   </div>
-  <div class="llm-task" data-interaction-id="phase-X-task-main">
-    <h3>Core Task</h3>
-    <p>Task details</p>
-    <button class="llm-button" data-interaction-id="phase-X-start-task">Start Task</button>
-  </div>
+</div>
+
+Interactive Quiz Pattern:
+<div class="llm-task">
+  <h3 class="llm-subtitle">Quick Check</h3>
+  <p class="llm-text">What is your understanding of this concept?</p>
+  <textarea id="user-response" class="llm-textarea" placeholder="Share your thoughts..."></textarea>
+  <button class="llm-button" data-interaction-id="phase-X-quiz-submit" data-value-from="user-response">
+    Submit Response
+  </button>
 </div>
 
 Current Phase: ${phase.title}
@@ -126,15 +144,37 @@ Generate an engaging, interactive visualization using the exact CSS classes abov
 
   // Handle click interactions with data-interaction-id elements
   const handleContentClick = useCallback(async (event: MouseEvent) => {
-    const target = event.target as HTMLElement;
-    const interactionElement = target.closest('[data-interaction-id]') as HTMLElement;
-    
-    if (!interactionElement) return;
+    let targetElement = event.target as HTMLElement;
+
+    // Traverse up the DOM to find the element with the interaction ID
+    while (
+      targetElement &&
+      targetElement !== contentRef.current &&
+      !targetElement.dataset.interactionId
+    ) {
+      targetElement = targetElement.parentElement as HTMLElement;
+    }
+
+    if (!targetElement || !targetElement.dataset.interactionId) return;
+
+    event.preventDefault();
+
+    let interactionValue: string | undefined;
+
+    // Check if we need to get a value from another element (e.g., a form input)
+    if (targetElement.dataset.valueFrom) {
+      const inputElement = document.getElementById(
+        targetElement.dataset.valueFrom,
+      ) as HTMLInputElement | HTMLTextAreaElement;
+      if (inputElement) {
+        interactionValue = inputElement.value;
+      }
+    }
 
     const interactionData: InteractionData = {
-      id: interactionElement.getAttribute('data-interaction-id') || '',
-      type: target.tagName.toLowerCase(),
-      value: interactionElement.textContent || '',
+      id: targetElement.dataset.interactionId,
+      type: targetElement.dataset.interactionType || 'generic_click',
+      value: interactionValue || targetElement.textContent || '',
       timestamp: new Date(),
       phaseContext: phase.id
     };
