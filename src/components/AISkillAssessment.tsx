@@ -37,6 +37,9 @@ const AISkillAssessment: React.FC = () => {
   const [llmContent, setLlmContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isProcessingAnswer, setIsProcessingAnswer] = useState(false);
+  const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null);
+  const [pendingGeneration, setPendingGeneration] = useState(false);
   
   
   const [assessmentContext, setAssessmentContext] = useState<AssessmentContext>({
@@ -167,13 +170,87 @@ Generate the appropriate assessment content for the current state.`;
       targetElement = targetElement.parentElement as HTMLElement;
     }
 
-    if (!targetElement || !targetElement.dataset.interactionId) return;
+    if (!targetElement || !targetElement.dataset.interactionId || pendingGeneration) return;
 
     event.preventDefault();
 
-    let interactionValue: string | undefined;
+    const interactionId = targetElement.dataset.interactionId;
+    console.log('🎯 Interaction detected:', interactionId);
 
-    // Check if we need to get a value from another element (e.g., a form input)
+    // Handle answer selection with immediate progression
+    if (interactionId.startsWith('assessment-option-')) {
+      if (isProcessingAnswer) return; // Prevent multiple clicks
+      
+      setIsProcessingAnswer(true);
+      setSelectedAnswerId(interactionId);
+      setPendingGeneration(true);
+      
+      // Update assessment context immediately
+      setAssessmentContext(prev => {
+        const newContext = {
+          ...prev,
+          userAnswers: {
+            ...prev.userAnswers,
+            [`question-${prev.currentQuestion}`]: interactionId
+          },
+          interactionHistory: [...prev.interactionHistory.slice(-10), {
+            id: interactionId,
+            type: 'answer_selection',
+            value: targetElement.textContent || '',
+            timestamp: new Date(),
+            questionNumber: prev.currentQuestion
+          }]
+        };
+
+        // Auto-progress to next question or complete assessment
+        if (prev.currentQuestion < prev.totalQuestions) {
+          newContext.currentQuestion = prev.currentQuestion + 1;
+        } else {
+          // Assessment complete
+          const score = Math.floor(Math.random() * 40) + 60; // Mock scoring
+          const skillLevel = score >= 80 ? 'Advanced' : score >= 60 ? 'Intermediate' : 'Beginner';
+          newContext.assessmentResults = {
+            score,
+            skillLevel,
+            recommendations: ['Practice chain-of-thought prompting', 'Learn few-shot techniques', 'Study prompt optimization']
+          };
+        }
+
+        // Generate next content after brief delay for visual feedback
+        setTimeout(async () => {
+          try {
+            const isComplete = newContext.assessmentResults !== null;
+            const contextPrompt = buildInteractionPrompt({
+              id: isComplete ? 'assessment-complete' : 'assessment-next-question',
+              type: isComplete ? 'completion' : 'progression',
+              value: targetElement.textContent || '',
+              timestamp: new Date(),
+              questionNumber: newContext.currentQuestion
+            }, newContext);
+            
+            const response = await callGeminiForGeneration(contextPrompt);
+            if (response) {
+              setLlmContent(response);
+              executeInlineScripts(response);
+            }
+          } catch (error) {
+            console.error('Error generating next content:', error);
+            toast.error('Failed to generate next question');
+          } finally {
+            setIsProcessingAnswer(false);
+            setSelectedAnswerId(null);
+            setPendingGeneration(false);
+          }
+        }, 800); // Brief delay for visual feedback
+
+        return newContext;
+      });
+      
+      return; // Exit early for answer selections
+    }
+
+    // Handle other interactions (restart, navigation, etc.)
+    let interactionValue: string | undefined;
     if (targetElement.dataset.valueFrom) {
       const inputElement = document.getElementById(
         targetElement.dataset.valueFrom,
@@ -184,43 +261,23 @@ Generate the appropriate assessment content for the current state.`;
     }
 
     const interactionData: InteractionData = {
-      id: targetElement.dataset.interactionId,
+      id: interactionId,
       type: targetElement.dataset.interactionType || 'assessment_interaction',
       value: interactionValue || targetElement.textContent || '',
       timestamp: new Date(),
       questionNumber: assessmentContext.currentQuestion
     };
 
-    // Update assessment context based on interaction
-    setAssessmentContext(prev => {
-      const newContext = {
-        ...prev,
-        interactionHistory: [...prev.interactionHistory.slice(-10), interactionData]
-      };
-
-      // Handle answer selection
-      if (interactionData.id.startsWith('assessment-option-')) {
-        newContext.userAnswers[`question-${prev.currentQuestion}`] = interactionData.id;
-      }
-
-      // Handle question progression
-      if (interactionData.id.includes('next-question') || interactionData.id.includes('submit-question')) {
-        if (prev.currentQuestion < prev.totalQuestions) {
-          newContext.currentQuestion = prev.currentQuestion + 1;
-        } else {
-          // Assessment complete, calculate results
-          const score = Math.floor(Math.random() * 40) + 60; // Mock scoring for now
-          const skillLevel = score >= 80 ? 'Advanced' : score >= 60 ? 'Intermediate' : 'Beginner';
-          newContext.assessmentResults = {
-            score,
-            skillLevel,
-            recommendations: ['Practice chain-of-thought prompting', 'Learn few-shot techniques', 'Study prompt optimization']
-          };
-        }
-      }
-
-      return newContext;
-    });
+    // Handle restart or other navigation
+    if (interactionId.includes('restart') || interactionId.includes('start-learning')) {
+      setAssessmentContext({
+        currentQuestion: 1,
+        totalQuestions: 5,
+        interactionHistory: [],
+        userAnswers: {},
+        assessmentResults: null
+      });
+    }
 
     // Send interaction to AI for response
     setIsLoading(true);
@@ -238,7 +295,7 @@ Generate the appropriate assessment content for the current state.`;
     } finally {
       setIsLoading(false);
     }
-  }, [assessmentContext]);
+  }, [assessmentContext, isProcessingAnswer, pendingGeneration]);
 
   // Build contextual prompt for interactions
   const buildInteractionPrompt = useCallback((
@@ -506,11 +563,13 @@ Generate the updated assessment interface:`;
         />
 
         {/* Loading Overlay */}
-        {isLoading && (
+        {(isLoading || isProcessingAnswer) && (
           <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Generating assessment content...</p>
+              <p className="text-muted-foreground">
+                {isProcessingAnswer ? 'Processing your answer...' : 'Generating assessment content...'}
+              </p>
             </div>
           </div>
         )}
