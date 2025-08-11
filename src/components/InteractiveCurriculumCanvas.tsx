@@ -41,11 +41,11 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
   const { coachService } = useAI();
   
   const [llmContent, setLlmContent] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [coachMessage, setCoachMessage] = useState('');
   const [userInput, setUserInput] = useState('');
-  const [isCoachOpen, setIsCoachOpen] = useState(true);
+  const [isCoachOpen, setIsCoachOpen] = useState(false);
   
   const [curriculumContext, setCurriculumContext] = useState<CurriculumContext>({
     currentPhase: phase.id,
@@ -142,11 +142,11 @@ Key Concepts: ${phase.keyConceptsAndActivities.map(concept => concept.title).joi
 Generate an engaging, interactive visualization using the exact CSS classes above.`;
   }, []);
 
-  // Handle click interactions with data-interaction-id elements
+  // Simplified click handler with minimal processing
   const handleContentClick = useCallback(async (event: MouseEvent) => {
     let targetElement = event.target as HTMLElement;
 
-    // Traverse up the DOM to find the element with the interaction ID
+    // Find element with interaction ID
     while (
       targetElement &&
       targetElement !== contentRef.current &&
@@ -159,49 +159,18 @@ Generate an engaging, interactive visualization using the exact CSS classes abov
 
     event.preventDefault();
 
-    let interactionValue: string | undefined;
-
-    // Check if we need to get a value from another element (e.g., a form input)
-    if (targetElement.dataset.valueFrom) {
-      const inputElement = document.getElementById(
-        targetElement.dataset.valueFrom,
-      ) as HTMLInputElement | HTMLTextAreaElement;
-      if (inputElement) {
-        interactionValue = inputElement.value;
-      }
+    // Simple feedback without heavy processing
+    const interactionId = targetElement.dataset.interactionId;
+    
+    if (interactionId.includes('concept')) {
+      toast.info('Concept selected: ' + (targetElement.textContent || '').substring(0, 50));
+    } else if (interactionId.includes('task')) {
+      toast.info('Task selected: ' + (targetElement.textContent || '').substring(0, 50));
+    } else if (interactionId.includes('coach')) {
+      setIsCoachOpen(true);
+      setCoachMessage('How can I help you with this topic?');
     }
-
-    const interactionData: InteractionData = {
-      id: targetElement.dataset.interactionId,
-      type: targetElement.dataset.interactionType || 'generic_click',
-      value: interactionValue || targetElement.textContent || '',
-      timestamp: new Date(),
-      phaseContext: phase.id
-    };
-
-    // Add to interaction history
-    setCurriculumContext(prev => ({
-      ...prev,
-      interactionHistory: [...prev.interactionHistory.slice(-10), interactionData]
-    }));
-
-    // Send interaction to AI for response
-    setIsLoading(true);
-    try {
-      const contextPrompt = buildInteractionPrompt(interactionData, curriculumContext);
-      const response = await callGeminiForGeneration(contextPrompt);
-      
-      if (response) {
-        setLlmContent(response);
-        executeInlineScripts(response);
-      }
-    } catch (error) {
-      console.error('Error processing interaction:', error);
-      toast.error('Failed to process interaction');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [phase.id, curriculumContext]);
+  }, []);
 
   // Build contextual prompt for interactions
   const buildInteractionPrompt = useCallback((
@@ -305,55 +274,32 @@ Generate the updated interactive visualization:`;
     `;
   }, [phase]);
 
-  // Execute any inline scripts in the AI-generated content
-  const executeInlineScripts = useCallback((htmlContent: string) => {
-    const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
-    let match;
-    
-    while ((match = scriptRegex.exec(htmlContent)) !== null) {
-      try {
-        // Create and execute script
-        const script = document.createElement('script');
-        script.textContent = match[1];
-        document.body.appendChild(script);
-        document.body.removeChild(script);
-      } catch (error) {
-        console.error('Script execution error:', error);
-      }
-    }
-  }, []);
+  // Removed script execution for safety and performance
 
-  // Initialize the canvas with AI-generated content
+  // Initialize the canvas with static content immediately
   useEffect(() => {
     if (isInitializing.current) return;
     isInitializing.current = true;
 
-    const initializeCanvas = async () => {
-      setIsLoading(true);
+    try {
+      // Load static content immediately without API calls
+      const fallbackContent = generateFallbackContent();
+      setLlmContent(fallbackContent);
       setError(null);
-
-      try {
-        // For now, always use the styled fallback content to ensure styling works
-        console.log('Loading beautifully styled curriculum content...');
-        const fallbackContent = generateFallbackContent();
-        setLlmContent(fallbackContent);
-        executeInlineScripts(fallbackContent);
-        
-        toast.success('Interactive curriculum loaded with beautiful styling!');
-      } catch (error) {
-        console.error('Initialization failed:', error);
-        setError('Failed to load interactive content');
-        // Always use fallback on error
-        const fallbackContent = generateFallbackContent();
-        setLlmContent(fallbackContent);
-      } finally {
-        setIsLoading(false);
-        isInitializing.current = false;
-      }
-    };
-
-    initializeCanvas();
-  }, [phase, buildSystemPrompt, callGeminiForGeneration, generateFallbackContent]);
+    } catch (error) {
+      console.error('Initialization failed:', error);
+      setError('Failed to load content');
+      // Minimal fallback
+      setLlmContent(`
+        <div class="llm-container">
+          <h1 class="llm-title">${phase.title}</h1>
+          <p class="llm-text">${phase.objective}</p>
+        </div>
+      `);
+    } finally {
+      isInitializing.current = false;
+    }
+  }, [phase]);
 
   // Set up click event listener for the content area
   useEffect(() => {
@@ -387,14 +333,12 @@ Generate the updated interactive visualization:`;
     }
   }, [userInput, coachService, phase.title, curriculumContext.interactionHistory]);
 
-  const handleRefresh = useCallback(async () => {
-    setIsLoading(true);
-    const refreshedContent = await callGeminiForGeneration(buildSystemPrompt(phase));
-    setLlmContent(refreshedContent);
-    executeInlineScripts(refreshedContent);
-    setIsLoading(false);
+  const handleRefresh = useCallback(() => {
+    // Simple refresh without API calls
+    const fallbackContent = generateFallbackContent();
+    setLlmContent(fallbackContent);
     toast.success('Content refreshed!');
-  }, [callGeminiForGeneration, buildSystemPrompt, phase]);
+  }, [generateFallbackContent]);
 
   if (error) {
     return (
