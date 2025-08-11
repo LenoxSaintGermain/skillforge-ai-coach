@@ -1,4 +1,5 @@
 import { User } from '@/contexts/UserContext';
+import { supabase } from '@/integrations/supabase/client';
 
 // Defines the structured response from the AI Coach service.
 // This allows for a variety of actions to be sent to the UI,
@@ -68,36 +69,16 @@ export class AICoachService {
     this.userContext = {
       lastInteractions: [],
       learningPreferences: ['Interactive exercises', 'Real-world examples', 'Visual learning'],
-      challengeAreas: ['Prompt optimization', 'Technical implementation'],
-      strengths: ['Strategic thinking', 'Creative problem-solving']
+      challengeAreas: [],
+      strengths: []
     };
+    // Initialize with empty data - will be populated with real data
     this.learningJourney = {
-      completedScenarios: ['4'],
-      currentSkillFocus: ['Prompt Engineering', 'AI Solution Design', 'Implementation Planning'],
-      progressMetrics: {
-        'Prompt Engineering': 65,
-        'AI Solution Design': 42,
-        'Implementation Planning': 38,
-        'Business Process Optimization': 53,
-        'AI Content Strategy': 78
-      },
-      recentActivities: [
-        {
-          date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-          activity: 'Completed "Building a Generative AI Assistant with Gemini" scenario',
-          outcome: 'Successfully implemented all healthcare assistant features'
-        },
-        {
-          date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-          activity: 'Started "Optimizing Customer Support with AI" scenario',
-          outcome: 'Completed initial workflow analysis tasks'
-        }
-      ],
-      recommendedNext: [
-        'Complete the Customer Support AI scenario',
-        'Practice advanced prompt engineering techniques',
-        'Explore AI implementation for personalized recommendations'
-      ]
+      completedScenarios: [],
+      currentSkillFocus: [],
+      progressMetrics: {},
+      recentActivities: [],
+      recommendedNext: []
     };
   }
   
@@ -205,23 +186,81 @@ export class AICoachService {
   }
   
   /**
-   * Initializes coach with welcome message based on user status
+   * Fetches real user progress from database
+   */
+  private async fetchUserProgress(userId: string): Promise<{
+    hasActivity: boolean;
+    progressData: any;
+  }> {
+    try {
+      // Check for scenario progress
+      const { data: scenarioProgress } = await supabase
+        .from('user_scenario_progress')
+        .select('*')
+        .eq('user_id', userId);
+
+      // Check for skill assessments
+      const { data: skillAssessments } = await supabase
+        .from('skill_assessments')
+        .select('*')
+        .eq('user_id', userId);
+
+      // Check for syllabus progress
+      const { data: syllabusProgress } = await supabase
+        .from('syllabus_progress')
+        .select('*')
+        .eq('user_id', userId);
+
+      const hasActivity = (scenarioProgress && scenarioProgress.length > 0) ||
+                         (skillAssessments && skillAssessments.length > 0) ||
+                         (syllabusProgress && syllabusProgress.length > 0);
+
+      return {
+        hasActivity,
+        progressData: {
+          scenarios: scenarioProgress || [],
+          assessments: skillAssessments || [],
+          syllabus: syllabusProgress || []
+        }
+      };
+    } catch (error) {
+      console.error('Error fetching user progress:', error);
+      return { hasActivity: false, progressData: null };
+    }
+  }
+
+  /**
+   * Initializes coach with welcome message based on real user activity
    */
   public async initializeCoach(user: User, context?: string): Promise<AIResponse> {
-    const isReturningUser = user.created_at !== null;
+    // Check for actual user activity in the database
+    const { hasActivity, progressData } = await this.fetchUserProgress(user.user_id);
     
     let welcomeMessage;
     const contextMessage = context ? ` I'm here to help you with ${context}.` : '';
     
-    if (isReturningUser) {
-      welcomeMessage = `Welcome back, ${user.name}! I see you've been making progress on your AI learning journey.${contextMessage} You're currently at ${user.ai_knowledge_level} level with strong skills in ${this.learningJourney.currentSkillFocus.join(', ')}. \n\nSince your last visit, you've advanced to ${this.learningJourney.progressMetrics['Prompt Engineering']}% in Prompt Engineering. How can I help you today?`;
+    if (hasActivity && progressData) {
+      // User has real activity - show personalized progress
+      const completedScenarios = progressData.scenarios.filter((s: any) => s.status === 'completed').length;
+      const skillAreas = progressData.assessments.map((a: any) => a.skill_area);
+      const uniqueSkills = [...new Set(skillAreas)];
+      
+      let progressText = '';
+      if (completedScenarios > 0) {
+        progressText += `You've completed ${completedScenarios} scenario${completedScenarios > 1 ? 's' : ''}. `;
+      }
+      if (uniqueSkills.length > 0) {
+        progressText += `You've been working on ${uniqueSkills.join(', ')}. `;
+      }
+      
+      welcomeMessage = `Welcome back, ${user.name}! ${progressText}${contextMessage} You're currently at ${user.ai_knowledge_level} level. How can I help you continue your AI learning journey today?`;
     } else {
-      welcomeMessage = `Welcome to AI SkillForge, ${user.name}! I'm your AI coach to help you master AI skills relevant to your ${user.role} role.${contextMessage} Based on your profile, I'd recommend starting with foundational AI concepts and then moving to practical applications in your industry. \n\nHow can I assist you today?`;
+      // New user with no activity
+      welcomeMessage = `Welcome to AI SkillForge, ${user.name}! I'm your AI coach to help you master AI skills relevant to your ${user.role || 'current'} role.${contextMessage} \n\nAs you're just getting started, I'd recommend beginning with a skill assessment or exploring our learning scenarios. How would you like to begin your AI learning journey?`;
     }
     
     this.addToConversationHistory('assistant', welcomeMessage);
 
-    // Mocked structured response
     return {
       actions: [
         { type: 'speech', content: welcomeMessage },
