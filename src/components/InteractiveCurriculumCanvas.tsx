@@ -61,40 +61,66 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
   const buildSystemPrompt = useCallback((phase: SyllabusPhase): string => {
     return `You are an Intelligent Curriculum Visualizer and Tutor. Your role is to generate interactive HTML content for learning ${phase.title}.
 
-CRITICAL RULES:
+CRITICAL STYLING RULES:
 1. Generate ONLY raw HTML content - no <html>, <head>, or <body> tags
-2. Use ONLY these predefined CSS classes for styling:
-   - llm-container: Main content wrapper
-   - llm-title: Headings and titles
-   - llm-concept: Concept boxes/cards
-   - llm-button: Interactive buttons
-   - llm-connection: Visual connection lines
-   - llm-highlight: Important information
-   - llm-task: Practical tasks
+2. Use ONLY these predefined CSS classes (MANDATORY):
+   - llm-container: Main content wrapper (ALWAYS use this as the root)
+   - llm-title: Large headings (use h1, h2 with this class)
+   - llm-concept: Individual concept cards (use with div)
+   - llm-concept-grid: Grid container for concepts
+   - llm-button: Interactive buttons (use with button tag)
+   - llm-connection: Visual connection lines between elements
+   - llm-highlight: Important highlighted information boxes
+   - llm-task: Practical task sections
    - llm-progress: Progress indicators
+   - llm-flow-container: Flow diagram container
+   - llm-flow-node: Individual flow nodes
+   - llm-mindmap: Mind map container
+   - llm-timeline: Timeline container
+   - llm-architecture: Architecture diagram grid
 
 3. MANDATORY: Add data-interaction-id attribute to ALL interactive elements
    - Format: "phase-${phase.id}-[element-type]-[unique-id]"
    - Examples: "phase-1-concept-genai", "phase-2-task-research", "phase-3-button-explore"
 
-4. Create interactive visualizations based on phase content:
-   - Phase 1: Concept relationship diagrams with clickable definitions
-   - Phase 2: Project ideation trees with expandable branches  
-   - Phase 3: Interactive architecture flows with hover explanations
-   - Phase 4: Multi-agent collaboration visualizations
-   - Phase 5: Deployment decision trees with real-world examples
+4. STRUCTURE REQUIREMENTS:
+   - ALWAYS start with: <div class="llm-container">
+   - Use llm-title for the main phase title
+   - Use llm-concept-grid container with llm-concept cards for key concepts
+   - Use llm-task for the practical task section
+   - Include llm-button elements for interactivity
 
 5. Visual Style Guidelines:
-   - Use clean, modern design with proper spacing
    - Create logical visual hierarchies and connections
    - Include interactive elements that users can click to explore
    - Show relationships between concepts visually
+   - Use proper heading structure (h1 for title, h3 for concept titles)
+
+EXAMPLE STRUCTURE:
+<div class="llm-container">
+  <h1 class="llm-title" data-interaction-id="phase-X-title-main">Phase Title</h1>
+  <div class="llm-highlight">
+    <p><strong>Objective:</strong> Phase objective here</p>
+  </div>
+  <div class="llm-concept-grid">
+    <div class="llm-concept" data-interaction-id="phase-X-concept-1">
+      <h3>Concept Title</h3>
+      <p>Description here</p>
+      <button class="llm-button" data-interaction-id="phase-X-explore-1">Explore</button>
+    </div>
+  </div>
+  <div class="llm-task" data-interaction-id="phase-X-task-main">
+    <h3>Core Task</h3>
+    <p>Task details</p>
+    <button class="llm-button" data-interaction-id="phase-X-start-task">Start Task</button>
+  </div>
+</div>
 
 Current Phase: ${phase.title}
 Objective: ${phase.objective}
 Key Concepts: ${phase.keyConceptsAndActivities.map(concept => concept.title).join(', ')}
 
-Generate an engaging, interactive visualization that helps users understand and explore this phase content.`;
+Generate an engaging, interactive visualization using the exact CSS classes above.`;
   }, []);
 
   // Handle click interactions with data-interaction-id elements
@@ -199,6 +225,7 @@ Generate the updated interactive visualization:`;
     return `
       <div class="llm-container">
         <h1 class="llm-title" data-interaction-id="phase-${phase.id}-title-main">${phase.title}</h1>
+        
         <div class="llm-highlight">
           <p><strong>Objective:</strong> ${phase.objective}</p>
         </div>
@@ -221,6 +248,14 @@ Generate the updated interactive visualization:`;
           <p><strong>Details:</strong> ${phase.corePracticalTask.taskDetails}</p>
           <button class="llm-button" data-interaction-id="phase-${phase.id}-start-task">
             Start This Task
+          </button>
+        </div>
+
+        <div class="llm-connection"></div>
+        
+        <div style="text-align: center; margin-top: 2rem;">
+          <button class="llm-button" data-interaction-id="phase-${phase.id}-coach-help">
+            Ask AI Coach for Help
           </button>
         </div>
       </div>
@@ -257,14 +292,18 @@ Generate the updated interactive visualization:`;
       try {
         const initialPrompt = `${buildSystemPrompt(phase)}
 
-Generate the initial interactive visualization for this phase. Create an engaging overview that shows:
-1. The phase title and objective prominently
-2. Key concepts as interactive, clickable elements
-3. Visual connections between related concepts
-4. The core practical task as a highlighted interactive section
-5. Navigation hints for the user
+Generate the initial interactive visualization for this phase. Create an engaging overview with proper styling:
 
-Make it visually appealing and immediately engaging.`;
+1. Start with <div class="llm-container"> as the root element
+2. Use <h1 class="llm-title"> for the phase title with proper data-interaction-id
+3. Add a <div class="llm-highlight"> section for the objective
+4. Create a <div class="llm-concept-grid"> containing multiple <div class="llm-concept"> cards
+5. Each concept card should have an <h3>, description <p>, and <button class="llm-button">
+6. Include a <div class="llm-task"> section for the practical task
+7. Add visual connections with <div class="llm-connection"> elements
+8. Make it visually appealing and immediately engaging
+
+Remember: Use EXACT CSS class names and include data-interaction-id on ALL interactive elements.`;
 
         const initialContent = await callGeminiForGeneration(initialPrompt);
         setLlmContent(initialContent);

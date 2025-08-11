@@ -2,6 +2,7 @@
 
 .llm-container {
   @apply max-w-6xl mx-auto p-6 space-y-8;
+  animation: llmFadeIn 0.5s ease-in-out;
 }
 
 .llm-title {
@@ -10,16 +11,19 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  animation: llmFadeIn 0.8s ease-in-out;
 }
 
 .llm-concept {
   @apply bg-card rounded-lg p-6 border border-border shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer;
   background: linear-gradient(135deg, hsl(var(--card)), hsl(var(--muted)/0.3));
+  animation: llmSlideUp 0.6s ease-out;
 }
 
 .llm-concept:hover {
   @apply border-primary/40 transform translate-y-[-2px];
   box-shadow: 0 10px 30px -10px hsl(var(--primary) / 0.3);
+  animation: llmBounceIn 0.3s ease-out;
 }
 
 .llm-concept h3 {
