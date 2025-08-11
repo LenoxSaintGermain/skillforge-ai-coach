@@ -59,7 +59,7 @@ const PhaseCard = ({
   );
 };
 
-const SyllabusExplorer = () => {
+const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (isLearning: boolean) => void }) => {
   const { coachService, isServiceReady, error } = useAI();
   const [currentPhaseId, setCurrentPhaseId] = useState(1);
   const [isLearningMode, setIsLearningMode] = useState(false);
@@ -90,7 +90,10 @@ const SyllabusExplorer = () => {
     return (
       <InteractiveCurriculumCanvas 
         phase={currentPhase} 
-        onClose={() => setIsLearningMode(false)} 
+        onClose={() => {
+          setIsLearningMode(false);
+          onLearningModeChange?.(false);
+        }} 
       />
     );
   }
@@ -165,7 +168,10 @@ const SyllabusExplorer = () => {
                 <Button 
                   variant="default" 
                   className="w-full"
-                  onClick={() => setIsLearningMode(true)}
+                  onClick={() => {
+                    setIsLearningMode(true);
+                    onLearningModeChange?.(true);
+                  }}
                   disabled={!isServiceReady}
                 >
                   <span>{isServiceReady ? 'Start Learning' : 'Initializing...'}</span>

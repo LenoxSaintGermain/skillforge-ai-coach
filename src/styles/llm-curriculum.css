@@ -349,6 +349,23 @@
   animation: llmBounceIn 0.8s ease-out;
 }
 
+/* Progress and Navigation Components */
+.llm-progress-bar {
+  @apply w-full h-1 bg-gray-200 rounded-full overflow-hidden mb-4;
+}
+
+.llm-progress-fill {
+  @apply h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all duration-300;
+}
+
+.llm-phase-indicator {
+  @apply text-xs text-gray-500 font-medium tracking-wide uppercase;
+}
+
+.llm-back-button {
+  @apply flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors text-sm font-medium;
+}
+
 @keyframes llmFadeIn {
   from {
     opacity: 0;

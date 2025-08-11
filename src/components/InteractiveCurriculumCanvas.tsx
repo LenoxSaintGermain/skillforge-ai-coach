@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { X, MessageCircle, RefreshCw } from "lucide-react";
+import { X, MessageCircle, RefreshCw, ArrowLeft } from "lucide-react";
 import { useAI } from "@/contexts/AIContext";
 import { SyllabusPhase } from "@/models/Syllabus";
 import { User } from "@/contexts/UserContext";
@@ -413,28 +413,45 @@ Generate the updated interactive visualization:`;
       {/* Main Content Area */}
       <div className="flex-1 relative overflow-auto">
         {/* Header Controls */}
-        <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-          <Card className="p-2 flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={isLoading}
-            >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-          </Card>
+        <div className="absolute top-4 left-4 right-4 z-10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-semibold">{phase.title}</h2>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Phase {phase.id} of 5</span>
+                <div className="w-16 h-1 bg-muted rounded-full">
+                  <div 
+                    className="h-full bg-primary rounded-full transition-all duration-300"
+                    style={{ width: `${(phase.id / 5) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={isLoading}
+                className="bg-card hover:bg-muted"
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onClose}
+                className="bg-card hover:bg-muted flex items-center gap-1"
+                title="Back to Syllabus"
+              >
+                <ArrowLeft className="h-3 w-3" />
+                <span className="text-xs">Back</span>
+              </Button>
+            </div>
+          </div>
         </div>
-
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="absolute top-4 right-4 z-10" 
-          onClick={onClose}
-        >
-          <X className="w-4 h-4" />
-        </Button>
 
         {/* AI-Generated Interactive Content */}
         <div 
