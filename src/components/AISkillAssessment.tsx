@@ -6,7 +6,7 @@ import { useAI } from "@/contexts/AIContext";
 import { useUser } from "@/contexts/UserContext";
 import { toast } from "sonner";
 import "@/styles/llm-curriculum.css";
-import CoachChatPanel from "./CoachChatPanel";
+
 
 interface InteractionData {
   id: string;
@@ -37,7 +37,7 @@ const AISkillAssessment: React.FC = () => {
   const [llmContent, setLlmContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isCoachOpen, setIsCoachOpen] = useState(true);
+  
   
   const [assessmentContext, setAssessmentContext] = useState<AssessmentContext>({
     currentQuestion: 1,
@@ -516,16 +516,6 @@ Generate the updated assessment interface:`;
         )}
       </div>
 
-      {/* Coach Panel */}
-      {isCoachOpen && (
-        <div className="w-80 border-l bg-card">
-          <CoachChatPanel 
-            isExpanded={true}
-            initialExpanded={true}
-            className="h-full"
-          />
-        </div>
-      )}
     </div>
   );
 };
