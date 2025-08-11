@@ -9,7 +9,7 @@ import { geminiSyllabus } from '@/data/GeminiSyllabus';
 import { useAI } from '@/contexts/AIContext';
 import { SyllabusPhase } from '@/models/Syllabus';
 import { Brain, BookOpen, CheckCircle, ArrowRight } from 'lucide-react';
-import InteractiveLearningCanvas from './InteractiveLearningCanvas';
+import InteractiveCurriculumCanvas from './InteractiveCurriculumCanvas';
 
 const PhaseCard = ({ 
   phase, 
@@ -88,7 +88,7 @@ const SyllabusExplorer = () => {
 
   if (isLearningMode && currentPhase) {
     return (
-      <InteractiveLearningCanvas 
+      <InteractiveCurriculumCanvas 
         phase={currentPhase} 
         onClose={() => setIsLearningMode(false)} 
       />

@@ -1,0 +1,267 @@
+/* LLM Curriculum Interface Styles */
+
+.llm-container {
+  @apply max-w-6xl mx-auto p-6 space-y-8;
+}
+
+.llm-title {
+  @apply text-3xl font-bold text-primary mb-4 text-center;
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-foreground)));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.llm-concept {
+  @apply bg-card rounded-lg p-6 border border-border shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer;
+  background: linear-gradient(135deg, hsl(var(--card)), hsl(var(--muted)/0.3));
+}
+
+.llm-concept:hover {
+  @apply border-primary/40 transform translate-y-[-2px];
+  box-shadow: 0 10px 30px -10px hsl(var(--primary) / 0.3);
+}
+
+.llm-concept h3 {
+  @apply text-lg font-semibold text-foreground mb-2;
+}
+
+.llm-concept p {
+  @apply text-muted-foreground text-sm leading-relaxed;
+}
+
+.llm-button {
+  @apply bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 cursor-pointer border-0;
+  box-shadow: 0 2px 8px hsl(var(--primary) / 0.2);
+}
+
+.llm-button:hover {
+  @apply transform translate-y-[-1px];
+  box-shadow: 0 4px 12px hsl(var(--primary) / 0.3);
+}
+
+.llm-connection {
+  @apply border-t-2 border-dashed border-muted-foreground/30 my-4 relative;
+}
+
+.llm-connection::before {
+  content: '';
+  @apply absolute top-[-4px] left-1/2 transform -translate-x-1/2 w-2 h-2 bg-primary rounded-full;
+}
+
+.llm-highlight {
+  @apply bg-accent/10 border border-accent/20 rounded-lg p-4 my-4;
+  background: linear-gradient(135deg, hsl(var(--accent)/0.1), hsl(var(--accent)/0.05));
+}
+
+.llm-task {
+  @apply bg-secondary/20 border border-secondary/30 rounded-lg p-6 my-6;
+  background: linear-gradient(135deg, hsl(var(--secondary)/0.2), hsl(var(--secondary)/0.1));
+}
+
+.llm-task h3 {
+  @apply text-xl font-semibold text-secondary-foreground mb-3;
+}
+
+.llm-progress {
+  @apply bg-muted rounded-full h-2 overflow-hidden my-3;
+}
+
+.llm-progress-bar {
+  @apply bg-primary h-full transition-all duration-500 ease-out;
+  background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary-foreground)));
+}
+
+/* Concept Grid Layout */
+.llm-concept-grid {
+  @apply grid gap-6 mt-8;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+/* Interactive Elements */
+.llm-interactive {
+  @apply relative overflow-hidden;
+}
+
+.llm-interactive::before {
+  content: '';
+  @apply absolute inset-0 bg-gradient-to-r from-primary/0 to-primary/10 transform translate-x-[-100%] transition-transform duration-500;
+}
+
+.llm-interactive:hover::before {
+  @apply transform translate-x-[100%];
+}
+
+/* Flow Diagrams */
+.llm-flow-container {
+  @apply flex flex-wrap items-center justify-center gap-4 my-8;
+}
+
+.llm-flow-node {
+  @apply bg-card border border-border rounded-lg p-4 text-center min-w-[120px] cursor-pointer transition-all duration-300;
+}
+
+.llm-flow-node:hover {
+  @apply border-primary/50 shadow-lg;
+}
+
+.llm-flow-arrow {
+  @apply text-muted-foreground text-2xl;
+}
+
+/* Mindmap Styles */
+.llm-mindmap {
+  @apply relative min-h-[400px] bg-gradient-to-br from-muted/20 to-background rounded-xl p-8;
+}
+
+.llm-mindmap-center {
+  @apply absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-primary text-primary-foreground rounded-full px-6 py-3 font-semibold text-center cursor-pointer;
+  min-width: 150px;
+}
+
+.llm-mindmap-branch {
+  @apply absolute bg-card border border-border rounded-lg p-3 cursor-pointer transition-all duration-300;
+}
+
+.llm-mindmap-branch:hover {
+  @apply border-primary/50 shadow-md transform scale-105;
+}
+
+/* Timeline Styles */
+.llm-timeline {
+  @apply relative pl-8 space-y-6;
+}
+
+.llm-timeline::before {
+  content: '';
+  @apply absolute left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary to-muted;
+}
+
+.llm-timeline-item {
+  @apply relative bg-card border border-border rounded-lg p-4 cursor-pointer transition-all duration-300;
+}
+
+.llm-timeline-item::before {
+  content: '';
+  @apply absolute left-[-24px] top-4 w-3 h-3 bg-primary rounded-full border-2 border-background;
+}
+
+.llm-timeline-item:hover {
+  @apply border-primary/40 shadow-md;
+}
+
+/* Architecture Diagram */
+.llm-architecture {
+  @apply grid gap-4 my-8;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.llm-component {
+  @apply bg-card border border-border rounded-lg p-4 text-center cursor-pointer transition-all duration-300;
+  background: linear-gradient(135deg, hsl(var(--card)), hsl(var(--muted)/0.2));
+}
+
+.llm-component:hover {
+  @apply border-primary/50 shadow-lg transform translate-y-[-2px];
+}
+
+.llm-component-title {
+  @apply font-semibold text-foreground mb-2;
+}
+
+.llm-component-desc {
+  @apply text-xs text-muted-foreground;
+}
+
+/* Decision Tree */
+.llm-decision-tree {
+  @apply space-y-4 my-6;
+}
+
+.llm-decision-node {
+  @apply bg-card border border-border rounded-lg p-4 cursor-pointer transition-all duration-300;
+}
+
+.llm-decision-node:hover {
+  @apply border-primary/50 shadow-md;
+}
+
+.llm-decision-options {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-3 mt-3;
+}
+
+.llm-decision-option {
+  @apply bg-muted/50 border border-muted rounded-md p-3 text-sm cursor-pointer transition-all duration-200;
+}
+
+.llm-decision-option:hover {
+  @apply bg-primary/10 border-primary/30;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .llm-concept-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .llm-architecture {
+    grid-template-columns: 1fr;
+  }
+  
+  .llm-flow-container {
+    flex-direction: column;
+  }
+  
+  .llm-mindmap-branch {
+    position: static !important;
+    margin: 8px 0;
+  }
+}
+
+/* Animation Classes */
+.llm-fade-in {
+  animation: llmFadeIn 0.5s ease-in-out;
+}
+
+.llm-slide-up {
+  animation: llmSlideUp 0.6s ease-out;
+}
+
+.llm-bounce-in {
+  animation: llmBounceIn 0.8s ease-out;
+}
+
+@keyframes llmFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes llmSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes llmBounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
