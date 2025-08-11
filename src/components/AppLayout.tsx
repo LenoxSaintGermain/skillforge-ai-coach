@@ -45,7 +45,6 @@ const AppLayout = () => {
         </Suspense>
       </main>
       
-      <CoachChatPanel initialExpanded={false} />
       <Toaster />
     </div>
   );
