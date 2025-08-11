@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { X, MessageCircle, RefreshCw, ArrowLeft } from "lucide-react";
 import { useAI } from "@/contexts/AIContext";
 import { useUser } from "@/contexts/UserContext";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import "@/styles/llm-curriculum.css";
 
@@ -31,8 +32,11 @@ interface AssessmentContext {
 const AISkillAssessment: React.FC = () => {
   const contentRef = useRef<HTMLDivElement>(null);
   const isInitializing = useRef(false);
+  const lastInteractionId = useRef<string | null>(null);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const { coachService } = useAI();
   const { currentUser } = useUser();
+  const navigate = useNavigate();
   
   const [llmContent, setLlmContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
@@ -40,6 +44,7 @@ const AISkillAssessment: React.FC = () => {
   const [isProcessingAnswer, setIsProcessingAnswer] = useState(false);
   const [selectedAnswerId, setSelectedAnswerId] = useState<string | null>(null);
   const [pendingGeneration, setPendingGeneration] = useState(false);
+  const [apiCallInProgress, setApiCallInProgress] = useState(false);
   
   
   const [assessmentContext, setAssessmentContext] = useState<AssessmentContext>({
@@ -49,6 +54,110 @@ const AISkillAssessment: React.FC = () => {
     userAnswers: {},
     assessmentResults: null
   });
+
+  // Generate fallback content when API fails
+  const generateFallbackContent = useCallback((): string => {
+    const { currentQuestion, totalQuestions } = assessmentContext;
+    const progress = ((currentQuestion - 1) / totalQuestions * 100);
+
+    if (currentQuestion > totalQuestions) {
+      // Results page
+      return `
+        <div class="llm-container">
+          <h1 class="llm-title">Assessment Complete!</h1>
+          
+          <div class="llm-highlight">
+            <h2 class="llm-subtitle">Your Prompt Engineering Skill Level</h2>
+            <div class="llm-progress">
+              <div class="llm-progress-bar" style="width: 75%"></div>
+            </div>
+            <p class="llm-text"><strong>75% - Intermediate Level</strong></p>
+          </div>
+          
+          <div class="llm-task">
+            <h3 class="llm-subtitle">Personalized Recommendations</h3>
+            <div class="llm-concept-grid">
+              <div class="llm-concept">
+                <h3>Advanced Techniques</h3>
+                <p class="llm-text">Learn chain-of-thought and few-shot prompting</p>
+                <button class="llm-button" data-interaction-id="assessment-start-learning">
+                  Start Learning Path
+                </button>
+              </div>
+              <div class="llm-concept">
+                <h3>Practical Application</h3>
+                <p class="llm-text">Practice with real-world scenarios</p>
+                <button class="llm-button" data-interaction-id="assessment-view-scenarios">
+                  View Scenarios
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Question page
+    return `
+      <div class="llm-container">
+        <div class="llm-progress">
+          <div class="llm-progress-bar" style="width: ${progress}%"></div>
+        </div>
+        
+        <div class="llm-highlight">
+          <p class="llm-text"><strong>Question ${currentQuestion} of ${totalQuestions}</strong></p>
+        </div>
+        
+        <div class="llm-task">
+          <h2 class="llm-subtitle">What is the primary goal of prompt engineering?</h2>
+          <p class="llm-text">As a ${currentUser?.role || 'professional'}, understanding this concept is crucial for effective AI interaction.</p>
+          
+          <div class="llm-concept-grid">
+            <div class="llm-concept llm-interactive" data-interaction-id="assessment-option-a">
+              <h3>Option A</h3>
+              <p class="llm-text">To write complex code for AI systems</p>
+            </div>
+            <div class="llm-concept llm-interactive" data-interaction-id="assessment-option-b">
+              <h3>Option B</h3>
+              <p class="llm-text">To craft inputs that guide AI models to produce desired outputs</p>
+            </div>
+            <div class="llm-concept llm-interactive" data-interaction-id="assessment-option-c">
+              <h3>Option C</h3>
+              <p class="llm-text">To design user interfaces for AI applications</p>
+            </div>
+            <div class="llm-concept llm-interactive" data-interaction-id="assessment-option-d">
+              <h3>Option D</h3>
+              <p class="llm-text">To optimize AI model training parameters</p>
+            </div>
+          </div>
+          
+          <div style="text-align: center; margin-top: 2rem;">
+            <button class="llm-button" data-interaction-id="assessment-submit-question">
+              Submit Answer
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }, [assessmentContext, currentUser]);
+
+  // Execute any inline scripts in the AI-generated content
+  const executeInlineScripts = useCallback((htmlContent: string) => {
+    const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+    let match;
+    
+    while ((match = scriptRegex.exec(htmlContent)) !== null) {
+      try {
+        // Create and execute script
+        const script = document.createElement('script');
+        script.textContent = match[1];
+        document.body.appendChild(script);
+        document.body.removeChild(script);
+      } catch (error) {
+        console.error('Script execution error:', error);
+      }
+    }
+  }, []);
 
   // System prompt for assessment-specific AI generation
   const buildSystemPrompt = useCallback((context: AssessmentContext): string => {
@@ -170,55 +279,76 @@ Generate the appropriate assessment content for the current state.`;
       targetElement = targetElement.parentElement as HTMLElement;
     }
 
-    if (!targetElement || !targetElement.dataset.interactionId || pendingGeneration) return;
-
-    event.preventDefault();
+    if (!targetElement || !targetElement.dataset.interactionId) return;
 
     const interactionId = targetElement.dataset.interactionId;
-    console.log('🎯 Interaction detected:', interactionId);
+    
+    // Prevent duplicate interactions and API calls
+    if (
+      pendingGeneration || 
+      apiCallInProgress || 
+      lastInteractionId.current === interactionId ||
+      isProcessingAnswer
+    ) {
+      console.log('🚫 Blocking duplicate interaction:', interactionId);
+      return;
+    }
+
+    event.preventDefault();
+    lastInteractionId.current = interactionId;
+    console.log('🎯 Processing interaction:', interactionId);
 
     // Handle answer selection with immediate progression
     if (interactionId.startsWith('assessment-option-')) {
-      if (isProcessingAnswer) return; // Prevent multiple clicks
-      
       setIsProcessingAnswer(true);
       setSelectedAnswerId(interactionId);
       setPendingGeneration(true);
+      setApiCallInProgress(true);
       
-      // Update assessment context immediately
-      setAssessmentContext(prev => {
-        const newContext = {
-          ...prev,
-          userAnswers: {
-            ...prev.userAnswers,
-            [`question-${prev.currentQuestion}`]: interactionId
-          },
-          interactionHistory: [...prev.interactionHistory.slice(-10), {
-            id: interactionId,
-            type: 'answer_selection',
-            value: targetElement.textContent || '',
-            timestamp: new Date(),
-            questionNumber: prev.currentQuestion
-          }]
-        };
+      // Show immediate visual feedback
+      targetElement.style.backgroundColor = 'hsl(var(--primary) / 0.2)';
+      targetElement.style.transform = 'scale(0.98)';
+      
+      // Clear any existing debounce timer
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+      
+      // Debounced API call
+      debounceTimer.current = setTimeout(async () => {
+        try {
+          // Update assessment context
+          setAssessmentContext(prev => {
+            const newContext = {
+              ...prev,
+              userAnswers: {
+                ...prev.userAnswers,
+                [`question-${prev.currentQuestion}`]: interactionId
+              },
+              interactionHistory: [...prev.interactionHistory.slice(-10), {
+                id: interactionId,
+                type: 'answer_selection',
+                value: targetElement.textContent || '',
+                timestamp: new Date(),
+                questionNumber: prev.currentQuestion
+              }]
+            };
 
-        // Auto-progress to next question or complete assessment
-        if (prev.currentQuestion < prev.totalQuestions) {
-          newContext.currentQuestion = prev.currentQuestion + 1;
-        } else {
-          // Assessment complete
-          const score = Math.floor(Math.random() * 40) + 60; // Mock scoring
-          const skillLevel = score >= 80 ? 'Advanced' : score >= 60 ? 'Intermediate' : 'Beginner';
-          newContext.assessmentResults = {
-            score,
-            skillLevel,
-            recommendations: ['Practice chain-of-thought prompting', 'Learn few-shot techniques', 'Study prompt optimization']
-          };
-        }
+            // Auto-progress to next question or complete assessment
+            if (prev.currentQuestion < prev.totalQuestions) {
+              newContext.currentQuestion = prev.currentQuestion + 1;
+            } else {
+              // Assessment complete
+              const score = Math.floor(Math.random() * 40) + 60;
+              const skillLevel = score >= 80 ? 'Advanced' : score >= 60 ? 'Intermediate' : 'Beginner';
+              newContext.assessmentResults = {
+                score,
+                skillLevel,
+                recommendations: ['Practice chain-of-thought prompting', 'Learn few-shot techniques', 'Study prompt optimization']
+              };
+            }
 
-        // Generate next content after brief delay for visual feedback
-        setTimeout(async () => {
-          try {
+            // Generate next content
             const isComplete = newContext.assessmentResults !== null;
             const contextPrompt = buildInteractionPrompt({
               id: isComplete ? 'assessment-complete' : 'assessment-next-question',
@@ -228,25 +358,38 @@ Generate the appropriate assessment content for the current state.`;
               questionNumber: newContext.currentQuestion
             }, newContext);
             
-            const response = await callGeminiForGeneration(contextPrompt);
-            if (response) {
-              setLlmContent(response);
-              executeInlineScripts(response);
-            }
-          } catch (error) {
-            console.error('Error generating next content:', error);
-            toast.error('Failed to generate next question');
-          } finally {
-            setIsProcessingAnswer(false);
-            setSelectedAnswerId(null);
-            setPendingGeneration(false);
-          }
-        }, 800); // Brief delay for visual feedback
+            callGeminiForGeneration(contextPrompt).then(response => {
+              if (response) {
+                setLlmContent(response);
+                executeInlineScripts(response);
+              }
+            }).catch(error => {
+              console.error('Error generating next content:', error);
+              toast.error('Failed to generate next question. Using fallback content.');
+              const fallbackContent = generateFallbackContent();
+              setLlmContent(fallbackContent);
+              executeInlineScripts(fallbackContent);
+            }).finally(() => {
+              setIsProcessingAnswer(false);
+              setSelectedAnswerId(null);
+              setPendingGeneration(false);
+              setApiCallInProgress(false);
+              lastInteractionId.current = null;
+            });
 
-        return newContext;
-      });
+            return newContext;
+          });
+        } catch (error) {
+          console.error('Error in answer selection:', error);
+          toast.error('Something went wrong. Please try again.');
+          setIsProcessingAnswer(false);
+          setPendingGeneration(false);
+          setApiCallInProgress(false);
+          lastInteractionId.current = null;
+        }
+      }, 500); // 500ms debounce
       
-      return; // Exit early for answer selections
+      return;
     }
 
     // Handle other interactions (restart, navigation, etc.)
@@ -269,7 +412,7 @@ Generate the appropriate assessment content for the current state.`;
     };
 
     // Handle restart or other navigation
-    if (interactionId.includes('restart') || interactionId.includes('start-learning')) {
+    if (interactionId.includes('restart')) {
       setAssessmentContext({
         currentQuestion: 1,
         totalQuestions: 5,
@@ -277,25 +420,45 @@ Generate the appropriate assessment content for the current state.`;
         userAnswers: {},
         assessmentResults: null
       });
+      lastInteractionId.current = null;
+      setIsLoading(true);
+      setTimeout(() => {
+        const fallbackContent = generateFallbackContent();
+        setLlmContent(fallbackContent);
+        setIsLoading(false);
+      }, 500);
+      return;
     }
 
-    // Send interaction to AI for response
-    setIsLoading(true);
-    try {
-      const contextPrompt = buildInteractionPrompt(interactionData, assessmentContext);
-      const response = await callGeminiForGeneration(contextPrompt);
-      
-      if (response) {
-        setLlmContent(response);
-        executeInlineScripts(response);
-      }
-    } catch (error) {
-      console.error('Error processing interaction:', error);
-      toast.error('Failed to process interaction');
-    } finally {
-      setIsLoading(false);
+    // Handle navigation to learning path
+    if (interactionId.includes('start-learning')) {
+      navigate('/gemini-training');
+      return;
     }
-  }, [assessmentContext, isProcessingAnswer, pendingGeneration]);
+
+    // Send interaction to AI for response (non-option interactions)
+    if (!apiCallInProgress) {
+      setApiCallInProgress(true);
+      setIsLoading(true);
+      
+      try {
+        const contextPrompt = buildInteractionPrompt(interactionData, assessmentContext);
+        const response = await callGeminiForGeneration(contextPrompt);
+        
+        if (response) {
+          setLlmContent(response);
+          executeInlineScripts(response);
+        }
+      } catch (error) {
+        console.error('Error processing interaction:', error);
+        toast.error('Failed to process interaction');
+      } finally {
+        setIsLoading(false);
+        setApiCallInProgress(false);
+        lastInteractionId.current = null;
+      }
+    }
+  }, [assessmentContext, isProcessingAnswer, pendingGeneration, apiCallInProgress, navigate, generateFallbackContent, buildSystemPrompt, executeInlineScripts]);
 
   // Build contextual prompt for interactions
   const buildInteractionPrompt = useCallback((
@@ -326,7 +489,7 @@ RESPONSE REQUIREMENTS:
 Generate the updated assessment interface:`;
   }, [buildSystemPrompt]);
 
-  // Call Gemini API for HTML generation
+  // Call Gemini API for HTML generation with rate limiting
   const callGeminiForGeneration = useCallback(async (prompt: string): Promise<string> => {
     try {
       const { supabase } = await import('@/integrations/supabase/client');
@@ -341,119 +504,22 @@ Generate the updated assessment interface:`;
       });
 
       if (error) {
+        // Handle rate limiting specifically
+        if (error.message?.includes('429') || error.message?.includes('quota')) {
+          toast.error('API rate limit reached. Using offline mode.');
+          return generateFallbackContent();
+        }
         throw new Error(`API error: ${error.message}`);
       }
 
-      return data?.generatedText || '';
+      return data?.generatedText || generateFallbackContent();
     } catch (error) {
       console.error('Gemini API call failed:', error);
+      toast.error('Connection issue. Using offline mode.');
       return generateFallbackContent();
     }
-  }, [assessmentContext, buildSystemPrompt]);
+  }, [assessmentContext, buildSystemPrompt, generateFallbackContent]);
 
-  // Generate fallback content when API fails
-  const generateFallbackContent = useCallback((): string => {
-    const { currentQuestion, totalQuestions } = assessmentContext;
-    const progress = ((currentQuestion - 1) / totalQuestions * 100);
-
-    if (currentQuestion > totalQuestions) {
-      // Results page
-      return `
-        <div class="llm-container">
-          <h1 class="llm-title">Assessment Complete!</h1>
-          
-          <div class="llm-highlight">
-            <h2 class="llm-subtitle">Your Prompt Engineering Skill Level</h2>
-            <div class="llm-progress">
-              <div class="llm-progress-bar" style="width: 75%"></div>
-            </div>
-            <p class="llm-text"><strong>75% - Intermediate Level</strong></p>
-          </div>
-          
-          <div class="llm-task">
-            <h3 class="llm-subtitle">Personalized Recommendations</h3>
-            <div class="llm-concept-grid">
-              <div class="llm-concept">
-                <h3>Advanced Techniques</h3>
-                <p class="llm-text">Learn chain-of-thought and few-shot prompting</p>
-                <button class="llm-button" data-interaction-id="assessment-start-learning">
-                  Start Learning Path
-                </button>
-              </div>
-              <div class="llm-concept">
-                <h3>Practical Application</h3>
-                <p class="llm-text">Practice with real-world scenarios</p>
-                <button class="llm-button" data-interaction-id="assessment-view-scenarios">
-                  View Scenarios
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    // Question page
-    return `
-      <div class="llm-container">
-        <div class="llm-progress">
-          <div class="llm-progress-bar" style="width: ${progress}%"></div>
-        </div>
-        
-        <div class="llm-highlight">
-          <p class="llm-text"><strong>Question ${currentQuestion} of ${totalQuestions}</strong></p>
-        </div>
-        
-        <div class="llm-task">
-          <h2 class="llm-subtitle">What is the primary goal of prompt engineering?</h2>
-          <p class="llm-text">As a ${currentUser?.role || 'professional'}, understanding this concept is crucial for effective AI interaction.</p>
-          
-          <div class="llm-concept-grid">
-            <div class="llm-concept llm-interactive" data-interaction-id="assessment-option-a">
-              <h3>Option A</h3>
-              <p class="llm-text">To write complex code for AI systems</p>
-            </div>
-            <div class="llm-concept llm-interactive" data-interaction-id="assessment-option-b">
-              <h3>Option B</h3>
-              <p class="llm-text">To craft inputs that guide AI models to produce desired outputs</p>
-            </div>
-            <div class="llm-concept llm-interactive" data-interaction-id="assessment-option-c">
-              <h3>Option C</h3>
-              <p class="llm-text">To design user interfaces for AI applications</p>
-            </div>
-            <div class="llm-concept llm-interactive" data-interaction-id="assessment-option-d">
-              <h3>Option D</h3>
-              <p class="llm-text">To optimize AI model training parameters</p>
-            </div>
-          </div>
-          
-          <div style="text-align: center; margin-top: 2rem;">
-            <button class="llm-button" data-interaction-id="assessment-submit-question">
-              Submit Answer
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-  }, [assessmentContext, currentUser]);
-
-  // Execute any inline scripts in the AI-generated content
-  const executeInlineScripts = useCallback((htmlContent: string) => {
-    const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
-    let match;
-    
-    while ((match = scriptRegex.exec(htmlContent)) !== null) {
-      try {
-        // Create and execute script
-        const script = document.createElement('script');
-        script.textContent = match[1];
-        document.body.appendChild(script);
-        document.body.removeChild(script);
-      } catch (error) {
-        console.error('Script execution error:', error);
-      }
-    }
-  }, []);
 
   // Initialize the assessment with AI-generated content
   useEffect(() => {
@@ -504,7 +570,7 @@ Generate the updated assessment interface:`;
     executeInlineScripts(refreshedContent);
     setIsLoading(false);
     toast.success('Assessment refreshed!');
-  }, [callGeminiForGeneration, buildSystemPrompt, assessmentContext]);
+  }, [callGeminiForGeneration, buildSystemPrompt, assessmentContext, executeInlineScripts]);
 
   if (error) {
     return (
@@ -544,7 +610,7 @@ Generate the updated assessment interface:`;
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.history.back()}
+                onClick={() => navigate('/dashboard')}
                 className="bg-card hover:bg-muted flex items-center gap-1"
                 title="Back to Dashboard"
               >
