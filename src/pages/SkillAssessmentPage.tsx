@@ -1,8 +1,8 @@
 
-import SkillAssessment from "@/components/SkillAssessment";
+import AISkillAssessment from "@/components/AISkillAssessment";
 
 const SkillAssessmentPage = () => {
-  return <SkillAssessment />;
+  return <AISkillAssessment />;
 };
 
 export default SkillAssessmentPage;
