@@ -742,7 +742,7 @@ Generate the updated interactive visualization:`;
         <div 
           ref={contentRef}
           className="p-8 min-h-screen"
-          style={{ paddingTop: 'calc(7rem + 2rem)' }} // 7rem for header + 2rem padding
+          style={{ paddingTop: '8rem' }} // Fixed 8rem for header clearance
           dangerouslySetInnerHTML={{ __html: llmContent }}
         />
 
