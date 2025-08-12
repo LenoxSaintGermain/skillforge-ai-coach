@@ -111,68 +111,70 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
     `;
   }, [phase, exploredConcepts]);
 
-  const getPhaseVideos = useCallback((phaseId: number): Array<{id: string, title: string, description: string}> => {
-    // Import and use VideoService for real videos
-    const getRealVideos = async () => {
+  // Video loading state
+  const [phaseVideos, setPhaseVideos] = useState<Array<{id: string, title: string, description: string}>>([]);
+  const [videosLoading, setVideosLoading] = useState(false);
+  const [videosError, setVideosError] = useState<string | null>(null);
+
+  // Load videos for current phase
+  useEffect(() => {
+    const loadPhaseVideos = async () => {
+      setVideosLoading(true);
+      setVideosError(null);
+      
       try {
+        console.log('Loading videos for phase:', phase.id);
+        
         const { videoService } = await import('@/services/VideoService');
-        const videos = await videoService.getVideosForPhase(phaseId);
-        return videos.map(video => ({
+        await videoService.initialize();
+        
+        const videos = await videoService.getVideosForPhase(phase.id);
+        console.log('Found videos:', videos);
+        
+        const mappedVideos = videos.map(video => ({
           id: video.id,
           title: video.title,
           description: `${video.bestFor} • ${video.duration || 'Watch now'} • ${video.category}`
         }));
+        
+        setPhaseVideos(mappedVideos);
       } catch (error) {
-        console.error('Failed to load videos for phase:', error);
-        // Return fallback videos if service fails
-        return [
-          {
-            id: "Py5aHOLpAMg",
-            title: "Google AI Studio Tutorial for Beginners: Master it in 10 Minutes!",
-            description: "Complete beginners, quick introduction • 9:59 • Beginner Tutorials"
-          },
-          {
-            id: "13EPujO40iE",
-            title: "Google AI Studio In 26 Minutes",
-            description: "Comprehensive beginner introduction • 26:00 • Beginner Tutorials"
-          },
-          {
-            id: "4oyqd7CB09c",
-            title: "Introduction to Gemini APIs and AI Studio",
-            description: "API integration basics • 18:07 • Developer-Focused Content"
-          }
-        ];
+        console.error('Error loading phase videos:', error);
+        setVideosError('Failed to load videos from catalog');
+        
+        // Fallback videos
+        const fallbackMappings: { [key: number]: Array<{id: string, title: string, description: string}> } = {
+          1: [
+            { id: "Py5aHOLpAMg", title: "Google AI Studio Tutorial for Beginners: Master it in 10 Minutes!", description: "Complete beginners, quick introduction • 9:59 • Beginner Tutorials" },
+            { id: "G2fqAlgmoPo", title: "Introduction to Generative AI Studio", description: "Understanding the platform fundamentals • AI Fundamentals" }
+          ],
+          2: [
+            { id: "4oyqd7CB09c", title: "Introduction to Gemini APIs and AI Studio", description: "API integration basics • 18:07 • Developer-Focused Content" },
+            { id: "13EPujO40iE", title: "Google AI Studio In 26 Minutes", description: "Comprehensive beginner introduction • 26:00 • Beginner Tutorials" }
+          ],
+          3: [
+            { id: "zxye_ZfRpD0", title: "How to Build an AI Recipe Generator with Python, Tkinter and Gemini API", description: "Python developers building GUI apps • 8:04 • Practical Applications" },
+            { id: "VwpDvvNjN2I", title: "Fine tuning Gemini with Google AI Studio", description: "Basic fine-tuning introduction • 7:18 • Model Training & Fine-tuning" },
+            { id: "B1RKFL6ASts", title: "Gemini API and Flutter: Practical, AI-driven apps with Google AI tools", description: "Mobile app developers • Practical Applications" }
+          ],
+          4: [
+            { id: "TGaoZpvs1Fo", title: "Unlock Gemini's Powers in Google AI Studio (Full Guide)", description: "Complete feature exploration • 28:08 • Advanced Features" },
+            { id: "Y10WeRIDKiw", title: "How to use the Gemini APIs: Advanced techniques", description: "Advanced API usage patterns • Developer-Focused Content" }
+          ],
+          5: [
+            { id: "8qg_6OWE8cc", title: "Take your AI projects further with Google AI Studio", description: "Scaling up existing projects • Short • Advanced Features" },
+            { id: "VRT8YNiD7xg", title: "Google Gemini APIs and AI Studio: Accelerating creative workflows", description: "Creative and research applications • 50:24 • Developer-Focused Content" }
+          ]
+        };
+        
+        setPhaseVideos(fallbackMappings[phase.id] || []);
+      } finally {
+        setVideosLoading(false);
       }
     };
 
-    // For immediate rendering, return fallback videos
-    // Real videos will be loaded asynchronously
-    const fallbackMappings = {
-      1: [
-        { id: "Py5aHOLpAMg", title: "Google AI Studio Tutorial for Beginners: Master it in 10 Minutes!", description: "Complete beginners, quick introduction • 9:59 • Beginner Tutorials" },
-        { id: "G2fqAlgmoPo", title: "Introduction to Generative AI Studio", description: "Understanding the platform fundamentals • AI Fundamentals" }
-      ],
-      2: [
-        { id: "4oyqd7CB09c", title: "Introduction to Gemini APIs and AI Studio", description: "API integration basics • 18:07 • Developer-Focused Content" },
-        { id: "13EPujO40iE", title: "Google AI Studio In 26 Minutes", description: "Comprehensive beginner introduction • 26:00 • Beginner Tutorials" }
-      ],
-      3: [
-        { id: "zxye_ZfRpD0", title: "How to Build an AI Recipe Generator with Python, Tkinter and Gemini API", description: "Python developers building GUI apps • 8:04 • Practical Applications" },
-        { id: "VwpDvvNjN2I", title: "Fine tuning Gemini with Google AI Studio", description: "Basic fine-tuning introduction • 7:18 • Model Training & Fine-tuning" },
-        { id: "B1RKFL6ASts", title: "Gemini API and Flutter: Practical, AI-driven apps with Google AI tools", description: "Mobile app developers • Practical Applications" }
-      ],
-      4: [
-        { id: "TGaoZpvs1Fo", title: "Unlock Gemini's Powers in Google AI Studio (Full Guide)", description: "Complete feature exploration • 28:08 • Advanced Features" },
-        { id: "Y10WeRIDKiw", title: "How to use the Gemini APIs: Advanced techniques", description: "Advanced API usage patterns • Developer-Focused Content" }
-      ],
-      5: [
-        { id: "8qg_6OWE8cc", title: "Take your AI projects further with Google AI Studio", description: "Scaling up existing projects • Short • Advanced Features" },
-        { id: "VRT8YNiD7xg", title: "Google Gemini APIs and AI Studio: Accelerating creative workflows", description: "Creative and research applications • 50:24 • Developer-Focused Content" }
-      ]
-    };
-    
-    return fallbackMappings[phaseId] || [];
-  }, []);
+    loadPhaseVideos();
+  }, [phase.id]);
 
   // System prompt for curriculum-specific AI generation
   const buildSystemPrompt = useCallback((phase: SyllabusPhase): string => {
@@ -748,28 +750,44 @@ Generate the updated interactive visualization:`;
         )}
 
         {/* YouTube Videos Section for All Phases */}
-        {contentState === 'overview' && getPhaseVideos(phase.id).length > 0 && (
+        {contentState === 'overview' && (
           <div className="absolute bottom-20 left-4 right-4 z-10">
             <Card className="p-4 max-h-64 overflow-y-auto">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 🎥 Hands-On Video Tutorials
+                {videosError && <span className="text-xs text-yellow-600">(Fallback videos)</span>}
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {getPhaseVideos(phase.id).map((video) => (
-                  <YouTubePlayer
-                    key={video.id}
-                    videoId={video.id}
-                    title={video.title}
-                    description={video.description}
-                    onWatched={() => {
-                      const newWatchedVideos = new Set(watchedVideos);
-                      newWatchedVideos.add(video.id);
-                      setWatchedVideos(newWatchedVideos);
-                      toast.success("Video marked as watched!");
-                    }}
-                  />
-                ))}
-              </div>
+              
+              {videosLoading && (
+                <div className="text-center py-4">
+                  <div className="text-sm text-muted-foreground">Loading video tutorials...</div>
+                </div>
+              )}
+              
+              {!videosLoading && phaseVideos.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {phaseVideos.map((video) => (
+                    <YouTubePlayer
+                      key={video.id}
+                      videoId={video.id}
+                      title={video.title}
+                      description={video.description}
+                      onWatched={() => {
+                        const newWatchedVideos = new Set(watchedVideos);
+                        newWatchedVideos.add(video.id);
+                        setWatchedVideos(newWatchedVideos);
+                        toast.success("Video marked as watched!");
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+              
+              {!videosLoading && phaseVideos.length === 0 && (
+                <div className="text-center py-4">
+                  <div className="text-sm text-muted-foreground">No videos available for this phase</div>
+                </div>
+              )}
             </Card>
           </div>
         )}
