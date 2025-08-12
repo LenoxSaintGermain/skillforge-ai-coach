@@ -267,6 +267,8 @@ Generate an engaging, interactive visualization using the exact CSS classes abov
     try {
       const { supabase } = await import('@/integrations/supabase/client');
       
+      console.log('Calling Gemini API with prompt preview:', prompt.substring(0, 100));
+      
       const { data, error } = await supabase.functions.invoke('gemini-api', {
         body: {
           prompt,
@@ -277,12 +279,27 @@ Generate an engaging, interactive visualization using the exact CSS classes abov
       });
 
       if (error) {
-        throw new Error(`API error: ${error.message}`);
+        console.error('Supabase function invoke error:', error);
+        // Check if it's an API key issue
+        if (error.message?.includes('GEMINI_API_KEY not configured') || 
+            error.message?.includes('No API key found')) {
+          toast.error('Gemini API key not configured. Please add your API key in the project settings.');
+          return generateFallbackContent();
+        }
+        throw new Error(`API error: ${error.message || 'Unknown error'}`);
       }
 
-      return data?.generatedText || '';
+      if (!data?.generatedText) {
+        console.error('No generated text in response:', data);
+        throw new Error('No content generated from API');
+      }
+
+      console.log('Successfully generated content:', data.generatedText.substring(0, 100));
+      return data.generatedText;
     } catch (error) {
       console.error('Gemini API call failed:', error);
+      // Return fallback content on API failure
+      toast.warning('Using simplified content due to API issues');
       return generateFallbackContent();
     }
   }, [phase, buildSystemPrompt, generateFallbackContent]);
@@ -725,7 +742,7 @@ Generate the updated interactive visualization:`;
         <div 
           ref={contentRef}
           className="p-8 min-h-screen"
-          style={{ paddingTop: 'calc(5rem + 2rem)' }} // 5rem for header + 2rem padding
+          style={{ paddingTop: 'calc(7rem + 2rem)' }} // 7rem for header + 2rem padding
           dangerouslySetInnerHTML={{ __html: llmContent }}
         />
 
