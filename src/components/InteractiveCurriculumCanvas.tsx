@@ -5,7 +5,8 @@ import { X, MessageCircle, RefreshCw, ArrowLeft } from "lucide-react";
 import YouTubePlayer from "./YouTubePlayer";
 import { useAI } from "@/contexts/AIContext";
 import { SyllabusPhase } from "@/models/Syllabus";
-import { User } from "@/contexts/UserContext";
+import { useUser } from "@/contexts/UserContext";
+import { syllabusProgressService } from "@/services/SyllabusProgressService";
 import { toast } from "sonner";
 import "@/styles/llm-curriculum.css";
 
@@ -40,6 +41,7 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
   const contentRef = useRef<HTMLDivElement>(null);
   const isInitializing = useRef(false);
   const { coachService } = useAI();
+  const { currentUser } = useUser();
   
   const [llmContent, setLlmContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -320,6 +322,26 @@ Generate an engaging, interactive visualization using the exact CSS classes abov
             const newSet = new Set([...prev, concept.title]);
             // Save to localStorage for persistence
             localStorage.setItem(`explored-concepts-${phase.id}`, JSON.stringify([...newSet]));
+            
+            // Save progress to database
+            if (currentUser?.user_id) {
+              const progressPercentage = syllabusProgressService.calculateProgress(
+                newSet, 
+                new Set(), // completed phases not tracked here
+                5 // total phases
+              );
+              
+              syllabusProgressService.saveProgressDual(currentUser.user_id, {
+                syllabus_name: 'Gemini AI Studio Training',
+                current_module: `Phase ${phase.id}: ${phase.title}`,
+                progress_percentage: progressPercentage,
+                completed_modules: [...newSet],
+                last_accessed: new Date()
+              }).catch(error => {
+                console.warn('Failed to save progress to database:', error);
+              });
+            }
+            
             return newSet;
           });
           
@@ -534,12 +556,33 @@ Generate the updated interactive visualization:`;
     isInitializing.current = true;
 
     try {
-      // Load saved explored concepts from localStorage
-      const savedConcepts = localStorage.getItem(`explored-concepts-${phase.id}`);
-      if (savedConcepts) {
-        const conceptNames = JSON.parse(savedConcepts);
-        setExploredConcepts(new Set(conceptNames));
-      }
+      // Load saved explored concepts from localStorage and database
+      const loadProgress = async () => {
+        try {
+          // Load from localStorage first for immediate display
+          const savedConcepts = localStorage.getItem(`explored-concepts-${phase.id}`);
+          if (savedConcepts) {
+            const conceptNames = JSON.parse(savedConcepts);
+            setExploredConcepts(new Set(conceptNames));
+          }
+
+          // Load from database if available
+          if (currentUser?.user_id) {
+            const dbProgress = await syllabusProgressService.getProgress(
+              currentUser.user_id, 
+              'Gemini AI Studio Training'
+            );
+            
+            if (dbProgress && dbProgress.completed_modules) {
+              setExploredConcepts(new Set(dbProgress.completed_modules));
+            }
+          }
+        } catch (error) {
+          console.error('Error loading saved progress:', error);
+        }
+      };
+
+      loadProgress();
       
       // Load static content immediately without API calls
       const fallbackContent = generateFallbackContent();
@@ -681,7 +724,8 @@ Generate the updated interactive visualization:`;
         {/* AI-Generated Interactive Content */}
         <div 
           ref={contentRef}
-          className="pt-20 p-8 min-h-screen"
+          className="p-8 min-h-screen"
+          style={{ paddingTop: 'calc(5rem + 2rem)' }} // 5rem for header + 2rem padding
           dangerouslySetInnerHTML={{ __html: llmContent }}
         />
 

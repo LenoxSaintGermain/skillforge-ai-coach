@@ -64,23 +64,22 @@ const UserAnalytics = () => {
         `)
         .eq('user_id', currentUser.user_id);
 
+      // Fetch syllabus progress data
+      const { data: syllabusData, error: syllabusError } = await supabase
+        .from('syllabus_progress')
+        .select('*')
+        .eq('user_id', currentUser.user_id);
+
       if (progressError) {
         console.error('Error fetching progress data:', progressError);
-        // Set empty data instead of returning to prevent infinite loading
-        setAnalyticsData({
-          totalScenariosCompleted: 0,
-          totalTimeSpent: 0,
-          averageCompletionTime: 0,
-          skillProgress: [],
-          monthlyActivity: [],
-          difficultyDistribution: [],
-          recentCompletions: []
-        });
-        return;
+      }
+
+      if (syllabusError) {
+        console.error('Error fetching syllabus data:', syllabusError);
       }
 
       // Process the data for analytics
-      const processedData = processAnalyticsData(progressData || []);
+      const processedData = processAnalyticsData(progressData || [], syllabusData || []);
       setAnalyticsData(processedData);
 
     } catch (error) {
@@ -90,7 +89,7 @@ const UserAnalytics = () => {
     }
   };
 
-  const processAnalyticsData = (progressData: any[]): UserAnalyticsData => {
+  const processAnalyticsData = (progressData: any[], syllabusData: any[]): UserAnalyticsData => {
     const completedScenarios = progressData.filter(p => p.status === 'completed');
     
     // Total scenarios completed
@@ -120,6 +119,14 @@ const UserAnalytics = () => {
           totalScore: current.totalScore + (scenario.score || 0)
         });
       });
+    });
+
+    // Add syllabus progress to skill tracking
+    syllabusData.forEach(syllabus => {
+      const syllabusSkill = `${syllabus.syllabus_name}`;
+      if (!skillMap.has(syllabusSkill)) {
+        skillMap.set(syllabusSkill, { count: 1, totalScore: syllabus.progress_percentage });
+      }
     });
 
     const skillProgress = Array.from(skillMap.entries()).map(([skillName, data]) => ({
