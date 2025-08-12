@@ -64,6 +64,10 @@ const SyllabusExplorer = () => {
   const [currentPhaseId, setCurrentPhaseId] = useState(1);
   const [isLearningMode, setIsLearningMode] = useState(false);
   const [userProgress, setUserProgress] = useState(() => {
+    const savedProgress = localStorage.getItem('userSyllabusProgress');
+    if (savedProgress) {
+      return JSON.parse(savedProgress);
+    }
     return {
       currentPhase: 1,
       completedTasks: [],
@@ -77,6 +81,10 @@ const SyllabusExplorer = () => {
       }
     };
   });
+
+  useEffect(() => {
+    localStorage.setItem('userSyllabusProgress', JSON.stringify(userProgress));
+  }, [userProgress]);
   
   const handlePhaseSelect = (phaseId: number) => {
     console.log(`📚 Selecting phase ${phaseId}`);

@@ -33,6 +33,7 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
   const [initializationStatus, setInitializationStatus] = useState<'idle' | 'initializing' | 'ready' | 'error'>('idle');
   const [canvasError, setCanvasError] = useState<string | null>(null);
   const [isCoachOpen, setIsCoachOpen] = useState(true);
+  const [showRetry, setShowRetry] = useState(false);
 
   const isCoachReady = initializationStatus === 'ready';
 
@@ -253,16 +254,35 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
 
     const currentInput = userInput;
     setUserInput("");
-    setCoachMessage("Coach is thinking...");
+    setCoachMessage("Generating detailed content... this may take a few seconds");
+    setShowRetry(false);
+
+    const longWaitTimer = setTimeout(() => {
+      setCoachMessage("Still working... the AI is generating a detailed response.");
+    }, 8000);
 
     try {
-      const response = await coachServiceRef.current.processUserMessage(
+      const timeoutPromise = new Promise<AIResponse>((_, reject) =>
+        setTimeout(() => reject(new Error("Response timeout")), 20000)
+      );
+
+      const responsePromise = coachServiceRef.current.processUserMessage(
         `${currentInput} [Canvas context: User is working on ${phaseRef.current.title}. Canvas has ${fabricCanvasRef.current?.getObjects().length || 0} objects.]`
       );
+
+      const response = await Promise.race([responsePromise, timeoutPromise]);
+
+      clearTimeout(longWaitTimer);
       handleAIActions(response);
     } catch (error) {
+      clearTimeout(longWaitTimer);
       console.error("Coach interaction failed:", error);
-      setCoachMessage("Sorry, I'm having trouble responding right now. Try rephrasing your question or ask something else!");
+      if (error instanceof Error && error.message === "Response timeout") {
+        setCoachMessage("Sorry, the coach is taking a while to respond. Please try again.");
+        setShowRetry(true);
+      } else {
+        setCoachMessage("Sorry, an unexpected error occurred. Please try again in a moment.");
+      }
       setUserInput(currentInput);
     }
   }, [userInput, isCoachReady, handleAIActions]);
@@ -332,16 +352,20 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
                     {typeof coachMessage === 'string' ? coachMessage : 'Coach is ready to help!'}
                   </p>
                   <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={userInput}
-                      onChange={(e) => setUserInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleCoachInteraction()}
-                      placeholder="Ask your coach..."
-                      className="flex-1 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                      disabled={!isCoachReady}
-                    />
-                    <Button size="sm" onClick={handleCoachInteraction} disabled={!userInput.trim() || !isCoachReady}>Send</Button>
+                    {showRetry ? (
+                      <Button size="sm" onClick={handleCoachInteraction}>Retry</Button>
+                    ) : (
+                      <input
+                        type="text"
+                        value={userInput}
+                        onChange={(e) => setUserInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleCoachInteraction()}
+                        placeholder="Ask your coach..."
+                        className="flex-1 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                        disabled={!isCoachReady}
+                      />
+                    )}
+                    <Button size="sm" onClick={handleCoachInteraction} disabled={!userInput.trim() || !isCoachReady || showRetry}>Send</Button>
                     <Button variant="ghost" size="sm" onClick={() => setIsCoachOpen(false)}><X className="w-4 h-4" /></Button>
                   </div>
                 </div>
