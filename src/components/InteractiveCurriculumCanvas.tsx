@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect, useCallback, useLayoutEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { X, MessageCircle, RefreshCw, ArrowLeft } from "lucide-react";
@@ -40,6 +40,7 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const isInitializing = useRef(false);
+  const headerRef = useRef<HTMLElement | null>(null);
   const { coachService } = useAI();
   const { currentUser } = useUser();
   
@@ -51,6 +52,7 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
   const [coachMessage, setCoachMessage] = useState('');
   const [userInput, setUserInput] = useState('');
   const [isCoachOpen, setIsCoachOpen] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(80); // Default fallback height
   
   // New state for interactive content management
   const [contentState, setContentState] = useState<'overview' | 'concept-detail'>('overview');
@@ -70,6 +72,34 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
     learningPath: []
   });
 
+  // Dynamic header height measurement
+  useLayoutEffect(() => {
+    const measureHeaderHeight = () => {
+      const header = document.querySelector('header');
+      if (header) {
+        headerRef.current = header;
+        const rect = header.getBoundingClientRect();
+        const newHeight = rect.height;
+        setHeaderHeight(newHeight);
+        console.log('Measured header height:', newHeight);
+      }
+    };
+
+    measureHeaderHeight();
+    
+    // Remeasure on window resize
+    const handleResize = () => {
+      setTimeout(measureHeaderHeight, 100); // Small delay to allow for layout changes
+    };
+    
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, []);
 
   // Generate fallback content when API fails - simplified without "bottom bit"
   const generateFallbackContent = useCallback((): string => {
@@ -87,7 +117,6 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
     }).join('');
 
     return `
-      <div class="llm-container">
         <h1 class="llm-title" data-interaction-id="phase-${phase.id}-title-main">${phase.title}</h1>
         
         <div class="llm-highlight">
@@ -109,7 +138,6 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
             Ask AI Coach for Help
           </button>
         </div>
-      </div>
     `;
   }, [phase, exploredConcepts]);
 
@@ -191,7 +219,8 @@ You are "Jarvis", an expert AI Curriculum Visualizer and Interactive Learning Co
 
 **Instructions:**
 1. **Interactive HTML Output:** Your entire response MUST be ONLY HTML content (no markdown, no explanations)
-2. **Styling Contract:** Use ONLY these predefined CSS classes:
+2. **Container Rule:** Do NOT wrap content in llm-container div - it will be applied externally
+3. **Styling Contract:** Use ONLY these predefined CSS classes:
    - llm-container: Main content wrapper (ALWAYS use as root)
    - llm-title, llm-subtitle: Headings (h1, h2, h3 with these classes)
    - llm-text: Body text paragraphs
@@ -741,8 +770,11 @@ Generate the updated interactive visualization:`;
         {/* AI-Generated Interactive Content */}
         <div 
           ref={contentRef}
-          className="p-8 min-h-screen"
-          style={{ paddingTop: '8rem' }} // Fixed 8rem for header clearance
+          className="llm-container min-h-screen"
+          style={{ 
+            paddingTop: `${headerHeight + 32}px`, // Dynamic header height + 2rem spacing
+            marginTop: 0, // Override llm-container default margin
+          }}
           dangerouslySetInnerHTML={{ __html: llmContent }}
         />
 

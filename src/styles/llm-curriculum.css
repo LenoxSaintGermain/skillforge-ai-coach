@@ -10,6 +10,13 @@
   animation: llmFadeIn 0.5s ease-in-out;
 }
 
+/* Canvas-specific container - optimized for dynamic header spacing */
+.llm-container.min-h-screen {
+  margin-top: 0 !important; /* Override default margin for canvas */
+  padding: 1.5rem 1.5rem 6rem 1.5rem; /* Extra bottom padding for videos section */
+  gap: 1.5rem; /* Slightly tighter gap for canvas */
+}
+
 /* Text and Input Elements */
 .llm-text {
   margin: 0.5rem 0;
