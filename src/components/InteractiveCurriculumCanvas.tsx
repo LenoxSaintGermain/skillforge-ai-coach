@@ -337,13 +337,24 @@ Generate an engaging, interactive visualization using the exact CSS classes abov
               } else {
                 throw new Error('No content generated');
               }
-            } catch (error) {
+            } catch (error: any) {
               console.error('Content generation failed:', error);
               setLoadingMessage('');
+              
+              // Detect content blocker issues
+              const isNetworkBlocked = error.message?.includes('NetworkError') || 
+                                      error.message?.includes('ERR_BLOCKED_BY_CONTENT_BLOCKER') ||
+                                      error.message?.includes('Failed to fetch') ||
+                                      error.name === 'TypeError' ||
+                                      error.message?.includes('fetch');
               
               if (error.message.includes('timed out')) {
                 setShowRetry(true);
                 toast.error('Generation timed out. You can retry or view simplified content.');
+                return; // Don't show fallback immediately
+              } else if (isNetworkBlocked) {
+                setShowRetry(true);
+                toast.error('Content blocked by ad blocker or network filter. Please check your browser settings and retry.');
                 return; // Don't show fallback immediately
               } else {
                 toast.error('Generation failed. Showing simplified content.');
@@ -656,12 +667,21 @@ Generate the updated interactive visualization:`;
           <div className="absolute inset-0 bg-background/90 flex items-center justify-center">
             <div className="text-center max-w-md px-4">
               <div className="mb-4">
-                <h3 className="text-lg font-semibold mb-2">Generation Timed Out</h3>
+                <h3 className="text-lg font-semibold mb-2">Content Generation Failed</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  The AI is taking longer than usual to generate detailed content. You can retry or view simplified content.
+                  Content generation failed. This may be due to network blocking or timeout.
                 </p>
+                <div className="bg-muted p-4 rounded-lg text-left space-y-2">
+                  <p className="font-medium text-sm">If you're seeing this error:</p>
+                  <ul className="text-sm space-y-1">
+                    <li>• Check if your ad blocker is blocking this site</li>
+                    <li>• Try disabling browser content filters</li>
+                    <li>• Refresh the page and try again</li>
+                    <li>• Try in incognito/private browsing mode</li>
+                  </ul>
+                </div>
               </div>
-              <div className="flex gap-3 justify-center">
+              <div className="flex gap-2 justify-center">
                 <Button 
                   onClick={() => {
                     const retryEvent = new MouseEvent('click');
