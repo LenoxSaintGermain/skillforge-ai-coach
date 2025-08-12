@@ -313,7 +313,7 @@ const InteractiveLearningCanvas: React.FC<InteractiveLearningCanvasProps> = ({ p
   }
 
   return (
-    <div className="fixed inset-0 bg-background z-50 flex">
+    <div className="fixed inset-0 bg-background z-50 flex pt-20">
       <div className="flex-1 relative">
         <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
           <Card className="p-2 flex items-center gap-2">
