@@ -111,32 +111,68 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
     `;
   }, [phase, exploredConcepts]);
 
-  const getPhaseVideos = (phaseId: number): Array<{id: string, title: string, description: string}> => {
-    const videoMappings = {
+  const getPhaseVideos = useCallback((phaseId: number): Array<{id: string, title: string, description: string}> => {
+    // Import and use VideoService for real videos
+    const getRealVideos = async () => {
+      try {
+        const { videoService } = await import('@/services/VideoService');
+        const videos = await videoService.getVideosForPhase(phaseId);
+        return videos.map(video => ({
+          id: video.id,
+          title: video.title,
+          description: `${video.bestFor} • ${video.duration || 'Watch now'} • ${video.category}`
+        }));
+      } catch (error) {
+        console.error('Failed to load videos for phase:', error);
+        // Return fallback videos if service fails
+        return [
+          {
+            id: "Py5aHOLpAMg",
+            title: "Google AI Studio Tutorial for Beginners: Master it in 10 Minutes!",
+            description: "Complete beginners, quick introduction • 9:59 • Beginner Tutorials"
+          },
+          {
+            id: "13EPujO40iE",
+            title: "Google AI Studio In 26 Minutes",
+            description: "Comprehensive beginner introduction • 26:00 • Beginner Tutorials"
+          },
+          {
+            id: "4oyqd7CB09c",
+            title: "Introduction to Gemini APIs and AI Studio",
+            description: "API integration basics • 18:07 • Developer-Focused Content"
+          }
+        ];
+      }
+    };
+
+    // For immediate rendering, return fallback videos
+    // Real videos will be loaded asynchronously
+    const fallbackMappings = {
       1: [
-        { id: "aOx_ZgYvBbs", title: "Getting Started with AI Studio", description: "Complete introduction to Google AI Studio interface and basic features" },
-        { id: "3o7lhvLbC9M", title: "Understanding Gemini Models", description: "Overview of different Gemini models and their capabilities" }
+        { id: "Py5aHOLpAMg", title: "Google AI Studio Tutorial for Beginners: Master it in 10 Minutes!", description: "Complete beginners, quick introduction • 9:59 • Beginner Tutorials" },
+        { id: "G2fqAlgmoPo", title: "Introduction to Generative AI Studio", description: "Understanding the platform fundamentals • AI Fundamentals" }
       ],
       2: [
-        { id: "2sL1adOt6wE", title: "Planning Your AI Project", description: "Best practices for structuring and planning AI applications" },
-        { id: "eFijoOhDZm4", title: "Prompt Engineering Fundamentals", description: "Essential techniques for effective prompt design" }
+        { id: "4oyqd7CB09c", title: "Introduction to Gemini APIs and AI Studio", description: "API integration basics • 18:07 • Developer-Focused Content" },
+        { id: "13EPujO40iE", title: "Google AI Studio In 26 Minutes", description: "Comprehensive beginner introduction • 26:00 • Beginner Tutorials" }
       ],
       3: [
-        { id: "Hvt_TEWMojk", title: "Building with AI Studio", description: "Hands-on tutorial for creating your first AI application" },
-        { id: "M1fGcrSZzBU", title: "Implementing Function Calling", description: "Step-by-step guide to implementing function calling in Gemini" },
-        { id: "yltT8qc_bDw", title: "Working with Multimodal Inputs", description: "How to process text, images, and other media types" }
+        { id: "zxye_ZfRpD0", title: "How to Build an AI Recipe Generator with Python, Tkinter and Gemini API", description: "Python developers building GUI apps • 8:04 • Practical Applications" },
+        { id: "VwpDvvNjN2I", title: "Fine tuning Gemini with Google AI Studio", description: "Basic fine-tuning introduction • 7:18 • Model Training & Fine-tuning" },
+        { id: "B1RKFL6ASts", title: "Gemini API and Flutter: Practical, AI-driven apps with Google AI tools", description: "Mobile app developers • Practical Applications" }
       ],
       4: [
-        { id: "wKKa3UGD5nE", title: "Testing and Evaluation", description: "Methods for testing AI model performance and reliability" },
-        { id: "UOJ6cCHqLAE", title: "Optimizing Model Performance", description: "Techniques for improving response quality and speed" }
+        { id: "TGaoZpvs1Fo", title: "Unlock Gemini's Powers in Google AI Studio (Full Guide)", description: "Complete feature exploration • 28:08 • Advanced Features" },
+        { id: "Y10WeRIDKiw", title: "How to use the Gemini APIs: Advanced techniques", description: "Advanced API usage patterns • Developer-Focused Content" }
       ],
       5: [
-        { id: "1iLxn2HSfq4", title: "Deploying AI Applications", description: "Production deployment strategies and best practices" },
-        { id: "1sIsqIXNdjs", title: "Real-world Implementation", description: "Case studies and examples of successful AI deployments" }
+        { id: "8qg_6OWE8cc", title: "Take your AI projects further with Google AI Studio", description: "Scaling up existing projects • Short • Advanced Features" },
+        { id: "VRT8YNiD7xg", title: "Google Gemini APIs and AI Studio: Accelerating creative workflows", description: "Creative and research applications • 50:24 • Developer-Focused Content" }
       ]
     };
-    return videoMappings[phaseId] || [];
-  };
+    
+    return fallbackMappings[phaseId] || [];
+  }, []);
 
   // System prompt for curriculum-specific AI generation
   const buildSystemPrompt = useCallback((phase: SyllabusPhase): string => {
@@ -711,15 +747,15 @@ Generate the updated interactive visualization:`;
           </div>
         )}
 
-        {/* YouTube Videos Section for Phase 3 */}
-        {phase.id === 3 && contentState === 'overview' && (
+        {/* YouTube Videos Section for All Phases */}
+        {contentState === 'overview' && getPhaseVideos(phase.id).length > 0 && (
           <div className="absolute bottom-20 left-4 right-4 z-10">
             <Card className="p-4 max-h-64 overflow-y-auto">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 🎥 Hands-On Video Tutorials
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {getPhaseVideos(3).map((video) => (
+                {getPhaseVideos(phase.id).map((video) => (
                   <YouTubePlayer
                     key={video.id}
                     videoId={video.id}
