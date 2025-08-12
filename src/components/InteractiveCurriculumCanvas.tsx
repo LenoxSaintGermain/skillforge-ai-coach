@@ -44,6 +44,8 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
   const [llmContent, setLlmContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingMessage, setLoadingMessage] = useState('');
+  const [showRetry, setShowRetry] = useState(false);
   const [coachMessage, setCoachMessage] = useState('');
   const [userInput, setUserInput] = useState('');
   const [isCoachOpen, setIsCoachOpen] = useState(false);
@@ -304,9 +306,20 @@ Generate an engaging, interactive visualization using the exact CSS classes abov
             
             IMPORTANT: Include a button with data-interaction-id="phase-${phase.id}-back-to-overview" to return to the main view.`;
             
-            // Set a timeout for API call
+            // Set progressive loading messages
+            setLoadingMessage("Generating content...");
+            const loadingTimer1 = setTimeout(() => setLoadingMessage("Still working, this usually takes 10-15 seconds..."), 8000);
+            const loadingTimer2 = setTimeout(() => setLoadingMessage("Almost done, finalizing content..."), 15000);
+            const loadingTimer3 = setTimeout(() => setLoadingMessage("Taking longer than usual, but still processing..."), 20000);
+            
+            // Set a timeout for API call - increased to 25 seconds
             const timeoutPromise = new Promise<string>((_, reject) => 
-              setTimeout(() => reject(new Error('Content generation timed out')), 10000)
+              setTimeout(() => {
+                clearTimeout(loadingTimer1);
+                clearTimeout(loadingTimer2);
+                clearTimeout(loadingTimer3);
+                reject(new Error('Content generation timed out'));
+              }, 25000)
             );
             
             try {
@@ -319,13 +332,22 @@ Generate an engaging, interactive visualization using the exact CSS classes abov
                 setContentCache(prev => new Map([...prev, [cacheKey, detailedContent]]));
                 setLlmContent(detailedContent);
                 setContentState('concept-detail');
+                setLoadingMessage('');
                 toast.success("Detailed content generated!");
               } else {
                 throw new Error('No content generated');
               }
             } catch (error) {
               console.error('Content generation failed:', error);
-              toast.error('Generation took too long. Showing simplified content.');
+              setLoadingMessage('');
+              
+              if (error.message.includes('timed out')) {
+                setShowRetry(true);
+                toast.error('Generation timed out. You can retry or view simplified content.');
+                return; // Don't show fallback immediately
+              } else {
+                toast.error('Generation failed. Showing simplified content.');
+              }
               
               // Fallback detailed content
               const fallbackDetailContent = `
@@ -353,6 +375,8 @@ Generate an engaging, interactive visualization using the exact CSS classes abov
         }
       } finally {
         setIsLoading(false);
+        setLoadingMessage('');
+        setShowRetry(false);
       }
     } else if (interactionId.includes('back-to-overview')) {
       // Return to overview with immediate feedback
@@ -361,6 +385,44 @@ Generate an engaging, interactive visualization using the exact CSS classes abov
       const overviewContent = generateFallbackContent();
       setLlmContent(overviewContent);
       toast.success("Returned to overview");
+    } else if (interactionId.includes('retry-generation')) {
+      setShowRetry(false);
+      // Retry the last concept exploration
+      if (selectedConcept) {
+        const conceptIndex = phase.keyConceptsAndActivities.findIndex(c => c.title === selectedConcept);
+        if (conceptIndex >= 0) {
+          // Trigger re-exploration with the same logic
+          const retryId = `phase-${phase.id}-explore-${conceptIndex}`;
+          const retryEvent = new MouseEvent('click');
+          Object.defineProperty(retryEvent, 'target', {
+            value: { dataset: { interactionId: retryId } }
+          });
+          handleContentClick(retryEvent);
+          return;
+        }
+      }
+    } else if (interactionId.includes('use-fallback')) {
+      setShowRetry(false);
+      // Show fallback content immediately
+      const fallbackDetailContent = `
+        <div class="llm-container">
+          <button class="llm-button" data-interaction-id="phase-${phase.id}-back-to-overview">← Back to Overview</button>
+          <h1 class="llm-title">${selectedConcept || 'Concept Details'}</h1>
+          <div class="llm-highlight">
+            <p><strong>Description:</strong> Simplified content due to generation timeout.</p>
+          </div>
+          <div class="llm-text">
+            <p>This concept is part of ${phase.title}. For more detailed content, please try again or check your internet connection.</p>
+          </div>
+          <div style="text-align: center; margin-top: 2rem;">
+            <button class="llm-button" data-interaction-id="phase-${phase.id}-coach-help">
+              Ask AI Coach About This Concept
+            </button>
+          </div>
+        </div>
+      `;
+      setLlmContent(fallbackDetailContent);
+      setContentState('concept-detail');
     } else if (interactionId.includes('coach')) {
       setIsCoachOpen(true);
       setCoachMessage('How can I help you with this topic?');
@@ -462,22 +524,43 @@ Generate the updated interactive visualization:`;
     };
   }, [handleContentClick]);
 
-  // Handle coach interactions
+  // Enhanced coach interaction with better timeout handling
   const handleCoachInteraction = useCallback(async () => {
-    if (!userInput.trim()) return;
+    if (!userInput.trim()) {
+      toast.error("Please enter a question for the coach");
+      return;
+    }
 
     const currentInput = userInput;
     setUserInput('');
     setCoachMessage('Coach is analyzing your question...');
 
+    // Add timeout for coach interaction
+    const coachTimeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Coach response timed out')), 15000)
+    );
+
     try {
-      const response = await coachService.getResponse(
-        `${currentInput} [Context: User is exploring ${phase.title}. Recent interactions: ${curriculumContext.interactionHistory.slice(-3).map(h => h.id).join(', ')}]`
-      );
-      setCoachMessage(response);
+      const response = await Promise.race([
+        coachService.getResponse(
+          `${currentInput} [Context: User is exploring ${phase.title}. Recent interactions: ${curriculumContext.interactionHistory.slice(-3).map(h => h.id).join(', ')}]`
+        ),
+        coachTimeoutPromise
+      ]);
+      
+      // Type guard to ensure response is a string
+      const responseText = typeof response === 'string' ? response : 'I received your question but had trouble generating a response.';
+      setCoachMessage(responseText);
+      toast.success("Coach response received!");
     } catch (error) {
       console.error('Coach interaction failed:', error);
-      setCoachMessage('I\'m having trouble responding right now. Try rephrasing your question!');
+      if (error.message.includes('timed out')) {
+        setCoachMessage("My response is taking longer than usual. Please try a shorter, more specific question.");
+        toast.error("Coach response timed out");
+      } else {
+        setCoachMessage('I\'m having trouble responding right now. Try rephrasing your question!');
+        toast.error("Coach interaction failed");
+      }
       setUserInput(currentInput);
     }
   }, [userInput, coachService, phase.title, curriculumContext.interactionHistory]);
@@ -553,12 +636,57 @@ Generate the updated interactive visualization:`;
           dangerouslySetInnerHTML={{ __html: llmContent }}
         />
 
-        {/* Loading Overlay */}
+        {/* Loading overlay with progressive messages */}
         {isLoading && (
           <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
-            <div className="text-center">
+            <div className="text-center max-w-md px-4">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Generating interactive content...</p>
+              <p className="text-muted-foreground mb-2">
+                {loadingMessage || 'Generating interactive content...'}
+              </p>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div className="bg-primary h-2 rounded-full animate-pulse" style={{width: '60%'}}></div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Retry overlay */}
+        {showRetry && (
+          <div className="absolute inset-0 bg-background/90 flex items-center justify-center">
+            <div className="text-center max-w-md px-4">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold mb-2">Generation Timed Out</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  The AI is taking longer than usual to generate detailed content. You can retry or view simplified content.
+                </p>
+              </div>
+              <div className="flex gap-3 justify-center">
+                <Button 
+                  onClick={() => {
+                    const retryEvent = new MouseEvent('click');
+                    Object.defineProperty(retryEvent, 'target', {
+                      value: { dataset: { interactionId: `phase-${phase.id}-retry-generation` } }
+                    });
+                    handleContentClick(retryEvent);
+                  }}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  Retry Generation
+                </Button>
+                <Button 
+                  onClick={() => {
+                    const fallbackEvent = new MouseEvent('click');
+                    Object.defineProperty(fallbackEvent, 'target', {
+                      value: { dataset: { interactionId: `phase-${phase.id}-use-fallback` } }
+                    });
+                    handleContentClick(fallbackEvent);
+                  }}
+                  variant="outline"
+                >
+                  Use Simplified Content
+                </Button>
+              </div>
             </div>
           </div>
         )}
