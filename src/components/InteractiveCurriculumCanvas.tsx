@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback, useLayoutEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { X, MessageCircle, RefreshCw, ArrowLeft } from "lucide-react";
@@ -40,7 +40,6 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const isInitializing = useRef(false);
-  const headerRef = useRef<HTMLElement | null>(null);
   const { coachService } = useAI();
   const { currentUser } = useUser();
   
@@ -52,7 +51,6 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
   const [coachMessage, setCoachMessage] = useState('');
   const [userInput, setUserInput] = useState('');
   const [isCoachOpen, setIsCoachOpen] = useState(false);
-  const [headerHeight, setHeaderHeight] = useState(80); // Default fallback height
   
   // New state for interactive content management
   const [contentState, setContentState] = useState<'overview' | 'concept-detail'>('overview');
@@ -71,35 +69,6 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
     },
     learningPath: []
   });
-
-  // Dynamic header height measurement
-  useLayoutEffect(() => {
-    const measureHeaderHeight = () => {
-      const header = document.querySelector('header');
-      if (header) {
-        headerRef.current = header;
-        const rect = header.getBoundingClientRect();
-        const newHeight = rect.height;
-        setHeaderHeight(newHeight);
-        console.log('Measured header height:', newHeight);
-      }
-    };
-
-    measureHeaderHeight();
-    
-    // Remeasure on window resize
-    const handleResize = () => {
-      setTimeout(measureHeaderHeight, 100); // Small delay to allow for layout changes
-    };
-    
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
-    };
-  }, []);
 
   // Generate fallback content when API fails - simplified without "bottom bit"
   const generateFallbackContent = useCallback((): string => {
@@ -771,10 +740,6 @@ Generate the updated interactive visualization:`;
         <div 
           ref={contentRef}
           className="llm-container min-h-screen"
-          style={{ 
-            paddingTop: `${headerHeight + 32}px`, // Dynamic header height + 2rem spacing
-            marginTop: 0, // Override llm-container default margin
-          }}
           dangerouslySetInnerHTML={{ __html: llmContent }}
         />
 

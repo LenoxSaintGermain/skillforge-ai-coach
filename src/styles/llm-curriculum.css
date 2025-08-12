@@ -10,10 +10,10 @@
   animation: llmFadeIn 0.5s ease-in-out;
 }
 
-/* Canvas-specific container - optimized for dynamic header spacing */
+/* Canvas-specific container - simple header spacing */
 .llm-container.min-h-screen {
   margin-top: 0 !important; /* Override default margin for canvas */
-  padding: 1.5rem 1.5rem 6rem 1.5rem; /* Extra bottom padding for videos section */
+  padding: 5rem 1.5rem 6rem 1.5rem; /* Header spacing + extra bottom padding for videos section */
   gap: 1.5rem; /* Slightly tighter gap for canvas */
 }
 
