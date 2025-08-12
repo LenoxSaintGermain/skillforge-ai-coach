@@ -681,7 +681,7 @@ Generate the updated interactive visualization:`;
         {/* AI-Generated Interactive Content */}
         <div 
           ref={contentRef}
-          className="p-8 min-h-full"
+          className="pt-20 p-8 min-h-screen"
           dangerouslySetInnerHTML={{ __html: llmContent }}
         />
 
