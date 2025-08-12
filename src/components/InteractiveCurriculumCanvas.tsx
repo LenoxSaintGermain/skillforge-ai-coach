@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { X, MessageCircle, RefreshCw, ArrowLeft } from "lucide-react";
+import YouTubePlayer from "./YouTubePlayer";
 import { useAI } from "@/contexts/AIContext";
 import { SyllabusPhase } from "@/models/Syllabus";
 import { User } from "@/contexts/UserContext";
@@ -52,6 +53,7 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
   const [selectedConcept, setSelectedConcept] = useState<string | null>(null);
   const [exploredConcepts, setExploredConcepts] = useState<Set<string>>(new Set());
   const [contentCache, setContentCache] = useState<Map<string, string>>(new Map());
+  const [watchedVideos, setWatchedVideos] = useState<Set<string>>(new Set());
   
   const [curriculumContext, setCurriculumContext] = useState<CurriculumContext>({
     currentPhase: phase.id,
@@ -106,6 +108,33 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
       </div>
     `;
   }, [phase, exploredConcepts]);
+
+  const getPhaseVideos = (phaseId: number): Array<{id: string, title: string, description: string}> => {
+    const videoMappings = {
+      1: [
+        { id: "aOx_ZgYvBbs", title: "Getting Started with AI Studio", description: "Complete introduction to Google AI Studio interface and basic features" },
+        { id: "3o7lhvLbC9M", title: "Understanding Gemini Models", description: "Overview of different Gemini models and their capabilities" }
+      ],
+      2: [
+        { id: "2sL1adOt6wE", title: "Planning Your AI Project", description: "Best practices for structuring and planning AI applications" },
+        { id: "eFijoOhDZm4", title: "Prompt Engineering Fundamentals", description: "Essential techniques for effective prompt design" }
+      ],
+      3: [
+        { id: "Hvt_TEWMojk", title: "Building with AI Studio", description: "Hands-on tutorial for creating your first AI application" },
+        { id: "M1fGcrSZzBU", title: "Implementing Function Calling", description: "Step-by-step guide to implementing function calling in Gemini" },
+        { id: "yltT8qc_bDw", title: "Working with Multimodal Inputs", description: "How to process text, images, and other media types" }
+      ],
+      4: [
+        { id: "wKKa3UGD5nE", title: "Testing and Evaluation", description: "Methods for testing AI model performance and reliability" },
+        { id: "UOJ6cCHqLAE", title: "Optimizing Model Performance", description: "Techniques for improving response quality and speed" }
+      ],
+      5: [
+        { id: "1iLxn2HSfq4", title: "Deploying AI Applications", description: "Production deployment strategies and best practices" },
+        { id: "1sIsqIXNdjs", title: "Real-world Implementation", description: "Case studies and examples of successful AI deployments" }
+      ]
+    };
+    return videoMappings[phaseId] || [];
+  };
 
   // System prompt for curriculum-specific AI generation
   const buildSystemPrompt = useCallback((phase: SyllabusPhase): string => {
@@ -531,6 +560,33 @@ Generate the updated interactive visualization:`;
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
               <p className="text-muted-foreground">Generating interactive content...</p>
             </div>
+          </div>
+        )}
+
+        {/* YouTube Videos Section for Phase 3 */}
+        {phase.id === 3 && contentState === 'overview' && (
+          <div className="absolute bottom-20 left-4 right-4 z-10">
+            <Card className="p-4 max-h-64 overflow-y-auto">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                🎥 Hands-On Video Tutorials
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {getPhaseVideos(3).map((video) => (
+                  <YouTubePlayer
+                    key={video.id}
+                    videoId={video.id}
+                    title={video.title}
+                    description={video.description}
+                    onWatched={() => {
+                      const newWatchedVideos = new Set(watchedVideos);
+                      newWatchedVideos.add(video.id);
+                      setWatchedVideos(newWatchedVideos);
+                      toast.success("Video marked as watched!");
+                    }}
+                  />
+                ))}
+              </div>
+            </Card>
           </div>
         )}
 
