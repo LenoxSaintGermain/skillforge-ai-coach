@@ -126,6 +126,7 @@ const Dashboard = () => {
                   title="Prompt Engineering" 
                   description="Learn advanced techniques to craft effective prompts for AI models."
                   icon={<Brain className="h-4 w-4 text-skillforge-primary" />}
+                  onClick={() => navigate('/prompt-engineering')}
                 />
                 
                 <RecommendationCard 
