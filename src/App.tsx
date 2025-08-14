@@ -14,6 +14,7 @@ import ScenarioDetailPage from "./pages/ScenarioDetailPage";
 import ScenarioGeneratorPage from "./pages/ScenarioGeneratorPage";
 import SkillAssessmentPage from "./pages/SkillAssessmentPage";
 import GeminiTrainingPage from "./pages/GeminiTrainingPage";
+import PromptEngineeringPage from "./pages/PromptEngineeringPage";
 import ResourcesPage from "./pages/ResourcesPage";
 import NotFound from "./pages/NotFound";
 import { UserProvider } from "./contexts/UserContext";
@@ -43,6 +44,7 @@ const App = () => (
                     <Route path="/scenario/generate" element={<ScenarioGeneratorPage />} />
                     <Route path="/assessment" element={<SkillAssessmentPage />} />
                     <Route path="/gemini-training" element={<GeminiTrainingPage />} />
+                    <Route path="/prompt-engineering" element={<PromptEngineeringPage />} />
                     <Route path="/resources" element={<ResourcesPage />} />
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   </Route>

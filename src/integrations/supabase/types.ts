@@ -160,6 +160,189 @@ export type Database = {
         }
         Relationships: []
       }
+      prompt_experiments: {
+        Row: {
+          context_data: Json | null
+          created_at: string
+          id: string
+          is_favorite: boolean | null
+          model_used: string
+          performance_metrics: Json | null
+          prompt_text: string
+          response_data: Json | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          context_data?: Json | null
+          created_at?: string
+          id?: string
+          is_favorite?: boolean | null
+          model_used?: string
+          performance_metrics?: Json | null
+          prompt_text: string
+          response_data?: Json | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          context_data?: Json | null
+          created_at?: string
+          id?: string
+          is_favorite?: boolean | null
+          model_used?: string
+          performance_metrics?: Json | null
+          prompt_text?: string
+          response_data?: Json | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      prompt_learning_progress: {
+        Row: {
+          best_practices_learned: string[] | null
+          created_at: string
+          current_challenge_id: string | null
+          current_level: string
+          exercises_completed: number
+          experience_points: number
+          id: string
+          last_practice_session: string | null
+          skill_area: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          best_practices_learned?: string[] | null
+          created_at?: string
+          current_challenge_id?: string | null
+          current_level?: string
+          exercises_completed?: number
+          experience_points?: number
+          id?: string
+          last_practice_session?: string | null
+          skill_area: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          best_practices_learned?: string[] | null
+          created_at?: string
+          current_challenge_id?: string | null
+          current_level?: string
+          exercises_completed?: number
+          experience_points?: number
+          id?: string
+          last_practice_session?: string | null
+          skill_area?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      prompt_skill_assessments: {
+        Row: {
+          answers_data: Json
+          assessment_type: string
+          completed_at: string
+          id: string
+          improvement_areas: string[] | null
+          max_score: number
+          questions_data: Json
+          recommendations: Json | null
+          score: number
+          skill_level: string
+          strengths: string[] | null
+          user_id: string
+        }
+        Insert: {
+          answers_data?: Json
+          assessment_type?: string
+          completed_at?: string
+          id?: string
+          improvement_areas?: string[] | null
+          max_score?: number
+          questions_data?: Json
+          recommendations?: Json | null
+          score?: number
+          skill_level?: string
+          strengths?: string[] | null
+          user_id: string
+        }
+        Update: {
+          answers_data?: Json
+          assessment_type?: string
+          completed_at?: string
+          id?: string
+          improvement_areas?: string[] | null
+          max_score?: number
+          questions_data?: Json
+          recommendations?: Json | null
+          score?: number
+          skill_level?: string
+          strengths?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      prompt_templates: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          difficulty_level: string
+          id: string
+          is_public: boolean | null
+          rating: number | null
+          tags: string[] | null
+          template_text: string
+          title: string
+          updated_at: string
+          usage_count: number | null
+          use_cases: string[] | null
+          user_id: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          difficulty_level?: string
+          id?: string
+          is_public?: boolean | null
+          rating?: number | null
+          tags?: string[] | null
+          template_text: string
+          title: string
+          updated_at?: string
+          usage_count?: number | null
+          use_cases?: string[] | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          difficulty_level?: string
+          id?: string
+          is_public?: boolean | null
+          rating?: number | null
+          tags?: string[] | null
+          template_text?: string
+          title?: string
+          updated_at?: string
+          usage_count?: number | null
+          use_cases?: string[] | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       scenarios: {
         Row: {
           created_at: string | null
