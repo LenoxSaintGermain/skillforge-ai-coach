@@ -512,6 +512,83 @@ Generate an engaging, interactive visualization using the exact CSS classes abov
     } else if (interactionId.includes('coach')) {
       setIsCoachOpen(true);
       setCoachMessage('How can I help you with this topic?');
+    } else if (interactionId.includes('submit')) {
+      // Handle submit interactions (quiz submissions, form submissions, etc.)
+      setIsLoading(true);
+      toast.info("Processing your submission...");
+      
+      try {
+        // Check if there's input to collect via data-value-from attribute
+        let userInput = '';
+        const valueFromId = targetElement.dataset.valueFrom;
+        
+        if (valueFromId) {
+          const inputElement = document.getElementById(valueFromId) as HTMLInputElement | HTMLTextAreaElement;
+          if (inputElement) {
+            userInput = inputElement.value.trim();
+          }
+        }
+        
+        // Generate contextual response based on the submission
+        const submissionPrompt = `
+          User submitted response via "${interactionId}".
+          User input: "${userInput}"
+          
+          Generate an interactive response that:
+          1. Acknowledges their input
+          2. Provides feedback or evaluation
+          3. Offers next steps or deeper exploration
+          4. Includes interactive elements for continued learning
+          5. Maintains the current phase context: ${phase.title}
+          
+          If this was a quiz or assessment, provide constructive feedback.
+          If this was an idea submission, build upon their ideas with related concepts.
+        `;
+        
+        const responseContent = await callGeminiForGeneration(submissionPrompt);
+        setLlmContent(responseContent);
+        toast.success("Response generated based on your submission!");
+        
+        // Clear the input if it exists
+        if (valueFromId) {
+          const inputElement = document.getElementById(valueFromId) as HTMLInputElement | HTMLTextAreaElement;
+          if (inputElement) {
+            inputElement.value = '';
+          }
+        }
+        
+      } catch (error) {
+        console.error('Failed to process submission:', error);
+        toast.error('Failed to process your submission. Please try again.');
+        
+        // Provide fallback response
+        const fallbackResponse = `
+          <div class="llm-container">
+            <div class="llm-highlight">
+              <p><strong>Thank you for your submission!</strong></p>
+              <p class="llm-text">Your input has been noted. Due to processing issues, here's a simplified response:</p>
+            </div>
+            <div class="llm-task">
+              <h3 class="llm-subtitle">Next Steps</h3>
+              <p class="llm-text">Continue exploring the concepts in ${phase.title} or ask the AI coach for more detailed feedback on your ideas.</p>
+              <button class="llm-button" data-interaction-id="phase-${phase.id}-coach-help">
+                Get AI Coach Feedback
+              </button>
+            </div>
+          </div>
+        `;
+        setLlmContent(fallbackResponse);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // Handle any unrecognized interaction types
+      console.log('Unhandled interaction:', interactionId);
+      toast.info('Interaction noted. You can ask the AI coach for help with this topic.');
+      
+      // For unrecognized interactions, offer to help via coach
+      setIsCoachOpen(true);
+      setCoachMessage(`I noticed you clicked on "${targetElement.textContent?.substring(0, 50)}...". How can I help you with this?`);
     }
     
     // Record interaction
