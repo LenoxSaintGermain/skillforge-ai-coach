@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { contentCacheService } from "./ContentCacheService";
+import { phaseContextService } from "./PhaseContextService";
 
 interface GenerationRequest {
   userId: string;
@@ -81,37 +82,13 @@ export class OptimizedGeminiService {
   }
 
   private async generateOptimizedContent(request: GenerationRequest): Promise<string> {
-    // Build minimal context instead of huge system prompt
-    const minimalContext = await contentCacheService.buildMinimalContext({
-      userId: request.userId,
-      phaseId: request.phaseId,
-      interactionType: request.interactionType
-    });
-
-    // Get appropriate template
-    let templateKey = 'concept_explanation';
-    switch (request.interactionType) {
-      case 'submit':
-        templateKey = 'submission_response';
-        break;
-      case 'quiz':
-        templateKey = 'quiz_feedback';
-        break;
-      case 'introduction':
-        templateKey = 'phase_introduction';
-        break;
-    }
-
-    const template = await contentCacheService.getContentTemplate(templateKey);
-    
-    // Build optimized prompt - much smaller than before
-    const optimizedPrompt = this.buildOptimizedPrompt({
-      template: template?.template_content || "Generate helpful content for {{interaction_type}}",
-      userInput: request.userInput || '',
-      phaseId: request.phaseId,
-      interactionType: request.interactionType,
-      minimalContext
-    });
+    // Use smart context instead of generic templates
+    const phaseId = parseInt(request.phaseId);
+    const optimizedPrompt = phaseContextService.buildSmartPrompt(
+      phaseId, 
+      request.interactionType, 
+      request.userInput
+    );
 
     // Call edge function with smaller payload and timeout
     const { data, error } = await Promise.race([
@@ -136,35 +113,6 @@ export class OptimizedGeminiService {
     return this.formatResponse(data.generatedText || data.text || data.content || '');
   }
 
-  private buildOptimizedPrompt(params: {
-    template: string;
-    userInput: string;
-    phaseId: string;
-    interactionType: string;
-    minimalContext: any;
-  }): string {
-    // Replace template variables
-    let prompt = params.template
-      .replace('{{user_input}}', params.userInput)
-      .replace('{{user_answer}}', params.userInput)
-      .replace('{{interaction_type}}', params.interactionType)
-      .replace('{{phase_title}}', `Phase ${params.phaseId}`)
-      .replace('{{topic}}', `Phase ${params.phaseId} concepts`)
-      .replace('{{concept}}', `Phase ${params.phaseId} key concepts`)
-      .replace('{{key_concepts}}', 'hands-on AI development');
-
-    // Add minimal context - much smaller than before
-    prompt += `\n\nContext: User progress ${params.minimalContext.currentProgress}%. `;
-    
-    if (params.minimalContext.recentSuccesses?.length > 0) {
-      prompt += `Recent successful interactions: ${params.minimalContext.recentSuccesses.length}. `;
-    }
-
-    prompt += `\n\nGenerate interactive HTML using only these classes: llm-container, llm-title, llm-text, llm-button, llm-code, llm-highlight, llm-task, llm-subtitle. Include data-interaction-id attributes on clickable elements.`;
-
-    return prompt;
-  }
-
   private formatResponse(content: string): string {
     // Ensure proper HTML structure and class usage
     if (!content.includes('llm-container')) {
@@ -183,12 +131,17 @@ export class OptimizedGeminiService {
   }
 
   private getFallbackContent(request: GenerationRequest): string {
+    const phaseId = parseInt(request.phaseId);
+    const profile = phaseContextService.getPhaseProfile(phaseId);
+    const phaseTitle = profile?.titleShort || `Phase ${request.phaseId}`;
+
+    // Phase-appropriate fallbacks
     const fallbacks = {
       submit: `
         <div class="llm-container">
           <div class="llm-highlight">
-            <p class="llm-text"><strong>Thank you for your submission!</strong></p>
-            <p class="llm-text">Your input has been noted. Let's continue exploring this topic.</p>
+            <p class="llm-text"><strong>Great work on ${phaseTitle}!</strong></p>
+            <p class="llm-text">Let's continue building your understanding step by step.</p>
           </div>
           <div class="llm-task">
             <h3 class="llm-subtitle">Next Steps</h3>
@@ -198,10 +151,23 @@ export class OptimizedGeminiService {
           </div>
         </div>
       `,
-      introduction: `
+      introduction: profile?.difficulty === 'beginner' ? `
         <div class="llm-container">
-          <h2 class="llm-title">Welcome to Phase ${request.phaseId}</h2>
-          <p class="llm-text">Let's explore the key concepts in this phase through hands-on practice.</p>
+          <h2 class="llm-title">Welcome to ${phaseTitle}</h2>
+          <p class="llm-text">Let's start with the fundamentals and build your understanding step by step.</p>
+          <div class="llm-highlight">
+            <p class="llm-text">In this phase, you'll learn about: ${profile.keyTerms.join(', ')}</p>
+          </div>
+          <div class="llm-task">
+            <button class="llm-button" data-interaction-id="phase-${request.phaseId}-start">
+              Begin Learning
+            </button>
+          </div>
+        </div>
+      ` : `
+        <div class="llm-container">
+          <h2 class="llm-title">Welcome to ${phaseTitle}</h2>
+          <p class="llm-text">Ready to dive deeper? Let's explore advanced concepts and practical applications.</p>
           <div class="llm-task">
             <button class="llm-button" data-interaction-id="phase-${request.phaseId}-start">
               Begin Exploration
