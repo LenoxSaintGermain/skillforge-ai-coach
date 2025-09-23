@@ -113,21 +113,27 @@ export class OptimizedGeminiService {
       minimalContext
     });
 
-    // Call edge function with smaller payload
-    const { data, error } = await supabase.functions.invoke('gemini-api', {
-      body: {
-        prompt: optimizedPrompt,
-        type: 'curriculum_generation',
-        maxTokens: 800, // Reduced from larger values
-        temperature: 0.7
-      }
-    });
+    // Call edge function with smaller payload and timeout
+    const { data, error } = await Promise.race([
+      supabase.functions.invoke('gemini-api', {
+        body: {
+          prompt: optimizedPrompt,
+          type: 'curriculum_generation',
+          maxTokens: 800,
+          temperature: 0.7
+        }
+      }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 30000)
+      )
+    ]) as { data: any; error: any };
 
     if (error) {
+      console.error('Gemini API error:', error);
       throw new Error(`Gemini API error: ${error.message}`);
     }
 
-    return this.formatResponse(data.text || data.content || '');
+    return this.formatResponse(data.generatedText || data.text || data.content || '');
   }
 
   private buildOptimizedPrompt(params: {

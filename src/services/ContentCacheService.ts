@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { createHash } from 'crypto';
 
 interface CachedContent {
   id: string;
@@ -93,9 +92,10 @@ export class ContentCacheService {
     try {
       const contextHash = this.generateContextHash(context, additionalData);
       
-      const { error } = await supabase
+      // First try to insert new content
+      const { error: insertError } = await supabase
         .from('content_cache')
-        .upsert({
+        .insert({
           user_id: context.userId,
           context_hash: contextHash,
           phase_id: context.phaseId,
@@ -103,12 +103,27 @@ export class ContentCacheService {
           content,
           generation_metadata: { additionalData, generatedAt: new Date().toISOString() },
           usage_count: 1
-        }, {
-          onConflict: 'user_id,context_hash,phase_id,interaction_type'
         });
 
-      if (error) {
-        console.error('Error caching content:', error);
+      // If insert fails due to duplicate, try update instead
+      if (insertError && insertError.code === '23505') {
+        const { error: updateError } = await supabase
+          .from('content_cache')
+          .update({
+            content,
+            generation_metadata: { additionalData, generatedAt: new Date().toISOString() },
+            usage_count: 1
+          })
+          .eq('user_id', context.userId)
+          .eq('context_hash', contextHash)
+          .eq('phase_id', context.phaseId)
+          .eq('interaction_type', context.interactionType);
+
+        if (updateError) {
+          console.error('Error updating cached content:', updateError);
+        }
+      } else if (insertError) {
+        console.error('Error inserting cached content:', insertError);
       }
     } catch (error) {
       console.error('Error in cacheContent:', error);
