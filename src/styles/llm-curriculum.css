@@ -13,7 +13,7 @@
 /* Canvas-specific container - simple header spacing */
 .llm-container.min-h-screen {
   margin-top: 0 !important; /* Override default margin for canvas */
-  padding: 5rem 1.5rem 6rem 1.5rem; /* Header spacing + extra bottom padding for videos section */
+  padding: 5rem 1.5rem 8rem 1.5rem; /* Header spacing + extra bottom padding for Coach button safe zone */
   gap: 1.5rem; /* Slightly tighter gap for canvas */
 }
 

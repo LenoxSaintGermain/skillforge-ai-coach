@@ -807,48 +807,48 @@ Generate the updated interactive visualization:`;
           </div>
         )}
 
-        {/* YouTube Videos Section for All Phases */}
-        {contentState === 'overview' && (
-          <div className="absolute bottom-20 left-4 right-4 z-10">
-            <Card className="p-4 max-h-64 overflow-y-auto">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                🎥 Hands-On Video Tutorials
-                {videosError && <span className="text-xs text-yellow-600">(Fallback videos)</span>}
-              </h3>
-              
-              {videosLoading && (
-                <div className="text-center py-4">
-                  <div className="text-sm text-muted-foreground">Loading video tutorials...</div>
-                </div>
-              )}
-              
-              {!videosLoading && phaseVideos.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {phaseVideos.map((video) => (
-                    <YouTubePlayer
-                      key={video.id}
-                      videoId={video.id}
-                      title={video.title}
-                      description={video.description}
-                      onWatched={() => {
-                        const newWatchedVideos = new Set(watchedVideos);
-                        newWatchedVideos.add(video.id);
-                        setWatchedVideos(newWatchedVideos);
-                        toast.success("Video marked as watched!");
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-              
-              {!videosLoading && phaseVideos.length === 0 && (
-                <div className="text-center py-4">
-                  <div className="text-sm text-muted-foreground">No videos available for this phase</div>
-                </div>
-              )}
-            </Card>
-          </div>
-        )}
+      {/* YouTube Videos Section for All Phases - Integrated into content flow */}
+      {contentState === 'overview' && (
+        <div className="mt-8 mb-6">
+          <Card className="p-4 border-2 border-dashed border-primary/20">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              🎥 Hands-On Video Tutorials
+              {videosError && <span className="text-xs text-yellow-600">(Fallback videos)</span>}
+            </h3>
+            
+            {videosLoading && (
+              <div className="text-center py-4">
+                <div className="text-sm text-muted-foreground">Loading video tutorials...</div>
+              </div>
+            )}
+            
+            {!videosLoading && phaseVideos.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {phaseVideos.map((video) => (
+                  <YouTubePlayer
+                    key={video.id}
+                    videoId={video.id}
+                    title={video.title}
+                    description={video.description}
+                    onWatched={() => {
+                      const newWatchedVideos = new Set(watchedVideos);
+                      newWatchedVideos.add(video.id);
+                      setWatchedVideos(newWatchedVideos);
+                      toast.success("Video marked as watched!");
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+            
+            {!videosLoading && phaseVideos.length === 0 && (
+              <div className="text-center py-4">
+                <div className="text-sm text-muted-foreground">No videos available for this phase</div>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
 
         {/* Coach Panel */}
         {isCoachOpen && (
