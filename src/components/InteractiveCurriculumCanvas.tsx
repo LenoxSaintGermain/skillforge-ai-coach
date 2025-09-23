@@ -215,7 +215,7 @@ You are "Jarvis", an expert AI Curriculum Visualizer and Interactive Learning Co
    - ALL clickable elements MUST have data-interaction-id attribute
    - Format: "phase-${phase.id}-[element-type]-[unique-id]"
    - For form inputs: Add data-value-from="input_id" to buttons that collect input
-   - Examples: "phase-1-concept-genai", "phase-2-quiz-submit", "phase-3-input-response"
+   - Examples: "phase-1-explore-genai", "phase-2-quiz-submit", "phase-3-input-response"
 
 4. **Dynamic Response Patterns:**
    - Create quizzes with input fields and submit buttons
@@ -324,7 +324,7 @@ Generate an engaging, interactive visualization using the exact CSS classes abov
     
     const interactionId = targetElement.dataset.interactionId;
     
-    if (interactionId.includes('explore')) {
+    if (interactionId.includes('explore') || interactionId.includes('concept')) {
       setIsLoading(true);
       toast.info("Generating detailed content... this may take a few seconds");
       
