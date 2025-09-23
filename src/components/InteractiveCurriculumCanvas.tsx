@@ -512,6 +512,35 @@ Generate an engaging, interactive visualization using the exact CSS classes abov
       `;
       setLlmContent(fallbackDetailContent);
       setContentState('concept-detail');
+    } else if (interactionId.includes('start') || interactionId.includes('continue')) {
+      // Handle start/continue interactions - show main phase content
+      setIsLoading(true);
+      toast.info("Loading phase content...");
+      
+      try {
+        setContentState('overview');
+        const overviewContent = generateFallbackContent();
+        setLlmContent(overviewContent);
+        toast.success(`Welcome to ${phase.title}!`);
+        
+        // Track that user has started this phase
+        if (currentUser?.user_id) {
+          syllabusProgressService.saveProgressDual(currentUser.user_id, {
+            syllabus_name: 'Gemini AI Studio Training',
+            current_module: `Phase ${phase.id}: ${phase.title}`,
+            progress_percentage: (exploredConcepts.size / phase.keyConceptsAndActivities.length) * 100,
+            completed_modules: [...exploredConcepts],
+            last_accessed: new Date()
+          }).catch(error => {
+            console.warn('Failed to save progress to database:', error);
+          });
+        }
+      } catch (error) {
+        console.error('Failed to start phase:', error);
+        toast.error('Failed to load content. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
     } else if (interactionId.includes('coach')) {
       setIsCoachOpen(true);
       setCoachMessage('How can I help you with this topic?');
@@ -734,7 +763,7 @@ Generate the updated interactive visualization:`;
     };
 
     initializeContent();
-  }, [phase, currentUser, generateFallbackContent]);
+  }, [phase.id, phase.title, phase.objective, currentUser?.user_id]); // Remove generateFallbackContent to prevent loops
 
   // Set up click event listener for the content area
   useEffect(() => {
