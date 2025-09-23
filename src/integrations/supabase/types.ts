@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -84,6 +84,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      content_cache: {
+        Row: {
+          content: string
+          context_hash: string
+          created_at: string
+          expires_at: string | null
+          generation_metadata: Json | null
+          id: string
+          interaction_type: string
+          phase_id: string
+          success_score: number | null
+          updated_at: string
+          usage_count: number | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          context_hash: string
+          created_at?: string
+          expires_at?: string | null
+          generation_metadata?: Json | null
+          id?: string
+          interaction_type: string
+          phase_id: string
+          success_score?: number | null
+          updated_at?: string
+          usage_count?: number | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          context_hash?: string
+          created_at?: string
+          expires_at?: string | null
+          generation_metadata?: Json | null
+          id?: string
+          interaction_type?: string
+          phase_id?: string
+          success_score?: number | null
+          updated_at?: string
+          usage_count?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      content_templates: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          template_content: string
+          template_key: string
+          updated_at: string
+          variables: Json | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          template_content: string
+          template_key: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          template_content?: string
+          template_key?: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Relationships: []
       }
       learning_goals: {
         Row: {
@@ -450,6 +528,42 @@ export type Database = {
           progress_percentage?: number | null
           syllabus_name?: string
           updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_interactions: {
+        Row: {
+          created_at: string
+          id: string
+          interaction_data: Json | null
+          interaction_type: string
+          phase_id: string
+          session_id: string | null
+          success_rating: number | null
+          time_spent: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          interaction_data?: Json | null
+          interaction_type: string
+          phase_id: string
+          session_id?: string | null
+          success_rating?: number | null
+          time_spent?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          interaction_data?: Json | null
+          interaction_type?: string
+          phase_id?: string
+          session_id?: string | null
+          success_rating?: number | null
+          time_spent?: number | null
           user_id?: string
         }
         Relationships: []

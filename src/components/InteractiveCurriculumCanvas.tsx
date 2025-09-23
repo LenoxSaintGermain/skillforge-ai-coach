@@ -8,11 +8,13 @@ import { SyllabusPhase } from "@/models/Syllabus";
 import { useUser } from "@/contexts/UserContext";
 import { syllabusProgressService } from "@/services/SyllabusProgressService";
 import { toast } from "sonner";
+import { optimizedGeminiService } from "@/services/OptimizedGeminiService";
+import { contentCacheService } from "@/services/ContentCacheService";
 import "@/styles/llm-curriculum.css";
 
 interface InteractiveCurriculumCanvasProps {
   phase: SyllabusPhase;
-  onClose: () => void;
+  onBackToSyllabus: () => void; // Updated prop name for consistency
 }
 
 interface InteractionData {
@@ -36,12 +38,13 @@ interface CurriculumContext {
 
 const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = ({ 
   phase, 
-  onClose 
+  onBackToSyllabus 
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const isInitializing = useRef(false);
   const { coachService } = useAI();
-  const { currentUser } = useUser();
+  const { currentUser } = useUser(); // Keep currentUser as that's what UserContext provides
+  const startTime = useRef<number>(Date.now());
   
   const [llmContent, setLlmContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -642,59 +645,96 @@ Generate the updated interactive visualization:`;
 
   // Removed script execution for safety and performance
 
-  // Initialize the canvas with static content and load saved progress
+  // Initialize the canvas with optimized content generation and load saved progress
   useEffect(() => {
     if (isInitializing.current) return;
     isInitializing.current = true;
 
-    try {
-      // Load saved explored concepts from localStorage and database
-      const loadProgress = async () => {
-        try {
-          // Load from localStorage first for immediate display
-          const savedConcepts = localStorage.getItem(`explored-concepts-${phase.id}`);
-          if (savedConcepts) {
-            const conceptNames = JSON.parse(savedConcepts);
-            setExploredConcepts(new Set(conceptNames));
-          }
-
-          // Load from database if available
-          if (currentUser?.user_id) {
-            const dbProgress = await syllabusProgressService.getProgress(
-              currentUser.user_id, 
-              'Gemini AI Studio Training'
-            );
-            
-            if (dbProgress && dbProgress.completed_modules) {
-              setExploredConcepts(new Set(dbProgress.completed_modules));
+    const initializeContent = async () => {
+      try {
+        // Load saved explored concepts from localStorage and database
+        const loadProgress = async () => {
+          try {
+            // Load from localStorage first for immediate display
+            const savedConcepts = localStorage.getItem(`explored-concepts-${phase.id}`);
+            if (savedConcepts) {
+              const conceptNames = JSON.parse(savedConcepts);
+              setExploredConcepts(new Set(conceptNames));
             }
-          }
-        } catch (error) {
-          console.error('Error loading saved progress:', error);
-        }
-      };
 
-      loadProgress();
-      
-      // Load static content immediately without API calls
-      const fallbackContent = generateFallbackContent();
-      setLlmContent(fallbackContent);
-      setError(null);
-      setContentState('overview');
-    } catch (error) {
-      console.error('Initialization failed:', error);
-      setError('Failed to load content');
-      // Minimal fallback
-      setLlmContent(`
-        <div class="llm-container">
-          <h1 class="llm-title">${phase.title}</h1>
-          <p class="llm-text">${phase.objective}</p>
-        </div>
-      `);
-    } finally {
-      isInitializing.current = false;
-    }
-  }, [phase]);
+            // Load from database if available
+            if (currentUser?.user_id) {
+              const dbProgress = await syllabusProgressService.getProgress(
+                currentUser.user_id, 
+                'Gemini AI Studio Training'
+              );
+              
+              if (dbProgress && dbProgress.completed_modules) {
+                setExploredConcepts(new Set(dbProgress.completed_modules));
+              }
+            }
+          } catch (error) {
+            console.error('Error loading saved progress:', error);
+          }
+        };
+
+        await loadProgress();
+        
+        // Try to generate optimized content if user is logged in
+        if (currentUser?.user_id) {
+          setIsLoading(true);
+          setLoadingMessage('Loading content...');
+          
+          try {
+            const response = await optimizedGeminiService.generateContent({
+              userId: currentUser.user_id,
+              phaseId: phase.id.toString(),
+              interactionType: 'introduction',
+              context: {
+                phase: phase.title,
+                objective: phase.objective,
+                keyConcepts: phase.keyConceptsAndActivities.map(c => c.title)
+              }
+            });
+
+            setLlmContent(response.content);
+            
+            if (response.fromCache) {
+              toast.success("Content loaded from cache");
+            }
+          } catch (error) {
+            console.error('Failed to generate optimized content:', error);
+            // Fall back to static content
+            toast.info("Using static content");
+            setLlmContent(generateFallbackContent());
+          } finally {
+            setIsLoading(false);
+            setLoadingMessage('');
+          }
+        } else {
+          // Load static content for non-authenticated users
+          setLlmContent(generateFallbackContent());
+        }
+        
+        setError(null);
+        setContentState('overview');
+      } catch (error) {
+        console.error('Initialization failed:', error);
+        setError('Failed to load content');
+        // Minimal fallback
+        setLlmContent(`
+          <div class="llm-container">
+            <h1 class="llm-title">${phase.title}</h1>
+            <p class="llm-text">${phase.objective}</p>
+          </div>
+        `);
+      } finally {
+        isInitializing.current = false;
+      }
+    };
+
+    initializeContent();
+  }, [phase, currentUser, generateFallbackContent]);
 
   // Set up click event listener for the content area
   useEffect(() => {
@@ -802,7 +842,7 @@ Generate the updated interactive visualization:`;
               <Button
                 variant="outline"
                 size="sm"
-                onClick={onClose}
+                onClick={onBackToSyllabus}
                 className="bg-card hover:bg-muted flex items-center gap-1"
                 title="Back to Syllabus"
               >

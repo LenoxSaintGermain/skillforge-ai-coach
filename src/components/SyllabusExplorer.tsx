@@ -98,7 +98,7 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
     return (
       <InteractiveCurriculumCanvas 
         phase={currentPhase} 
-        onClose={() => {
+        onBackToSyllabus={() => {
           setIsLearningMode(false);
           onLearningModeChange?.(false);
         }} 
