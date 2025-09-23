@@ -36,6 +36,9 @@ class SyllabusProgressService {
           completed_modules: progressData.completed_modules || [],
           last_accessed: progressData.last_accessed.toISOString(),
           updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,syllabus_name',
+          ignoreDuplicates: false
         })
         .select()
         .single();
@@ -123,8 +126,12 @@ class SyllabusProgressService {
     const localKey = `syllabus_progress_${userId}_${progressData.syllabus_name}`;
     localStorage.setItem(localKey, JSON.stringify(progressData));
 
-    // Save to database
-    await this.saveProgress(userId, progressData);
+    // Save to database with error handling
+    try {
+      await this.saveProgress(userId, progressData);
+    } catch (error) {
+      console.error('Failed to save progress to database, saved locally only:', error);
+    }
   }
 
   /**
