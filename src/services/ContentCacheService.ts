@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
+const CURRENT_CACHE_VERSION = '2025-09-23_phasefix_1';
+
 interface CachedContent {
   id: string;
   content: string;
@@ -59,7 +61,7 @@ export class ContentCacheService {
       
       const { data, error } = await supabase
         .from('content_cache')
-        .select('content, id')
+        .select('content, id, generation_metadata')
         .eq('user_id', context.userId)
         .eq('context_hash', contextHash)
         .eq('phase_id', context.phaseId)
@@ -75,9 +77,18 @@ export class ContentCacheService {
       }
 
       if (data) {
+        const version = (data as any).generation_metadata?.version;
+        if (version !== CURRENT_CACHE_VERSION) {
+          await supabase.from('content_cache').delete().eq('id', (data as any).id);
+          return null;
+        }
+        if (!this.isContentPhaseAppropriate(context, (data as any).content)) {
+          await supabase.from('content_cache').delete().eq('id', (data as any).id);
+          return null;
+        }
         // Update usage count
-        await this.incrementUsageCount(data.id);
-        return data.content;
+        await this.incrementUsageCount((data as any).id);
+        return (data as any).content;
       }
 
       return null;
@@ -101,7 +112,7 @@ export class ContentCacheService {
           phase_id: context.phaseId,
           interaction_type: context.interactionType,
           content,
-          generation_metadata: { additionalData, generatedAt: new Date().toISOString() },
+          generation_metadata: { additionalData, generatedAt: new Date().toISOString(), version: CURRENT_CACHE_VERSION },
           usage_count: 1
         });
 
@@ -111,7 +122,7 @@ export class ContentCacheService {
           .from('content_cache')
           .update({
             content,
-            generation_metadata: { additionalData, generatedAt: new Date().toISOString() },
+            generation_metadata: { additionalData, generatedAt: new Date().toISOString(), version: CURRENT_CACHE_VERSION },
             usage_count: 1
           })
           .eq('user_id', context.userId)
@@ -268,6 +279,37 @@ export class ContentCacheService {
       }
     } catch (error) {
       console.error('Error in incrementUsageCount:', error);
+    }
+  }
+
+  // Validate content based on phase to prevent advanced material in beginner phases
+  private isContentPhaseAppropriate(context: UserContext, content: string): boolean {
+    const phase = parseInt((context.phaseId as any), 10);
+    const lower = (content || '').toLowerCase();
+    if (isNaN(phase)) return true;
+    if (phase <= 1) {
+      const codeIndicators = [
+        '```', '<code', '</code>', '<pre', '</pre>',
+        'def ', 'class ', 'import ', 'console.log', 'function ', '=>',
+        'python', 'javascript', 'typescript', 'java', 'c++'
+      ];
+      return !codeIndicators.some(ind => lower.includes(ind));
+    }
+    return true;
+  }
+
+  // Utility to clear a user's cache (optionally by phase/interaction)
+  async clearUserCache(userId: string, opts?: { phaseId?: string; interactionType?: string }): Promise<void> {
+    try {
+      let query = supabase.from('content_cache').delete().eq('user_id', userId);
+      if (opts?.phaseId) query = query.eq('phase_id', opts.phaseId);
+      if (opts?.interactionType) query = query.eq('interaction_type', opts.interactionType);
+      const { error } = await query;
+      if (error) {
+        console.error('Error clearing user cache:', error);
+      }
+    } catch (err) {
+      console.error('Error in clearUserCache:', err);
     }
   }
 }

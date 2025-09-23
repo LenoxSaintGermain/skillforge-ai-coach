@@ -49,13 +49,36 @@ export class OptimizedGeminiService {
       }
 
       // Generate new content with optimized request
-      const newContent = await this.generateOptimizedContent(request);
+      let newContent = await this.generateOptimizedContent(request);
       
-      // Cache the result
+      // Validate content appropriateness for the phase
+      if (!this.isContentPhaseAppropriate(request, newContent)) {
+        // Retry once with stricter beginner constraints
+        try {
+          newContent = await this.generateOptimizedContent(request, { strictBeginner: true });
+        } catch (_) {
+          // ignore and handle below
+        }
+      }
+
+      if (!this.isContentPhaseAppropriate(request, newContent)) {
+        await contentCacheService.logInteraction(userContext, {
+          userInput: request.userInput,
+          generated: false,
+          reason: 'invalid_content_rejected',
+          timestamp: new Date().toISOString()
+        });
+        return {
+          content: this.getFallbackContent(request),
+          fromCache: false
+        };
+      }
+      
+      // Cache the valid result
       await contentCacheService.cacheContent(
         userContext,
         newContent,
-        { userInput: request.userInput, context: request.context }
+        { userInput: request.userInput, context: request.context, cacheVersion: '2025-09-23_phasefix_1' }
       );
 
       // Log the interaction
@@ -81,14 +104,19 @@ export class OptimizedGeminiService {
     }
   }
 
-  private async generateOptimizedContent(request: GenerationRequest): Promise<string> {
+  private async generateOptimizedContent(request: GenerationRequest, opts?: { strictBeginner?: boolean }): Promise<string> {
     // Use smart context instead of generic templates
     const phaseId = parseInt(request.phaseId);
-    const optimizedPrompt = phaseContextService.buildSmartPrompt(
+    let optimizedPrompt = phaseContextService.buildSmartPrompt(
       phaseId, 
       request.interactionType, 
       request.userInput
     );
+
+    // Add strict guard for beginner phases when requested
+    if ((opts?.strictBeginner ?? false) && phaseId <= 1) {
+      optimizedPrompt += "\n\nCRITICAL: Do NOT include any code, programming languages, or implementation details. Focus purely on beginner-friendly conceptual explanations and interactive questions. Output must use only the predefined Tailwind classes and data-interaction-id attributes.";
+    }
 
     // Call edge function with smaller payload and timeout
     const { data, error } = await Promise.race([
@@ -128,6 +156,21 @@ export class OptimizedGeminiService {
     }
 
     return content;
+  }
+  
+  private isContentPhaseAppropriate(request: GenerationRequest, content: string): boolean {
+    const phase = parseInt(request.phaseId, 10);
+    const lower = (content || '').toLowerCase();
+    if (isNaN(phase)) return true;
+    if (phase <= 1) {
+      const codeIndicators = [
+        '```', '<code', '</code>', '<pre', '</pre>',
+        'def ', 'class ', 'import ', 'console.log', 'function ', '=>',
+        'python', 'javascript', 'typescript', 'java', 'c++'
+      ];
+      return !codeIndicators.some(ind => lower.includes(ind));
+    }
+    return true;
   }
 
   private getFallbackContent(request: GenerationRequest): string {
