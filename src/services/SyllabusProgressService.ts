@@ -26,13 +26,16 @@ class SyllabusProgressService {
    */
   async saveProgress(userId: string, progressData: SyllabusProgressUpdate): Promise<SyllabusProgressData | null> {
     try {
+      // Ensure progress percentage is a valid integer between 0 and 100
+      const validProgressPercentage = Math.min(Math.max(Math.round(progressData.progress_percentage), 0), 100);
+      
       const { data, error } = await supabase
         .from('syllabus_progress')
         .upsert({
           user_id: userId,
           syllabus_name: progressData.syllabus_name,
           current_module: progressData.current_module,
-          progress_percentage: progressData.progress_percentage,
+          progress_percentage: validProgressPercentage,
           completed_modules: progressData.completed_modules || [],
           last_accessed: progressData.last_accessed.toISOString(),
           updated_at: new Date().toISOString()
@@ -109,13 +112,17 @@ class SyllabusProgressService {
     const conceptWeight = 0.7; // 70% weight for exploring concepts
     const phaseWeight = 0.3;   // 30% weight for completing phases
     
-    // Estimate progress based on explored concepts (assuming 20 concepts per phase)
-    const conceptProgress = Math.min((exploredConcepts.size / (totalPhases * 5)) * 100, 100);
+    // Estimate progress based on explored concepts (assuming 5 concepts per phase)
+    const totalConcepts = totalPhases * 5;
+    const conceptProgress = Math.min((exploredConcepts.size / totalConcepts) * 100, 100);
     
     // Calculate phase completion progress
-    const phaseProgress = (completedPhases.size / totalPhases) * 100;
+    const phaseProgress = Math.min((completedPhases.size / totalPhases) * 100, 100);
     
-    return Math.round((conceptProgress * conceptWeight) + (phaseProgress * phaseWeight));
+    // Calculate weighted progress and ensure it's capped at 100%
+    const totalProgress = (conceptProgress * conceptWeight) + (phaseProgress * phaseWeight);
+    
+    return Math.min(Math.round(totalProgress), 100);
   }
 
   /**
