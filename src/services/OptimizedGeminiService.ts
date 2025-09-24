@@ -167,27 +167,49 @@ export class OptimizedGeminiService {
   }
 
   private formatResponse(content: string): string {
-    // Ensure proper HTML structure and class usage
+    if (!content) return '<div class="llm-container"><p class="llm-text">No content available.</p></div>';
+    
+    // Handle full HTML documents - extract body content
+    if (content.includes('<!DOCTYPE') || content.includes('<html>')) {
+      const bodyMatch = content.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+      if (bodyMatch) {
+        content = bodyMatch[1].trim();
+      }
+    }
+    
+    // Remove any remaining html, head tags
+    content = content.replace(/<\/?html[^>]*>/gi, '')
+                    .replace(/<\/?head[^>]*>/gi, '')
+                    .replace(/<\/?body[^>]*>/gi, '')
+                    .replace(/<!DOCTYPE[^>]*>/gi, '')
+                    .trim();
+    
+    // Ensure proper container structure
     if (!content.includes('llm-container')) {
       content = `<div class="llm-container">${content}</div>`;
     }
-    // No longer adding default interaction IDs, as content should be self-contained
+    
     return content;
   }
   
   private isContentPhaseAppropriate(request: GenerationRequest, content: string): boolean {
     const phase = parseInt(request.phaseId, 10);
-    const lower = (content || '').toLowerCase();
-    if (isNaN(phase)) return true;
-    if (phase <= 1) {
-      const codeIndicators = [
-        '```', '<code', '</code>', '<pre', '</pre>',
-        'def ', 'class ', 'import ', 'console.log', 'function ', '=>',
-        'python', 'javascript', 'typescript', 'java', 'c++'
-      ];
-      return !codeIndicators.some(ind => lower.includes(ind));
-    }
-    return true;
+    if (isNaN(phase) || !content) return false;
+    
+    // Basic content validation - check if content has meaningful structure
+    const hasContent = content.length > 50;
+    const hasLLMClasses = content.includes('llm-') || content.includes('class=');
+    const isNotEmpty = content.trim() !== '' && !content.includes('No content available');
+    
+    console.log('DEBUG: Content validation:', {
+      hasContent,
+      hasLLMClasses, 
+      isNotEmpty,
+      contentLength: content.length,
+      contentPreview: content.substring(0, 100)
+    });
+    
+    return hasContent && isNotEmpty;
   }
 
   private getFallbackContent(request: GenerationRequest): string {
