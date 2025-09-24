@@ -70,12 +70,12 @@ const Dashboard = () => {
   // Load Gemini Training progress
   useEffect(() => {
     const loadGeminiProgress = async () => {
-      if (currentUser?.id && isAuthenticated) {
+      if (currentUser?.user_id && isAuthenticated) {
         try {
-          const progressInfo = await geminiProgressService.getProgressInfo(currentUser.id);
+          const progressInfo = await geminiProgressService.getProgressInfo(currentUser.user_id);
           setGeminiProgress(progressInfo);
           // Ensure the learning goal is synced only when fully authenticated
-          await geminiProgressService.syncProgress(currentUser.id);
+          await geminiProgressService.syncProgress(currentUser.user_id);
         } catch (error) {
           console.error('Error loading Gemini progress:', error);
           // Show basic progress from localStorage if available
@@ -116,13 +116,13 @@ const Dashboard = () => {
     };
 
     loadGeminiProgress();
-  }, [currentUser?.id, isAuthenticated, hasSession]);
+  }, [currentUser?.user_id, isAuthenticated, hasSession]);
 
   const handleRefreshGemini = async () => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.user_id) return;
     try {
-      await geminiProgressService.syncProgress(currentUser.id);
-      const progressInfo = await geminiProgressService.getProgressInfo(currentUser.id);
+      await geminiProgressService.syncProgress(currentUser.user_id);
+      const progressInfo = await geminiProgressService.getProgressInfo(currentUser.user_id);
       setGeminiProgress(progressInfo);
       toast({ title: 'Progress synced', description: 'Gemini progress updated.' });
     } catch (error) {

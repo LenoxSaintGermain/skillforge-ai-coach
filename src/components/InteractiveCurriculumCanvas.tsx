@@ -252,6 +252,18 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
     } else if (interactionId.includes('coach')) {
       setIsCoachOpen(true);
       setCoachMessage('How can I help you with this topic?');
+    } else if (
+      interactionId.includes('back') ||
+      interactionId.includes('back-to-syllabus') ||
+      interactionId.includes('finish') ||
+      interactionId.includes('complete')
+    ) {
+      console.log('DEBUG: Back/Finish detected, returning to syllabus');
+      try {
+        onBackToSyllabus?.();
+      } catch (e) {
+        console.error('Failed to navigate back to syllabus', e);
+      }
     } else {
       console.log('Unhandled interaction in simplified view:', interactionId);
     }
@@ -269,7 +281,7 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
       interactionHistory: [...prev.interactionHistory.slice(-9), newInteraction]
     }));
     
-  }, [phase, callGeminiForGeneration]);
+  }, [phase, callGeminiForGeneration, onBackToSyllabus]);
 
   // buildInteractionPrompt is no longer needed
 

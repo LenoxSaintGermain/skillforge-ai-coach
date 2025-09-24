@@ -111,10 +111,10 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
   // Load explored phases from database
   useEffect(() => {
     const loadExploredPhases = async () => {
-      if (currentUser?.id) {
+      if (currentUser?.user_id) {
         setIsLoadingProgress(true);
         try {
-          const phases = await contentCacheService.getExploredPhases(currentUser.id);
+          const phases = await contentCacheService.getExploredPhases(currentUser.user_id);
           setExploredPhases(new Set(phases));
           
           // Also save to localStorage as backup
@@ -139,14 +139,14 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
     };
 
     loadExploredPhases();
-  }, [currentUser?.id, hasSession]);
+  }, [currentUser?.user_id, hasSession]);
 
   // Refresh progress when returning from learning mode
   const refreshProgress = async () => {
-    if (currentUser?.id) {
+    if (currentUser?.user_id) {
       setIsLoadingProgress(true);
       try {
-        const phases = await contentCacheService.getExploredPhases(currentUser.id);
+        const phases = await contentCacheService.getExploredPhases(currentUser.user_id);
         setExploredPhases(new Set(phases));
         localStorage.setItem('exploredPhases', JSON.stringify(phases));
       } catch (error) {
@@ -177,8 +177,8 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
       localStorage.setItem('exploredPhases', JSON.stringify([...updatedPhases]));
       
       // Sync progress with learning goals only when authenticated
-      if (currentUser?.id && isAuthenticated) {
-        await geminiProgressService.syncProgress(currentUser.id);
+      if (currentUser?.user_id && isAuthenticated) {
+        await geminiProgressService.syncProgress(currentUser.user_id);
       }
     }
   };
@@ -192,8 +192,8 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
     localStorage.setItem('exploredPhases', JSON.stringify([...updatedPhases]));
     
     // Sync progress with learning goals only when authenticated
-    if (currentUser?.id && isAuthenticated) {
-      await geminiProgressService.syncProgress(currentUser.id);
+    if (currentUser?.user_id && isAuthenticated) {
+      await geminiProgressService.syncProgress(currentUser.user_id);
     }
     
     onLearningModeChange?.(true);
@@ -210,8 +210,8 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
             onLearningModeChange?.(false);
             // Refresh progress and sync learning goal when returning to syllabus
             await refreshProgress();
-            if (currentUser?.id && isAuthenticated) {
-              await geminiProgressService.syncProgress(currentUser.id);
+            if (currentUser?.user_id && isAuthenticated) {
+              await geminiProgressService.syncProgress(currentUser.user_id);
             }
           }}
         onPhaseChange={handlePhaseChange}
