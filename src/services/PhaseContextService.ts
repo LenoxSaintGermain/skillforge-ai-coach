@@ -1,4 +1,4 @@
-// Phase-specific micro-context service for content generation
+// Phase-specific context service for comprehensive, blog-style content generation
 export interface PhaseProfile {
   id: number;
   titleShort: string;
@@ -8,16 +8,9 @@ export interface PhaseProfile {
   contentType: 'conceptual' | 'practical' | 'mixed';
 }
 
-export interface MicroTemplate {
-  key: string;
-  template: string;
-  maxLength: number;
-}
-
 export class PhaseContextService {
   private static instance: PhaseContextService;
   
-  // Condensed phase profiles (under 100 chars each)
   private readonly phaseProfiles: Record<number, PhaseProfile> = {
     1: {
       id: 1,
@@ -61,55 +54,6 @@ export class PhaseContextService {
     }
   };
 
-  // Micro-templates (under 200 chars each)
-  private readonly microTemplates: Record<string, MicroTemplate> = {
-    // Beginner conceptual templates
-    'beginner_introduction': {
-      key: 'beginner_introduction',
-      template: 'Welcome to {{phase_title}}! Let\'s start with the fundamentals of {{key_concept}}. Use simple language and examples.',
-      maxLength: 180
-    },
-    'beginner_concept': {
-      key: 'beginner_concept',
-      template: 'Explain {{concept}} for beginners. Focus on understanding, not implementation. Include real-world examples.',
-      maxLength: 160
-    },
-    'beginner_submit': {
-      key: 'beginner_submit',
-      template: 'Great job exploring {{concept}}! Let\'s build on that understanding with the next topic.',
-      maxLength: 140
-    },
-
-    // Intermediate practical templates  
-    'intermediate_introduction': {
-      key: 'intermediate_introduction',
-      template: 'Ready for {{phase_title}}? Let\'s dive into {{key_concept}} with hands-on practice.',
-      maxLength: 150
-    },
-    'intermediate_hands_on': {
-      key: 'intermediate_hands_on',
-      template: 'Time to build! Let\'s work with {{concept}} step-by-step. Include code examples and tools.',
-      maxLength: 160
-    },
-    'intermediate_submit': {
-      key: 'intermediate_submit',
-      template: 'Excellent progress on {{concept}}! Ready for the next challenge?',
-      maxLength: 120
-    },
-
-    // Advanced deployment templates
-    'advanced_introduction': {
-      key: 'advanced_introduction',
-      template: 'Advanced {{phase_title}}: Let\'s explore {{key_concept}} for production systems.',
-      maxLength: 140
-    },
-    'advanced_practical': {
-      key: 'advanced_practical',
-      template: 'Implement {{concept}} with enterprise considerations. Include best practices and architecture.',
-      maxLength: 170
-    }
-  };
-
   static getInstance(): PhaseContextService {
     if (!PhaseContextService.instance) {
       PhaseContextService.instance = new PhaseContextService();
@@ -121,71 +65,47 @@ export class PhaseContextService {
     return this.phaseProfiles[phaseId] || null;
   }
 
-  getMicroTemplate(phaseId: number, interactionType: string): MicroTemplate {
+  buildComprehensivePrompt(phaseId: number, phaseObjective: string, keyConcepts: { title: string; description: string }[]): string {
     const profile = this.getPhaseProfile(phaseId);
+
     if (!profile) {
-      return this.microTemplates['beginner_introduction'];
+      return 'Generate a helpful beginner-level article about the fundamentals of AI.';
     }
 
-    // Smart template selection based on phase difficulty + interaction type
-    const templateKey = this.selectTemplateKey(profile.difficulty, profile.focus, interactionType);
-    return this.microTemplates[templateKey] || this.microTemplates['beginner_introduction'];
-  }
+    const keyConceptsList = keyConcepts.map(c => `- **${c.title}:** ${c.description}`).join('\n');
 
-  private selectTemplateKey(difficulty: string, focus: string, interactionType: string): string {
-    // Map phase characteristics to appropriate templates
-    if (difficulty === 'beginner') {
-      switch (interactionType) {
-        case 'introduction': return 'beginner_introduction';
-        case 'submit': return 'beginner_submit';
-        default: return 'beginner_concept';
-      }
-    }
-    
-    if (difficulty === 'intermediate') {
-      switch (interactionType) {
-        case 'introduction': return 'intermediate_introduction';
-        case 'submit': return 'intermediate_submit';
-        default: return focus === 'hands-on' ? 'intermediate_hands_on' : 'intermediate_introduction';
-      }
-    }
-
-    if (difficulty === 'advanced') {
-      switch (interactionType) {
-        case 'introduction': return 'advanced_introduction';
-        default: return 'advanced_practical';
-      }
-    }
-
-    return 'beginner_introduction';
-  }
-
-  buildSmartPrompt(phaseId: number, interactionType: string, userInput?: string): string {
-    const profile = this.getPhaseProfile(phaseId);
-    const template = this.getMicroTemplate(phaseId, interactionType);
-    
-    if (!profile) {
-      return 'Generate helpful beginner content about AI fundamentals.';
-    }
-
-    // Populate template with actual phase data
-    let prompt = template.template
-      .replace('{{phase_title}}', profile.titleShort)
-      .replace('{{key_concept}}', profile.keyTerms[0] || 'AI concepts')
-      .replace('{{concept}}', profile.keyTerms.join(', '))
-      .replace('{{user_input}}', userInput || '');
-
-    // Add content type guidance
-    const contentGuidance = profile.contentType === 'conceptual' 
-      ? ' Focus on understanding and explanation.'
+    const contentGuidance = profile.contentType === 'conceptual'
+      ? 'Focus on clear explanations, real-world analogies, and conceptual understanding. Avoid overly technical jargon.'
       : profile.contentType === 'practical'
-      ? ' Include actionable steps and examples.'
-      : ' Balance concepts with practical application.';
+      ? 'Provide actionable steps, code snippets (if applicable), and practical examples that users can apply.'
+      : 'Balance conceptual explanations with practical applications and examples.';
 
-    prompt += contentGuidance;
+    const prompt = `
+      **Objective:** Generate a comprehensive, blog-style article for the learning phase: "${profile.titleShort}".
 
-    // Add HTML formatting requirements
-    prompt += '\n\nGenerate interactive HTML using classes: llm-container, llm-title, llm-text, llm-button, llm-code, llm-highlight, llm-task, llm-subtitle. Include data-interaction-id attributes.';
+      **Target Audience:** ${profile.difficulty} learners with a focus on ${profile.focus}.
+
+      **Core Task:** Write a detailed and engaging article that covers all the key concepts for this phase. The article should be a single, cohesive piece of content that does not require any further clicks to reveal information.
+
+      **Phase Learning Objective:** ${phaseObjective}
+
+      **Key Concepts to Cover in Detail:**
+      ${keyConceptsList}
+
+      **Content Structure and Style:**
+      1.  **Introduction:** Start with an engaging introduction that outlines the phase's learning objective.
+      2.  **Body:** Create a dedicated section for each key concept. Each section should be well-structured with subheadings, explanations, and examples.
+      3.  **Conclusion:** End with a summary of the key takeaways and a brief look ahead.
+      4.  **Tone:** Maintain an encouraging, educational, and clear tone.
+      5.  **Formatting:** Use the provided HTML classes to structure the content visually.
+
+      **${contentGuidance}**
+
+      **CRITICAL HTML Formatting Rules:**
+      - Your entire response MUST be ONLY HTML content.
+      - Use classes: llm-container, llm-title, llm-subtitle, llm-text, llm-code, llm-highlight, llm-task.
+      - Do NOT include any interactive elements like buttons or elements with 'data-interaction-id' attributes, except for a single "Back to Syllabus" button if you want to provide one at the end.
+    `;
 
     return prompt;
   }

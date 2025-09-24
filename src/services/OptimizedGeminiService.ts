@@ -5,9 +5,13 @@ import { phaseContextService } from "./PhaseContextService";
 interface GenerationRequest {
   userId: string;
   phaseId: string;
-  interactionType: string;
+  interactionType: 'introduction' | 'generate_full_content';
   userInput?: string;
-  context?: any;
+  context: {
+    phase: string;
+    objective: string;
+    keyConcepts: { title: string; description: string }[];
+  };
 }
 
 interface GenerationResponse {
@@ -104,32 +108,27 @@ export class OptimizedGeminiService {
     }
   }
 
-  private async generateOptimizedContent(request: GenerationRequest, opts?: { strictBeginner?: boolean }): Promise<string> {
-    // Use smart context instead of generic templates
+  private async generateOptimizedContent(request: GenerationRequest): Promise<string> {
     const phaseId = parseInt(request.phaseId);
-    let optimizedPrompt = phaseContextService.buildSmartPrompt(
-      phaseId, 
-      request.interactionType, 
-      request.userInput
+
+    const optimizedPrompt = phaseContextService.buildComprehensivePrompt(
+      phaseId,
+      request.context.objective,
+      request.context.keyConcepts
     );
 
-    // Add strict guard for beginner phases when requested
-    if ((opts?.strictBeginner ?? false) && phaseId <= 1) {
-      optimizedPrompt += "\n\nCRITICAL: Do NOT include any code, programming languages, or implementation details. Focus purely on beginner-friendly conceptual explanations and interactive questions. Output must use only the predefined Tailwind classes and data-interaction-id attributes.";
-    }
-
-    // Call edge function with smaller payload and timeout
+    // Call edge function with a larger token limit for comprehensive content
     const { data, error } = await Promise.race([
       supabase.functions.invoke('gemini-api', {
         body: {
           prompt: optimizedPrompt,
           type: 'curriculum_generation',
-          maxTokens: 800,
-          temperature: 0.7
+          maxTokens: 4000, // Increased for blog-style content
+          temperature: 0.75,
         }
       }),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 30000)
+        setTimeout(() => reject(new Error('Request timeout')), 45000) // Increased timeout
       )
     ]) as { data: any; error: any };
 
@@ -146,15 +145,7 @@ export class OptimizedGeminiService {
     if (!content.includes('llm-container')) {
       content = `<div class="llm-container">${content}</div>`;
     }
-
-    // Add interactive elements if missing
-    if (!content.includes('data-interaction-id') && content.includes('button')) {
-      content = content.replace(
-        /<button([^>]*)>/g, 
-        '<button$1 data-interaction-id="continue-learning">'
-      );
-    }
-
+    // No longer adding default interaction IDs, as content should be self-contained
     return content;
   }
   
