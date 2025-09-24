@@ -14,48 +14,40 @@ import InteractiveCurriculumCanvas from './InteractiveCurriculumCanvas';
 import { contentCacheService } from '@/services/ContentCacheService';
 import { geminiProgressService } from '@/services/GeminiProgressService';
 
-const PhaseCard = ({ 
-  phase, 
-  isActive, 
-  completedTasks,
+const PhaseCard = ({
+  phase,
+  isActive,
   exploredPhases,
-  onSelect 
-}: { 
-  phase: SyllabusPhase; 
+  onSelect
+}: {
+  phase: SyllabusPhase;
   isActive: boolean;
-  completedTasks: number[];
   exploredPhases: Set<number>;
   onSelect: () => void;
 }) => {
-  const taskProgress = completedTasks.length > 0 ? 
-    (completedTasks.filter(id => Math.floor(id / 100) === phase.id).length / phase.keyConceptsAndActivities.length) * 100 : 0;
-  
   const isExplored = exploredPhases.has(phase.id);
-  const cardBorderClass = isActive 
-    ? 'border-skillforge-primary shadow-md' 
-    : isExplored 
-      ? 'border-blue-400 hover:border-skillforge-primary/50' 
+  // If a phase is explored, we consider it 100% complete for this UI.
+  const taskProgress = isExplored ? 100 : 0;
+  const isCompleted = isExplored;
+
+  const cardBorderClass = isActive
+    ? 'border-skillforge-primary shadow-md'
+    : isCompleted
+      ? 'border-green-500 hover:border-green-600'
       : 'hover:border-skillforge-primary/50';
 
   return (
     <Card className={`transition-all ${cardBorderClass}`}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <Badge variant={isActive ? "default" : isExplored ? "secondary" : "outline"} className="mb-2">
-            Phase {phase.id}
+          <Badge variant={isActive ? "default" : isCompleted ? "secondary" : "outline"} className="mb-2">
+            {isCompleted ? "Completed" : `Phase ${phase.id}`}
           </Badge>
-          <div className="flex items-center gap-1">
-            {isExplored && (
-              <div title="Explored">
-                <Eye className="h-4 w-4 text-blue-500" />
-              </div>
-            )}
-            {taskProgress === 100 && (
-              <div title="Completed">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              </div>
-            )}
-          </div>
+          {isCompleted && (
+            <div title="Completed">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+            </div>
+          )}
         </div>
         <CardTitle>{phase.title}</CardTitle>
         <CardDescription className="line-clamp-2">{phase.objective}</CardDescription>
@@ -66,16 +58,16 @@ const PhaseCard = ({
             <span>Progress</span>
             <span>{Math.round(taskProgress)}%</span>
           </div>
-          <Progress value={taskProgress} className="h-1" />
+          <Progress value={taskProgress} className={`h-1 ${isCompleted ? 'text-green-500' : ''}`} />
         </div>
       </CardContent>
       <CardFooter>
-        <Button 
-          variant={isActive ? "default" : isExplored ? "secondary" : "outline"} 
+        <Button
+          variant={isActive ? "default" : isCompleted ? "secondary" : "outline"}
           className="w-full"
           onClick={onSelect}
         >
-          {isActive ? 'Current Phase' : isExplored ? 'View Explored' : 'Explore Phase'}
+          {isActive ? 'Current Phase' : 'View Completed'}
         </Button>
       </CardFooter>
     </Card>
@@ -89,24 +81,6 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
   const [isLearningMode, setIsLearningMode] = useState(false);
   const [exploredPhases, setExploredPhases] = useState<Set<number>>(new Set());
   const [isLoadingProgress, setIsLoadingProgress] = useState(false);
-  const [userProgress, setUserProgress] = useState(() => {
-    const savedProgress = localStorage.getItem('userSyllabusProgress');
-    if (savedProgress) {
-      return JSON.parse(savedProgress);
-    }
-    return {
-      currentPhase: 1,
-      completedTasks: [],
-      lastInteraction: new Date(),
-      phaseProgress: {
-        1: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
-        2: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
-        3: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
-        4: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
-        5: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 }
-      }
-    };
-  });
 
   // Load explored phases from database
   useEffect(() => {
@@ -157,9 +131,6 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
     }
   };
 
-  useEffect(() => {
-    localStorage.setItem('userSyllabusProgress', JSON.stringify(userProgress));
-  }, [userProgress]);
   
   const handlePhaseSelect = (phaseId: number) => {
     console.log(`📚 Selecting phase ${phaseId}`);
@@ -255,7 +226,6 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
             key={phase.id}
             phase={phase}
             isActive={currentPhaseId === phase.id}
-            completedTasks={userProgress.completedTasks}
             exploredPhases={exploredPhases}
             onSelect={() => handlePhaseSelect(phase.id)}
           />
