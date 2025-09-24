@@ -8,6 +8,8 @@ import { Brain, Target, BookOpen, Trophy, ArrowRight, Award, Sparkles, BarChart3
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { geminiProgressService } from "@/services/GeminiProgressService";
+import { useEffect, useState } from "react";
 
 const SkillCard = ({ skill, progress }: { skill: string; progress: number }) => {
   return (
@@ -56,7 +58,31 @@ const RecommendationCard = ({ title, description, icon, onClick }: {
 const Dashboard = () => {
   const { currentUser } = useUser();
   const navigate = useNavigate();
+  const [geminiProgress, setGeminiProgress] = useState<{
+    progress: number;
+    exploredPhases: number[];
+    totalPhases: number;
+    completedPhases: number;
+  } | null>(null);
   
+  // Load Gemini Training progress
+  useEffect(() => {
+    const loadGeminiProgress = async () => {
+      if (currentUser?.id) {
+        try {
+          const progressInfo = await geminiProgressService.getProgressInfo(currentUser.id);
+          setGeminiProgress(progressInfo);
+          // Ensure the learning goal is synced
+          await geminiProgressService.syncProgress(currentUser.id);
+        } catch (error) {
+          console.error('Error loading Gemini progress:', error);
+        }
+      }
+    };
+
+    loadGeminiProgress();
+  }, [currentUser?.id]);
+
   if (!currentUser) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
@@ -95,7 +121,38 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {currentUser.learning_goals?.map((goal, index) => (
+                  {/* Gemini Training Progress */}
+                  {geminiProgress && (
+                    <div className="space-y-2 border rounded-lg p-3 bg-skillforge-light/10">
+                      <div className="text-sm font-medium flex items-center">
+                        <Sparkles className="h-4 w-4 mr-2 text-skillforge-secondary" />
+                        Gemini Training Program
+                      </div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-muted-foreground">
+                          Phase {geminiProgress.completedPhases} of {geminiProgress.totalPhases} completed
+                        </span>
+                        <span className="text-xs font-medium">{geminiProgress.progress}%</span>
+                      </div>
+                      <Progress value={geminiProgress.progress} className="h-2" />
+                      <div className="flex justify-between items-center mt-2">
+                        <span className="text-xs text-muted-foreground">
+                          {geminiProgress.completedPhases === geminiProgress.totalPhases ? 'Completed!' : 'In Progress'}
+                        </span>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => navigate('/gemini-training')}
+                          className="h-6 text-xs"
+                        >
+                          Continue
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Regular Learning Goals */}
+                  {currentUser.learning_goals?.filter(goal => goal.skill_area !== 'Gemini Training').map((goal, index) => (
                     <div key={index} className="space-y-2">
                       <div className="text-sm font-medium">{goal.skill_area}</div>
                       <div className="flex items-center justify-between mb-1">

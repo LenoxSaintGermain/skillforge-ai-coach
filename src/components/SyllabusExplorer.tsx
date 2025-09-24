@@ -12,6 +12,7 @@ import { SyllabusPhase } from '@/models/Syllabus';
 import { Brain, BookOpen, CheckCircle, ArrowRight, Eye } from 'lucide-react';
 import InteractiveCurriculumCanvas from './InteractiveCurriculumCanvas';
 import { contentCacheService } from '@/services/ContentCacheService';
+import { geminiProgressService } from '@/services/GeminiProgressService';
 
 const PhaseCard = ({ 
   phase, 
@@ -144,7 +145,7 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
     console.log(`✅ Phase ${phaseId} selected`);
   };
 
-  const handlePhaseChange = (newPhaseId: number) => {
+  const handlePhaseChange = async (newPhaseId: number) => {
     if (newPhaseId >= 1 && newPhaseId <= 5) {
       setCurrentPhaseId(newPhaseId);
       // Mark previous phase as explored when navigating
@@ -152,16 +153,27 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
       setExploredPhases(updatedPhases);
       // Save to localStorage as backup
       localStorage.setItem('exploredPhases', JSON.stringify([...updatedPhases]));
+      
+      // Sync progress with learning goals
+      if (currentUser?.id) {
+        await geminiProgressService.syncProgress(currentUser.id);
+      }
     }
   };
 
-  const handleEnterLearningMode = () => {
+  const handleEnterLearningMode = async () => {
     setIsLearningMode(true);
     // Mark current phase as explored when entering learning mode
     const updatedPhases = new Set([...exploredPhases, currentPhaseId]);
     setExploredPhases(updatedPhases);
     // Save to localStorage as backup
     localStorage.setItem('exploredPhases', JSON.stringify([...updatedPhases]));
+    
+    // Sync progress with learning goals
+    if (currentUser?.id) {
+      await geminiProgressService.syncProgress(currentUser.id);
+    }
+    
     onLearningModeChange?.(true);
   };
   
