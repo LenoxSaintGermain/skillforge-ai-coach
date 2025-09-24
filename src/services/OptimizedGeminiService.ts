@@ -32,6 +32,13 @@ export class OptimizedGeminiService {
 
   async generateContent(request: GenerationRequest): Promise<GenerationResponse> {
     try {
+      console.log('DEBUG: OptimizedGeminiService.generateContent called with:', {
+        userId: request.userId,
+        phaseId: request.phaseId,
+        interactionType: request.interactionType,
+        contextKeyConcepts: request.context.keyConcepts?.length
+      });
+
       const userContext = {
         userId: request.userId,
         phaseId: request.phaseId,
@@ -45,27 +52,20 @@ export class OptimizedGeminiService {
       );
 
       if (cachedContent) {
-        console.log('Using cached content for', request.interactionType);
+        console.log('DEBUG: Using cached content for', request.interactionType, 'length:', cachedContent.length);
         return {
           content: cachedContent,
           fromCache: true
         };
       }
 
+      console.log('DEBUG: No cached content found, generating new content...');
       // Generate new content with optimized request
       let newContent = await this.generateOptimizedContent(request);
       
       // Validate content appropriateness for the phase
       if (!this.isContentPhaseAppropriate(request, newContent)) {
-        // Retry once with stricter beginner constraints
-        try {
-          newContent = await this.generateOptimizedContent(request, { strictBeginner: true });
-        } catch (_) {
-          // ignore and handle below
-        }
-      }
-
-      if (!this.isContentPhaseAppropriate(request, newContent)) {
+        console.log('DEBUG: Content not appropriate for phase, using fallback');
         await contentCacheService.logInteraction(userContext, {
           userInput: request.userInput,
           generated: false,
@@ -77,6 +77,8 @@ export class OptimizedGeminiService {
           fromCache: false
         };
       }
+
+      console.log('DEBUG: Content validated, caching and returning. Content length:', newContent?.length);
       
       // Cache the valid result
       await contentCacheService.cacheContent(
@@ -110,6 +112,8 @@ export class OptimizedGeminiService {
 
   private async generateOptimizedContent(request: GenerationRequest): Promise<string> {
     const phaseId = parseInt(request.phaseId);
+    
+    console.log('DEBUG: generateOptimizedContent - phaseId:', phaseId);
 
     const optimizedPrompt = phaseContextService.buildComprehensivePrompt(
       phaseId,
@@ -117,7 +121,10 @@ export class OptimizedGeminiService {
       request.context.keyConcepts
     );
 
+    console.log('DEBUG: Generated prompt length:', optimizedPrompt?.length, 'Preview:', optimizedPrompt?.substring(0, 200));
+
     // Call edge function with a larger token limit for comprehensive content
+    console.log('DEBUG: Calling supabase.functions.invoke with gemini-api...');
     const { data, error } = await Promise.race([
       supabase.functions.invoke('gemini-api', {
         body: {
@@ -132,12 +139,31 @@ export class OptimizedGeminiService {
       )
     ]) as { data: any; error: any };
 
+    console.log('DEBUG: Supabase function response:', { 
+      hasData: !!data, 
+      hasError: !!error, 
+      dataKeys: data ? Object.keys(data) : null,
+      errorMessage: error?.message 
+    });
+
     if (error) {
       console.error('Gemini API error:', error);
       throw new Error(`Gemini API error: ${error.message}`);
     }
 
-    return this.formatResponse(data.generatedText || data.text || data.content || '');
+    const rawContent = data.generatedText || data.text || data.content || '';
+    console.log('DEBUG: Raw content from API:', { 
+      length: rawContent?.length, 
+      preview: rawContent?.substring(0, 100) 
+    });
+    
+    const formattedContent = this.formatResponse(rawContent);
+    console.log('DEBUG: Formatted content:', { 
+      length: formattedContent?.length, 
+      preview: formattedContent?.substring(0, 100) 
+    });
+
+    return formattedContent;
   }
 
   private formatResponse(content: string): string {

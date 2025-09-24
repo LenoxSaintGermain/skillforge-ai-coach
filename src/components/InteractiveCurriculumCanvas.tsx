@@ -171,6 +171,11 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
     }
 
     try {
+      console.log('DEBUG: callGeminiForGeneration - interactionType:', interactionType);
+      console.log('DEBUG: Current user:', currentUser?.user_id);
+      console.log('DEBUG: Phase:', phase.id, phase.title);
+      console.log('DEBUG: Key concepts count:', phase.keyConceptsAndActivities?.length);
+
       const response = await optimizedGeminiService.generateContent({
         userId: currentUser.user_id,
         phaseId: phase.id.toString(),
@@ -182,6 +187,12 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
         },
       });
 
+      console.log('DEBUG: OptimizedGeminiService response:', {
+        contentLength: response.content?.length,
+        fromCache: response.fromCache,
+        contentPreview: response.content?.substring(0, 200)
+      });
+
       if (response.fromCache) {
         toast.success("Content loaded from cache");
       } else {
@@ -189,7 +200,7 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
       }
       return response.content;
     } catch (error: any) {
-      console.error('Gemini API call failed:', error);
+      console.error('DEBUG: Gemini API call failed:', error);
       toast.error(`Content generation failed: ${error.message}`);
       return generateFallbackContent();
     }
@@ -212,23 +223,29 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
     event.preventDefault();
     
     const interactionId = targetElement.dataset.interactionId;
+    console.log('DEBUG: handleContentClick - interactionId:', interactionId);
     
     if (interactionId.includes('start') || interactionId.includes('continue')) {
+      console.log('DEBUG: Starting content generation...');
       setIsLoading(true);
       setLoadingMessage("Generating your comprehensive learning guide... this may take a moment.");
       toast.info("Generating comprehensive content...");
       
       try {
+        console.log('DEBUG: Calling callGeminiForGeneration with generate_full_content');
         const fullContent = await callGeminiForGeneration('generate_full_content');
+        console.log('DEBUG: Generated content length:', fullContent?.length, 'Preview:', fullContent?.substring(0, 100));
         setLlmContent(fullContent);
         setContentState('concept-detail'); // We are now in the detailed view
+        console.log('DEBUG: Content state updated to concept-detail');
       } catch (error) {
-        console.error('Failed to generate full content:', error);
+        console.error('DEBUG: Failed to generate full content:', error);
         toast.error('Failed to generate content. Please try again.');
         setLlmContent(generateFallbackContent()); // Revert to initial state on failure
       } finally {
         setIsLoading(false);
         setLoadingMessage('');
+        console.log('DEBUG: Loading completed');
       }
     } else if (interactionId.includes('coach')) {
       setIsCoachOpen(true);
