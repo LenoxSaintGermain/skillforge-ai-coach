@@ -205,12 +205,15 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
     return (
       <InteractiveCurriculumCanvas 
         phase={currentPhase} 
-        onBackToSyllabus={async () => {
-          setIsLearningMode(false);
-          onLearningModeChange?.(false);
-          // Refresh progress when returning to syllabus
-          await refreshProgress();
-        }}
+          onBackToSyllabus={async () => {
+            setIsLearningMode(false);
+            onLearningModeChange?.(false);
+            // Refresh progress and sync learning goal when returning to syllabus
+            await refreshProgress();
+            if (currentUser?.id && isAuthenticated) {
+              await geminiProgressService.syncProgress(currentUser.id);
+            }
+          }}
         onPhaseChange={handlePhaseChange}
       />
     );

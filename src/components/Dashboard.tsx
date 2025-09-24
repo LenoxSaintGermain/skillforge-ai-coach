@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { geminiProgressService } from "@/services/GeminiProgressService";
 import { useEffect, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const SkillCard = ({ skill, progress }: { skill: string; progress: number }) => {
   return (
@@ -64,6 +65,7 @@ const Dashboard = () => {
     totalPhases: number;
     completedPhases: number;
   } | null>(null);
+  const { toast } = useToast();
   
   // Load Gemini Training progress
   useEffect(() => {
@@ -115,6 +117,19 @@ const Dashboard = () => {
 
     loadGeminiProgress();
   }, [currentUser?.id, isAuthenticated, hasSession]);
+
+  const handleRefreshGemini = async () => {
+    if (!currentUser?.id) return;
+    try {
+      await geminiProgressService.syncProgress(currentUser.id);
+      const progressInfo = await geminiProgressService.getProgressInfo(currentUser.id);
+      setGeminiProgress(progressInfo);
+      toast({ title: 'Progress synced', description: 'Gemini progress updated.' });
+    } catch (error) {
+      console.error('Failed to sync progress:', error);
+      toast({ title: 'Sync failed', description: 'Please try again in a moment.', variant: 'destructive' });
+    }
+  };
 
   if (!currentUser) {
     return (
@@ -172,14 +187,24 @@ const Dashboard = () => {
                         <span className="text-xs text-muted-foreground">
                           {geminiProgress.completedPhases === geminiProgress.totalPhases ? 'Completed!' : 'In Progress'}
                         </span>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => navigate('/gemini-training')}
-                          className="h-6 text-xs"
-                        >
-                          Continue
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => navigate('/gemini-training')}
+                            className="h-6 text-xs"
+                          >
+                            Continue
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={handleRefreshGemini}
+                            className="h-6 text-xs"
+                          >
+                            Refresh
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}

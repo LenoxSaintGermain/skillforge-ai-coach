@@ -43,12 +43,8 @@ export class GeminiProgressService {
         return null;
       }
 
-      // Verify user is authenticated
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || user.id !== userId) {
-        console.warn('User not authenticated or user ID mismatch');
-        return null;
-      }
+      // Proceed without explicit auth check; RLS will enforce access
+
 
       // Check if Gemini Training goal exists
       const { data: existingGoal, error: fetchError } = await supabase
@@ -99,12 +95,8 @@ export class GeminiProgressService {
         return;
       }
 
-      // Verify user is authenticated
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || user.id !== userId) {
-        console.warn('User not authenticated, skipping progress sync');
-        return;
-      }
+      // Proceed with sync; rely on RLS to permit/deny operations based on auth
+
 
       const progress = await this.calculateProgress(userId);
       const goal = await this.getOrCreateGeminiGoal(userId);
