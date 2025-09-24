@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { contentCacheService } from "./ContentCacheService";
 import { phaseContextService } from "./PhaseContextService";
+import { videoService } from "./VideoService";
 
 interface GenerationRequest {
   userId: string;
@@ -157,8 +158,10 @@ export class OptimizedGeminiService {
       preview: rawContent?.substring(0, 100) 
     });
     
-    const formattedContent = this.formatResponse(rawContent);
-    console.log('DEBUG: Formatted content:', { 
+    // Format the response and add video recommendations
+    let formattedContent = this.formatResponse(rawContent);
+    formattedContent = await this.addVideoRecommendations(request, formattedContent);
+    console.log('DEBUG: Final content with videos:', { 
       length: formattedContent?.length, 
       preview: formattedContent?.substring(0, 100) 
     });
@@ -210,6 +213,61 @@ export class OptimizedGeminiService {
     });
     
     return hasContent && isNotEmpty;
+  }
+
+  private async addVideoRecommendations(request: GenerationRequest, content: string): Promise<string> {
+    try {
+      const phaseId = parseInt(request.phaseId, 10);
+      const profile = phaseContextService.getPhaseProfile(phaseId);
+      
+      if (!profile) return content;
+      
+      // Get relevant videos based on phase and key terms
+      const videos = await videoService.getVideosForPhaseWithKeywords(phaseId, profile.keyTerms);
+      
+      if (videos.length === 0) return content;
+      
+      // Generate video HTML section
+      const videoSection = `
+        <div class="llm-container mt-8">
+          <h2 class="llm-subtitle">📹 Further Exploration</h2>
+          <p class="llm-text">Deepen your understanding with these curated video resources:</p>
+          <div class="grid gap-4 mt-4">
+            ${videos.map(video => `
+              <div class="llm-video-card border rounded-lg p-4">
+                <div class="relative group cursor-pointer" onclick="window.open('${video.url}', '_blank')">
+                  <img 
+                    src="https://img.youtube.com/vi/${video.id}/maxresdefault.jpg" 
+                    alt="${video.title}"
+                    class="w-full h-32 object-cover rounded-lg mb-3"
+                  />
+                  <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center rounded-lg group-hover:bg-opacity-30 transition-all">
+                    <div class="w-12 h-12 bg-white bg-opacity-90 rounded-full flex items-center justify-center">
+                      <div class="w-0 h-0 border-l-[8px] border-l-black border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent ml-1"></div>
+                    </div>
+                  </div>
+                </div>
+                <h3 class="llm-text font-semibold text-sm mb-2">${video.title}</h3>
+                <p class="llm-text text-xs opacity-75 mb-2">${video.bestFor}</p>
+                ${video.duration ? `<p class="llm-text text-xs opacity-60">Duration: ${video.duration}</p>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      
+      // Replace placeholder or append to end
+      if (content.includes('[VIDEO_RECOMMENDATIONS_PLACEHOLDER]')) {
+        return content.replace('[VIDEO_RECOMMENDATIONS_PLACEHOLDER]', videoSection);
+      } else {
+        // Append before closing container div
+        return content.replace(/<\/div>\s*$/, videoSection + '</div>');
+      }
+      
+    } catch (error) {
+      console.error('Error adding video recommendations:', error);
+      return content; // Return original content if video addition fails
+    }
   }
 
   private getFallbackContent(request: GenerationRequest): string {

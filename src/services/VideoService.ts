@@ -373,6 +373,28 @@ class VideoService {
     return this.videos;
   }
 
+  // Get videos for phase with enhanced keyword matching
+  async getVideosForPhaseWithKeywords(phaseId: number, keyTerms: string[]): Promise<Video[]> {
+    await this.initialize();
+
+    // Start with phase-specific videos
+    const phaseVideos = await this.getVideosForPhase(phaseId);
+    
+    // Get keyword-based recommendations
+    const keywordRecommendation = await this.getVideosByTopic(keyTerms);
+    
+    // Combine and deduplicate
+    const combinedVideos = [...phaseVideos];
+    keywordRecommendation.videos.forEach(video => {
+      if (!combinedVideos.find(existing => existing.id === video.id)) {
+        combinedVideos.push(video);
+      }
+    });
+    
+    // Return top 3-4 most relevant videos
+    return combinedVideos.slice(0, 3);
+  }
+
   // Get fallback videos (for when other methods fail)
   getFallbackVideos(): Video[] {
     return [

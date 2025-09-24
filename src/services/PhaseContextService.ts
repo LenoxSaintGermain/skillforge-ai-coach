@@ -105,6 +105,7 @@ export class PhaseContextService {
       - Your entire response MUST be ONLY HTML content.
       - Use classes: llm-container, llm-title, llm-subtitle, llm-text, llm-code, llm-highlight, llm-task.
       - Do NOT include any interactive elements like buttons or elements with 'data-interaction-id' attributes, except for a single "Back to Syllabus" button if you want to provide one at the end.
+      - End your article with a "Further Exploration" section that includes a placeholder: [VIDEO_RECOMMENDATIONS_PLACEHOLDER] - this will be replaced with relevant video content.
     `;
 
     return prompt;
