@@ -14,6 +14,8 @@ export class GeminiProgressService {
   // Calculate progress based on explored phases
   async calculateProgress(userId: string): Promise<number> {
     try {
+      if (!userId) return 0;
+      
       const exploredPhases = await contentCacheService.getExploredPhases(userId);
       const totalPhases = 5; // Gemini syllabus has 5 phases
       return Math.round((exploredPhases.length / totalPhases) * 100);
@@ -26,13 +28,25 @@ export class GeminiProgressService {
   // Get or create Gemini Training learning goal
   async getOrCreateGeminiGoal(userId: string): Promise<any> {
     try {
+      if (!userId) {
+        console.warn('No user ID provided for Gemini goal creation');
+        return null;
+      }
+
+      // Verify user is authenticated
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || user.id !== userId) {
+        console.warn('User not authenticated or user ID mismatch');
+        return null;
+      }
+
       // Check if Gemini Training goal exists
       const { data: existingGoal, error: fetchError } = await supabase
         .from('learning_goals')
         .select('*')
         .eq('user_id', userId)
         .eq('skill_area', 'Gemini Training')
-        .single();
+        .maybeSingle();
 
       if (existingGoal && !fetchError) {
         return existingGoal;
@@ -52,7 +66,11 @@ export class GeminiProgressService {
         .single();
 
       if (createError) {
-        console.error('Error creating Gemini goal:', createError);
+        if (createError.code === '42501') {
+          console.warn('RLS policy violation - user not properly authenticated');
+        } else {
+          console.error('Error creating Gemini goal:', createError);
+        }
         return null;
       }
 
@@ -63,9 +81,21 @@ export class GeminiProgressService {
     }
   }
 
-  // Sync progress with learning goals
+  // Sync progress with learning goals (only when user is authenticated)
   async syncProgress(userId: string): Promise<void> {
     try {
+      if (!userId) {
+        console.warn('No user ID provided for progress sync');
+        return;
+      }
+
+      // Verify user is authenticated
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || user.id !== userId) {
+        console.warn('User not authenticated, skipping progress sync');
+        return;
+      }
+
       const progress = await this.calculateProgress(userId);
       const goal = await this.getOrCreateGeminiGoal(userId);
 

@@ -56,7 +56,7 @@ const RecommendationCard = ({ title, description, icon, onClick }: {
 };
 
 const Dashboard = () => {
-  const { currentUser } = useUser();
+  const { currentUser, isAuthenticated } = useUser();
   const navigate = useNavigate();
   const [geminiProgress, setGeminiProgress] = useState<{
     progress: number;
@@ -68,11 +68,11 @@ const Dashboard = () => {
   // Load Gemini Training progress
   useEffect(() => {
     const loadGeminiProgress = async () => {
-      if (currentUser?.id) {
+      if (currentUser?.id && isAuthenticated) {
         try {
           const progressInfo = await geminiProgressService.getProgressInfo(currentUser.id);
           setGeminiProgress(progressInfo);
-          // Ensure the learning goal is synced
+          // Ensure the learning goal is synced only when authenticated
           await geminiProgressService.syncProgress(currentUser.id);
         } catch (error) {
           console.error('Error loading Gemini progress:', error);
@@ -81,7 +81,7 @@ const Dashboard = () => {
     };
 
     loadGeminiProgress();
-  }, [currentUser?.id]);
+  }, [currentUser?.id, isAuthenticated]);
 
   if (!currentUser) {
     return (

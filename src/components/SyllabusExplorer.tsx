@@ -84,7 +84,7 @@ const PhaseCard = ({
 
 const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (isLearning: boolean) => void }) => {
   const { coachService, isServiceReady, error } = useAI();
-  const { currentUser } = useUser();
+  const { currentUser, isAuthenticated } = useUser();
   const [currentPhaseId, setCurrentPhaseId] = useState(1);
   const [isLearningMode, setIsLearningMode] = useState(false);
   const [exploredPhases, setExploredPhases] = useState<Set<number>>(new Set());
@@ -154,8 +154,8 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
       // Save to localStorage as backup
       localStorage.setItem('exploredPhases', JSON.stringify([...updatedPhases]));
       
-      // Sync progress with learning goals
-      if (currentUser?.id) {
+      // Sync progress with learning goals only when authenticated
+      if (currentUser?.id && isAuthenticated) {
         await geminiProgressService.syncProgress(currentUser.id);
       }
     }
@@ -169,8 +169,8 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
     // Save to localStorage as backup
     localStorage.setItem('exploredPhases', JSON.stringify([...updatedPhases]));
     
-    // Sync progress with learning goals
-    if (currentUser?.id) {
+    // Sync progress with learning goals only when authenticated
+    if (currentUser?.id && isAuthenticated) {
       await geminiProgressService.syncProgress(currentUser.id);
     }
     
