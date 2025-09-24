@@ -98,10 +98,14 @@ export class ContentCacheService {
     }
   }
 
-  // Cache new content
-  async cacheContent(context: UserContext, content: string, additionalData?: any): Promise<void> {
+  // Cache new content with extended expiration for completed content
+  async cacheContent(context: UserContext, content: string, additionalData?: any, isCompleted: boolean = false): Promise<void> {
     try {
       const contextHash = this.generateContextHash(context, additionalData);
+      
+      // Extended expiration for completed content (30 days vs 7 days)
+      const expirationDate = new Date();
+      expirationDate.setDate(expirationDate.getDate() + (isCompleted ? 30 : 7));
       
       // First try to insert new content
       const { error: insertError } = await supabase
@@ -112,7 +116,8 @@ export class ContentCacheService {
           phase_id: context.phaseId,
           interaction_type: context.interactionType,
           content,
-          generation_metadata: { additionalData, generatedAt: new Date().toISOString(), version: CURRENT_CACHE_VERSION },
+          expires_at: expirationDate.toISOString(),
+          generation_metadata: { additionalData, generatedAt: new Date().toISOString(), version: CURRENT_CACHE_VERSION, isCompleted },
           usage_count: 1
         });
 
@@ -122,7 +127,8 @@ export class ContentCacheService {
           .from('content_cache')
           .update({
             content,
-            generation_metadata: { additionalData, generatedAt: new Date().toISOString(), version: CURRENT_CACHE_VERSION },
+            expires_at: expirationDate.toISOString(),
+            generation_metadata: { additionalData, generatedAt: new Date().toISOString(), version: CURRENT_CACHE_VERSION, isCompleted },
             usage_count: 1
           })
           .eq('user_id', context.userId)

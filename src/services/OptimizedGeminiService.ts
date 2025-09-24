@@ -81,11 +81,12 @@ export class OptimizedGeminiService {
 
       console.log('DEBUG: Content validated, caching and returning. Content length:', newContent?.length);
       
-      // Cache the valid result
+      // Cache the valid result (mark as completed for extended caching)
       await contentCacheService.cacheContent(
         userContext,
         newContent,
-        { userInput: request.userInput, context: request.context, cacheVersion: '2025-09-23_phasefix_1' }
+        { userInput: request.userInput, context: request.context, cacheVersion: '2025-09-23_phasefix_1' },
+        true // Mark as completed for 30-day caching
       );
 
       // Log the interaction

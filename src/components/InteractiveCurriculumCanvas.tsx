@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { X, MessageCircle, RefreshCw, ArrowLeft } from "lucide-react";
+import { X, MessageCircle, RefreshCw, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import YouTubePlayer from "./YouTubePlayer";
 import { useAI } from "@/contexts/AIContext";
 import { SyllabusPhase } from "@/models/Syllabus";
@@ -14,7 +14,8 @@ import "@/styles/llm-curriculum.css";
 
 interface InteractiveCurriculumCanvasProps {
   phase: SyllabusPhase;
-  onBackToSyllabus: () => void; // Updated prop name for consistency
+  onBackToSyllabus: () => void;
+  onPhaseChange?: (phaseId: number) => void;
 }
 
 interface InteractionData {
@@ -38,7 +39,8 @@ interface CurriculumContext {
 
 const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = ({ 
   phase, 
-  onBackToSyllabus 
+  onBackToSyllabus,
+  onPhaseChange 
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const isInitializing = useRef(false);
@@ -385,6 +387,33 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* Phase Navigation */}
+              {onPhaseChange && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onPhaseChange(phase.id - 1)}
+                    disabled={phase.id <= 1 || isLoading}
+                    className="bg-card hover:bg-muted flex items-center gap-1"
+                    title="Previous Phase"
+                  >
+                    <ChevronLeft className="h-3 w-3" />
+                    <span className="text-xs">Prev</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onPhaseChange(phase.id + 1)}
+                    disabled={phase.id >= 5 || isLoading}
+                    className="bg-card hover:bg-muted flex items-center gap-1"
+                    title="Next Phase"
+                  >
+                    <span className="text-xs">Next</span>
+                    <ChevronRight className="h-3 w-3" />
+                  </Button>
+                </>
+              )}
               <Button
                 variant="outline"
                 size="sm"

@@ -8,31 +8,51 @@ import { Badge } from "@/components/ui/badge";
 import { geminiSyllabus } from '@/data/GeminiSyllabus';
 import { useAI } from '@/contexts/AIContext';
 import { SyllabusPhase } from '@/models/Syllabus';
-import { Brain, BookOpen, CheckCircle, ArrowRight } from 'lucide-react';
+import { Brain, BookOpen, CheckCircle, ArrowRight, Eye } from 'lucide-react';
 import InteractiveCurriculumCanvas from './InteractiveCurriculumCanvas';
 
 const PhaseCard = ({ 
   phase, 
   isActive, 
   completedTasks,
+  exploredPhases,
   onSelect 
 }: { 
   phase: SyllabusPhase; 
   isActive: boolean;
   completedTasks: number[];
+  exploredPhases: Set<number>;
   onSelect: () => void;
 }) => {
   const taskProgress = completedTasks.length > 0 ? 
     (completedTasks.filter(id => Math.floor(id / 100) === phase.id).length / phase.keyConceptsAndActivities.length) * 100 : 0;
+  
+  const isExplored = exploredPhases.has(phase.id);
+  const cardBorderClass = isActive 
+    ? 'border-skillforge-primary shadow-md' 
+    : isExplored 
+      ? 'border-blue-400 hover:border-skillforge-primary/50' 
+      : 'hover:border-skillforge-primary/50';
 
   return (
-    <Card className={`transition-all ${isActive ? 'border-skillforge-primary shadow-md' : 'hover:border-skillforge-primary/50'}`}>
+    <Card className={`transition-all ${cardBorderClass}`}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <Badge variant={isActive ? "default" : "outline"} className="mb-2">
+          <Badge variant={isActive ? "default" : isExplored ? "secondary" : "outline"} className="mb-2">
             Phase {phase.id}
           </Badge>
-          {taskProgress === 100 && <CheckCircle className="h-5 w-5 text-green-500" />}
+          <div className="flex items-center gap-1">
+            {isExplored && (
+              <div title="Explored">
+                <Eye className="h-4 w-4 text-blue-500" />
+              </div>
+            )}
+            {taskProgress === 100 && (
+              <div title="Completed">
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              </div>
+            )}
+          </div>
         </div>
         <CardTitle>{phase.title}</CardTitle>
         <CardDescription className="line-clamp-2">{phase.objective}</CardDescription>
@@ -48,11 +68,11 @@ const PhaseCard = ({
       </CardContent>
       <CardFooter>
         <Button 
-          variant={isActive ? "default" : "outline"} 
+          variant={isActive ? "default" : isExplored ? "secondary" : "outline"} 
           className="w-full"
           onClick={onSelect}
         >
-          {isActive ? 'Current Phase' : 'Select Phase'}
+          {isActive ? 'Current Phase' : isExplored ? 'View Explored' : 'Explore Phase'}
         </Button>
       </CardFooter>
     </Card>
@@ -63,6 +83,7 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
   const { coachService, isServiceReady, error } = useAI();
   const [currentPhaseId, setCurrentPhaseId] = useState(1);
   const [isLearningMode, setIsLearningMode] = useState(false);
+  const [exploredPhases, setExploredPhases] = useState<Set<number>>(new Set());
   const [userProgress, setUserProgress] = useState(() => {
     const savedProgress = localStorage.getItem('userSyllabusProgress');
     if (savedProgress) {
@@ -91,6 +112,21 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
     setCurrentPhaseId(phaseId);
     console.log(`✅ Phase ${phaseId} selected`);
   };
+
+  const handlePhaseChange = (newPhaseId: number) => {
+    if (newPhaseId >= 1 && newPhaseId <= 5) {
+      setCurrentPhaseId(newPhaseId);
+      // Mark previous phase as explored when navigating
+      setExploredPhases(prev => new Set([...prev, currentPhaseId]));
+    }
+  };
+
+  const handleEnterLearningMode = () => {
+    setIsLearningMode(true);
+    // Mark current phase as explored when entering learning mode
+    setExploredPhases(prev => new Set([...prev, currentPhaseId]));
+    onLearningModeChange?.(true);
+  };
   
   const currentPhase = geminiSyllabus.phases.find(phase => phase.id === currentPhaseId) || geminiSyllabus.phases[0];
 
@@ -101,7 +137,8 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
         onBackToSyllabus={() => {
           setIsLearningMode(false);
           onLearningModeChange?.(false);
-        }} 
+        }}
+        onPhaseChange={handlePhaseChange}
       />
     );
   }
@@ -143,6 +180,7 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
             phase={phase}
             isActive={currentPhaseId === phase.id}
             completedTasks={userProgress.completedTasks}
+            exploredPhases={exploredPhases}
             onSelect={() => handlePhaseSelect(phase.id)}
           />
         ))}
@@ -176,10 +214,7 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
                 <Button 
                   variant="default" 
                   className="w-full"
-                  onClick={() => {
-                    setIsLearningMode(true);
-                    onLearningModeChange?.(true);
-                  }}
+                  onClick={handleEnterLearningMode}
                   disabled={!isServiceReady}
                 >
                   <span>{isServiceReady ? 'Start Learning' : 'Initializing...'}</span>
