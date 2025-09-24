@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,34 +6,46 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { geminiSyllabus } from '@/data/GeminiSyllabus';
 import { useAI } from '@/contexts/AIContext';
+import { useUser } from '@/contexts/UserContext';
 import { SyllabusPhase } from '@/models/Syllabus';
-import { Brain, BookOpen, CheckCircle, ArrowRight } from 'lucide-react';
+import { Brain, BookOpen, CheckCircle, ArrowRight, Eye } from 'lucide-react';
 import InteractiveCurriculumCanvas from './InteractiveCurriculumCanvas';
+import { geminiProgressService } from '@/services/GeminiProgressService';
 
-import { contentCacheService } from '@/services/ContentCacheService';
-
-const PhaseCard = ({ 
-  phase, 
-  isActive, 
-  isCompleted,
-  onSelect 
-}: { 
-  phase: SyllabusPhase; 
+const PhaseCard = ({
+  phase,
+  isActive,
+  exploredPhases,
+  onSelect
+}: {
+  phase: SyllabusPhase;
   isActive: boolean;
-  isCompleted: boolean;
+  exploredPhases: Set<number>;
   onSelect: () => void;
 }) => {
-  const taskProgress = isCompleted ? 100 : 0;
-  const cardVariant = isCompleted ? 'border-green-500' : isActive ? 'border-skillforge-primary' : 'hover:border-skillforge-primary/50';
+  const isExplored = exploredPhases.has(phase.id);
+  // If a phase is explored, we consider it 100% complete for this UI.
+  const taskProgress = isExplored ? 100 : 0;
+  const isCompleted = isExplored;
+
+  const cardBorderClass = isActive
+    ? 'border-skillforge-primary shadow-md'
+    : isCompleted
+      ? 'border-green-500 hover:border-green-600'
+      : 'hover:border-skillforge-primary/50';
 
   return (
-    <Card className={`transition-all ${cardVariant} ${isCompleted ? 'shadow-lg' : isActive ? 'shadow-md' : ''}`}>
+    <Card className={`transition-all ${cardBorderClass}`}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <Badge variant={isCompleted ? "success" : isActive ? "default" : "outline"} className="mb-2">
+          <Badge variant={isActive ? "default" : isCompleted ? "success" : "outline"} className="mb-2">
             {isCompleted ? "Completed" : `Phase ${phase.id}`}
           </Badge>
-          {isCompleted && <CheckCircle className="h-5 w-5 text-green-500" />}
+          {isCompleted && (
+            <div title="Completed">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+            </div>
+          )}
         </div>
         <CardTitle>{phase.title}</CardTitle>
         <CardDescription className="line-clamp-2">{phase.objective}</CardDescription>
@@ -49,12 +60,12 @@ const PhaseCard = ({
         </div>
       </CardContent>
       <CardFooter>
-        <Button 
-          variant={isCompleted ? "secondary" : isActive ? "default" : "outline"}
+        <Button
+          variant={isActive ? "default" : isCompleted ? "success" : "outline"}
           className="w-full"
           onClick={onSelect}
         >
-          {isCompleted ? 'View Completed' : isActive ? 'Current Phase' : 'Select Phase'}
+          {isActive ? 'Current Phase' : 'View Completed'}
         </Button>
       </CardFooter>
     </Card>
@@ -63,24 +74,99 @@ const PhaseCard = ({
 
 const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (isLearning: boolean) => void }) => {
   const { coachService, isServiceReady, error } = useAI();
-  const [currentPhaseId, setCurrentPhaseId] = useState(1);
-  const [isLearningMode, setIsLearningMode] = useState(false);
+  const { currentUser, isAuthenticated, hasSession } = useUser();
   const [currentPhaseId, setCurrentPhaseId] = useState(1);
   const [isLearningMode, setIsLearningMode] = useState(false);
   const [exploredPhases, setExploredPhases] = useState<Set<number>>(new Set());
+  const [isLoadingProgress, setIsLoadingProgress] = useState(false);
+  // The userProgress state is no longer the source of truth for completion
+  // and has been removed to avoid conflicts.
 
+  // Load explored phases from database
   useEffect(() => {
-    const fetchExploredPhases = async () => {
-      const phases = await contentCacheService.getExploredPhases();
-      setExploredPhases(new Set(phases));
+    const loadExploredPhases = async () => {
+      if (currentUser?.user_id) {
+        setIsLoadingProgress(true);
+        try {
+          const phases = await contentCacheService.getExploredPhases(currentUser.user_id);
+          setExploredPhases(new Set(phases));
+
+          // Also save to localStorage as backup
+          localStorage.setItem('exploredPhases', JSON.stringify(Array.from(phases)));
+        } catch (error) {
+          console.error('Error loading explored phases:', error);
+          // Try to load from localStorage as fallback
+          const savedPhases = localStorage.getItem('exploredPhases');
+          if (savedPhases) {
+            setExploredPhases(new Set(JSON.parse(savedPhases)));
+          }
+        } finally {
+          setIsLoadingProgress(false);
+        }
+      } else if (hasSession) {
+        // If we have a session but no currentUser yet, try to load from localStorage
+        const savedPhases = localStorage.getItem('exploredPhases');
+        if (savedPhases) {
+          setExploredPhases(new Set(JSON.parse(savedPhases)));
+        }
+      }
     };
-    fetchExploredPhases();
-  }, []);
+
+    loadExploredPhases();
+  }, [currentUser?.user_id, hasSession]);
+
+  // Refresh progress when returning from learning mode
+  const refreshProgress = async () => {
+    if (currentUser?.user_id) {
+      setIsLoadingProgress(true);
+      try {
+        const phases = await contentCacheService.getExploredPhases(currentUser.user_id);
+        setExploredPhases(new Set(phases));
+        localStorage.setItem('exploredPhases', JSON.stringify(Array.from(phases)));
+      } catch (error) {
+        console.error('Error refreshing progress:', error);
+      } finally {
+        setIsLoadingProgress(false);
+      }
+    }
+  };
 
   const handlePhaseSelect = (phaseId: number) => {
     console.log(`📚 Selecting phase ${phaseId}`);
     setCurrentPhaseId(phaseId);
     console.log(`✅ Phase ${phaseId} selected`);
+  };
+
+  const handlePhaseChange = async (newPhaseId: number) => {
+    if (newPhaseId >= 1 && newPhaseId <= 5) {
+      setCurrentPhaseId(newPhaseId);
+      // Mark previous phase as explored when navigating
+      const updatedPhases = new Set([...exploredPhases, currentPhaseId]);
+      setExploredPhases(updatedPhases);
+      // Save to localStorage as backup
+      localStorage.setItem('exploredPhases', JSON.stringify([...updatedPhases]));
+
+      // Sync progress with learning goals only when authenticated
+      if (currentUser?.user_id && isAuthenticated) {
+        await geminiProgressService.syncProgress(currentUser.user_id);
+      }
+    }
+  };
+
+  const handleEnterLearningMode = async () => {
+    setIsLearningMode(true);
+    // Mark current phase as explored when entering learning mode
+    const updatedPhases = new Set([...exploredPhases, currentPhaseId]);
+    setExploredPhases(updatedPhases);
+    // Save to localStorage as backup
+    localStorage.setItem('exploredPhases', JSON.stringify([...updatedPhases]));
+
+    // Sync progress with learning goals only when authenticated
+    if (currentUser?.user_id && isAuthenticated) {
+      await geminiProgressService.syncProgress(currentUser.user_id);
+    }
+
+    onLearningModeChange?.(true);
   };
   
   const currentPhase = geminiSyllabus.phases.find(phase => phase.id === currentPhaseId) || geminiSyllabus.phases[0];
@@ -89,10 +175,16 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
     return (
       <InteractiveCurriculumCanvas 
         phase={currentPhase} 
-        onBackToSyllabus={() => {
-          setIsLearningMode(false);
-          onLearningModeChange?.(false);
-        }} 
+          onBackToSyllabus={async () => {
+            setIsLearningMode(false);
+            onLearningModeChange?.(false);
+            // Refresh progress and sync learning goal when returning to syllabus
+            await refreshProgress();
+            if (currentUser?.user_id && isAuthenticated) {
+              await geminiProgressService.syncProgress(currentUser.user_id);
+            }
+          }}
+        onPhaseChange={handlePhaseChange}
       />
     );
   }
@@ -133,7 +225,7 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
             key={phase.id}
             phase={phase}
             isActive={currentPhaseId === phase.id}
-            isCompleted={exploredPhases.has(phase.id)}
+            exploredPhases={exploredPhases}
             onSelect={() => handlePhaseSelect(phase.id)}
           />
         ))}
@@ -167,10 +259,7 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
                 <Button 
                   variant="default" 
                   className="w-full"
-                  onClick={() => {
-                    setIsLearningMode(true);
-                    onLearningModeChange?.(true);
-                  }}
+                  onClick={handleEnterLearningMode}
                   disabled={!isServiceReady}
                 >
                   <span>{isServiceReady ? 'Start Learning' : 'Initializing...'}</span>
