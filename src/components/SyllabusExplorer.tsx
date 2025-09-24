@@ -10,6 +10,7 @@ import { useUser } from '@/contexts/UserContext';
 import { SyllabusPhase } from '@/models/Syllabus';
 import { Brain, BookOpen, CheckCircle, ArrowRight, Eye } from 'lucide-react';
 import InteractiveCurriculumCanvas from './InteractiveCurriculumCanvas';
+import { contentCacheService } from '@/services/ContentCacheService';
 import { geminiProgressService } from '@/services/GeminiProgressService';
 
 const PhaseCard = ({
@@ -79,8 +80,6 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
   const [isLearningMode, setIsLearningMode] = useState(false);
   const [exploredPhases, setExploredPhases] = useState<Set<number>>(new Set());
   const [isLoadingProgress, setIsLoadingProgress] = useState(false);
-  // The userProgress state is no longer the source of truth for completion
-  // and has been removed to avoid conflicts.
 
   // Load explored phases from database
   useEffect(() => {
