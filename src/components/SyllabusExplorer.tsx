@@ -11,28 +11,30 @@ import { SyllabusPhase } from '@/models/Syllabus';
 import { Brain, BookOpen, CheckCircle, ArrowRight } from 'lucide-react';
 import InteractiveCurriculumCanvas from './InteractiveCurriculumCanvas';
 
+import { contentCacheService } from '@/services/ContentCacheService';
+
 const PhaseCard = ({ 
   phase, 
   isActive, 
-  completedTasks,
+  isCompleted,
   onSelect 
 }: { 
   phase: SyllabusPhase; 
   isActive: boolean;
-  completedTasks: number[];
+  isCompleted: boolean;
   onSelect: () => void;
 }) => {
-  const taskProgress = completedTasks.length > 0 ? 
-    (completedTasks.filter(id => Math.floor(id / 100) === phase.id).length / phase.keyConceptsAndActivities.length) * 100 : 0;
+  const taskProgress = isCompleted ? 100 : 0;
+  const cardVariant = isCompleted ? 'border-green-500' : isActive ? 'border-skillforge-primary' : 'hover:border-skillforge-primary/50';
 
   return (
-    <Card className={`transition-all ${isActive ? 'border-skillforge-primary shadow-md' : 'hover:border-skillforge-primary/50'}`}>
+    <Card className={`transition-all ${cardVariant} ${isCompleted ? 'shadow-lg' : isActive ? 'shadow-md' : ''}`}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <Badge variant={isActive ? "default" : "outline"} className="mb-2">
-            Phase {phase.id}
+          <Badge variant={isCompleted ? "success" : isActive ? "default" : "outline"} className="mb-2">
+            {isCompleted ? "Completed" : `Phase ${phase.id}`}
           </Badge>
-          {taskProgress === 100 && <CheckCircle className="h-5 w-5 text-green-500" />}
+          {isCompleted && <CheckCircle className="h-5 w-5 text-green-500" />}
         </div>
         <CardTitle>{phase.title}</CardTitle>
         <CardDescription className="line-clamp-2">{phase.objective}</CardDescription>
@@ -43,16 +45,16 @@ const PhaseCard = ({
             <span>Progress</span>
             <span>{Math.round(taskProgress)}%</span>
           </div>
-          <Progress value={taskProgress} className="h-1" />
+          <Progress value={taskProgress} className={`h-1 ${isCompleted ? 'text-green-500' : ''}`} />
         </div>
       </CardContent>
       <CardFooter>
         <Button 
-          variant={isActive ? "default" : "outline"} 
+          variant={isCompleted ? "secondary" : isActive ? "default" : "outline"}
           className="w-full"
           onClick={onSelect}
         >
-          {isActive ? 'Current Phase' : 'Select Phase'}
+          {isCompleted ? 'View Completed' : isActive ? 'Current Phase' : 'Select Phase'}
         </Button>
       </CardFooter>
     </Card>
@@ -63,29 +65,18 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
   const { coachService, isServiceReady, error } = useAI();
   const [currentPhaseId, setCurrentPhaseId] = useState(1);
   const [isLearningMode, setIsLearningMode] = useState(false);
-  const [userProgress, setUserProgress] = useState(() => {
-    const savedProgress = localStorage.getItem('userSyllabusProgress');
-    if (savedProgress) {
-      return JSON.parse(savedProgress);
-    }
-    return {
-      currentPhase: 1,
-      completedTasks: [],
-      lastInteraction: new Date(),
-      phaseProgress: {
-        1: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
-        2: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
-        3: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
-        4: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 },
-        5: { percentComplete: 0, conceptsUnderstanding: 0, practicalExercisesCompleted: 0 }
-      }
-    };
-  });
+  const [currentPhaseId, setCurrentPhaseId] = useState(1);
+  const [isLearningMode, setIsLearningMode] = useState(false);
+  const [exploredPhases, setExploredPhases] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    localStorage.setItem('userSyllabusProgress', JSON.stringify(userProgress));
-  }, [userProgress]);
-  
+    const fetchExploredPhases = async () => {
+      const phases = await contentCacheService.getExploredPhases();
+      setExploredPhases(new Set(phases));
+    };
+    fetchExploredPhases();
+  }, []);
+
   const handlePhaseSelect = (phaseId: number) => {
     console.log(`📚 Selecting phase ${phaseId}`);
     setCurrentPhaseId(phaseId);
@@ -142,7 +133,7 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
             key={phase.id}
             phase={phase}
             isActive={currentPhaseId === phase.id}
-            completedTasks={userProgress.completedTasks}
+            isCompleted={exploredPhases.has(phase.id)}
             onSelect={() => handlePhaseSelect(phase.id)}
           />
         ))}
