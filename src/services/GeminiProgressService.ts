@@ -21,6 +21,16 @@ export class GeminiProgressService {
       return Math.round((exploredPhases.length / totalPhases) * 100);
     } catch (error) {
       console.error('Error calculating Gemini progress:', error);
+      // Fallback to localStorage if database fails
+      try {
+        const savedPhases = localStorage.getItem('exploredPhases');
+        if (savedPhases) {
+          const phases = JSON.parse(savedPhases);
+          return Math.round((phases.length / 5) * 100);
+        }
+      } catch (localError) {
+        console.error('Error loading from localStorage:', localError);
+      }
       return 0;
     }
   }

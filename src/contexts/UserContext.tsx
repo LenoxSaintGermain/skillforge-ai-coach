@@ -40,6 +40,7 @@ export interface Achievement {
 interface UserContextType {
   currentUser: User | null;
   isAuthenticated: boolean;
+  hasSession: boolean;
   isLoading: boolean;
   session: Session | null;
   login: (email: string, password: string) => Promise<{ error: any }>;
@@ -251,7 +252,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <UserContext.Provider value={{ 
       currentUser, 
-      isAuthenticated: !!session?.user, 
+      isAuthenticated: !!session?.user && !!currentUser,
+      hasSession: !!session?.user,
       isLoading,
       session,
       login,

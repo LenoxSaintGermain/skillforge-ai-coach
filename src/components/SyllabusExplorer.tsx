@@ -84,7 +84,7 @@ const PhaseCard = ({
 
 const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (isLearning: boolean) => void }) => {
   const { coachService, isServiceReady, error } = useAI();
-  const { currentUser, isAuthenticated } = useUser();
+  const { currentUser, isAuthenticated, hasSession } = useUser();
   const [currentPhaseId, setCurrentPhaseId] = useState(1);
   const [isLearningMode, setIsLearningMode] = useState(false);
   const [exploredPhases, setExploredPhases] = useState<Set<number>>(new Set());
@@ -129,11 +129,33 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
         } finally {
           setIsLoadingProgress(false);
         }
+      } else if (hasSession) {
+        // If we have a session but no currentUser yet, try to load from localStorage
+        const savedPhases = localStorage.getItem('exploredPhases');
+        if (savedPhases) {
+          setExploredPhases(new Set(JSON.parse(savedPhases)));
+        }
       }
     };
 
     loadExploredPhases();
-  }, [currentUser?.id]);
+  }, [currentUser?.id, hasSession]);
+
+  // Refresh progress when returning from learning mode
+  const refreshProgress = async () => {
+    if (currentUser?.id) {
+      setIsLoadingProgress(true);
+      try {
+        const phases = await contentCacheService.getExploredPhases(currentUser.id);
+        setExploredPhases(new Set(phases));
+        localStorage.setItem('exploredPhases', JSON.stringify(phases));
+      } catch (error) {
+        console.error('Error refreshing progress:', error);
+      } finally {
+        setIsLoadingProgress(false);
+      }
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem('userSyllabusProgress', JSON.stringify(userProgress));
@@ -183,9 +205,11 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
     return (
       <InteractiveCurriculumCanvas 
         phase={currentPhase} 
-        onBackToSyllabus={() => {
+        onBackToSyllabus={async () => {
           setIsLearningMode(false);
           onLearningModeChange?.(false);
+          // Refresh progress when returning to syllabus
+          await refreshProgress();
         }}
         onPhaseChange={handlePhaseChange}
       />

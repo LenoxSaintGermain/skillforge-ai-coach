@@ -56,7 +56,7 @@ const RecommendationCard = ({ title, description, icon, onClick }: {
 };
 
 const Dashboard = () => {
-  const { currentUser, isAuthenticated } = useUser();
+  const { currentUser, isAuthenticated, hasSession } = useUser();
   const navigate = useNavigate();
   const [geminiProgress, setGeminiProgress] = useState<{
     progress: number;
@@ -72,16 +72,49 @@ const Dashboard = () => {
         try {
           const progressInfo = await geminiProgressService.getProgressInfo(currentUser.id);
           setGeminiProgress(progressInfo);
-          // Ensure the learning goal is synced only when authenticated
+          // Ensure the learning goal is synced only when fully authenticated
           await geminiProgressService.syncProgress(currentUser.id);
         } catch (error) {
           console.error('Error loading Gemini progress:', error);
+          // Show basic progress from localStorage if available
+          try {
+            const savedPhases = localStorage.getItem('exploredPhases');
+            if (savedPhases) {
+              const phases = JSON.parse(savedPhases);
+              const progress = Math.round((phases.length / 5) * 100);
+              setGeminiProgress({
+                progress,
+                exploredPhases: phases,
+                totalPhases: 5,
+                completedPhases: phases.length
+              });
+            }
+          } catch (localError) {
+            console.error('Error loading local progress:', localError);
+          }
+        }
+      } else if (hasSession && !currentUser) {
+        // If we have a session but user data is still loading, show localStorage progress
+        try {
+          const savedPhases = localStorage.getItem('exploredPhases');
+          if (savedPhases) {
+            const phases = JSON.parse(savedPhases);
+            const progress = Math.round((phases.length / 5) * 100);
+            setGeminiProgress({
+              progress,
+              exploredPhases: phases,
+              totalPhases: 5,
+              completedPhases: phases.length
+            });
+          }
+        } catch (error) {
+          console.error('Error loading local progress during auth:', error);
         }
       }
     };
 
     loadGeminiProgress();
-  }, [currentUser?.id, isAuthenticated]);
+  }, [currentUser?.id, isAuthenticated, hasSession]);
 
   if (!currentUser) {
     return (
