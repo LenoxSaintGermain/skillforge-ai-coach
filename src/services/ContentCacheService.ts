@@ -304,6 +304,34 @@ export class ContentCacheService {
     return true;
   }
 
+  // Get explored phases for a user (phases with cached content)
+  async getExploredPhases(userId: string): Promise<number[]> {
+    try {
+      const { data, error } = await supabase
+        .from('content_cache')
+        .select('phase_id')
+        .eq('user_id', userId)
+        .gt('expires_at', new Date().toISOString())
+        .order('phase_id', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching explored phases:', error);
+        return [];
+      }
+
+      // Convert phase_ids to numbers and remove duplicates
+      const phaseIds = data
+        .map(item => parseInt(item.phase_id, 10))
+        .filter(id => !isNaN(id))
+        .filter((value, index, self) => self.indexOf(value) === index);
+
+      return phaseIds;
+    } catch (error) {
+      console.error('Error in getExploredPhases:', error);
+      return [];
+    }
+  }
+
   // Utility to clear a user's cache (optionally by phase/interaction)
   async clearUserCache(userId: string, opts?: { phaseId?: string; interactionType?: string }): Promise<void> {
     try {

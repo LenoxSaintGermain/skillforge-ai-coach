@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { geminiSyllabus } from '@/data/GeminiSyllabus';
 import { useAI } from '@/contexts/AIContext';
+import { useUser } from '@/contexts/UserContext';
 import { SyllabusPhase } from '@/models/Syllabus';
 import { Brain, BookOpen, CheckCircle, ArrowRight, Eye } from 'lucide-react';
 import InteractiveCurriculumCanvas from './InteractiveCurriculumCanvas';
+import { contentCacheService } from '@/services/ContentCacheService';
 
 const PhaseCard = ({ 
   phase, 
@@ -81,9 +83,11 @@ const PhaseCard = ({
 
 const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (isLearning: boolean) => void }) => {
   const { coachService, isServiceReady, error } = useAI();
+  const { currentUser } = useUser();
   const [currentPhaseId, setCurrentPhaseId] = useState(1);
   const [isLearningMode, setIsLearningMode] = useState(false);
   const [exploredPhases, setExploredPhases] = useState<Set<number>>(new Set());
+  const [isLoadingProgress, setIsLoadingProgress] = useState(false);
   const [userProgress, setUserProgress] = useState(() => {
     const savedProgress = localStorage.getItem('userSyllabusProgress');
     if (savedProgress) {
@@ -103,6 +107,33 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
     };
   });
 
+  // Load explored phases from database
+  useEffect(() => {
+    const loadExploredPhases = async () => {
+      if (currentUser?.id) {
+        setIsLoadingProgress(true);
+        try {
+          const phases = await contentCacheService.getExploredPhases(currentUser.id);
+          setExploredPhases(new Set(phases));
+          
+          // Also save to localStorage as backup
+          localStorage.setItem('exploredPhases', JSON.stringify(phases));
+        } catch (error) {
+          console.error('Error loading explored phases:', error);
+          // Try to load from localStorage as fallback
+          const savedPhases = localStorage.getItem('exploredPhases');
+          if (savedPhases) {
+            setExploredPhases(new Set(JSON.parse(savedPhases)));
+          }
+        } finally {
+          setIsLoadingProgress(false);
+        }
+      }
+    };
+
+    loadExploredPhases();
+  }, [currentUser?.id]);
+
   useEffect(() => {
     localStorage.setItem('userSyllabusProgress', JSON.stringify(userProgress));
   }, [userProgress]);
@@ -117,14 +148,20 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
     if (newPhaseId >= 1 && newPhaseId <= 5) {
       setCurrentPhaseId(newPhaseId);
       // Mark previous phase as explored when navigating
-      setExploredPhases(prev => new Set([...prev, currentPhaseId]));
+      const updatedPhases = new Set([...exploredPhases, currentPhaseId]);
+      setExploredPhases(updatedPhases);
+      // Save to localStorage as backup
+      localStorage.setItem('exploredPhases', JSON.stringify([...updatedPhases]));
     }
   };
 
   const handleEnterLearningMode = () => {
     setIsLearningMode(true);
     // Mark current phase as explored when entering learning mode
-    setExploredPhases(prev => new Set([...prev, currentPhaseId]));
+    const updatedPhases = new Set([...exploredPhases, currentPhaseId]);
+    setExploredPhases(updatedPhases);
+    // Save to localStorage as backup
+    localStorage.setItem('exploredPhases', JSON.stringify([...updatedPhases]));
     onLearningModeChange?.(true);
   };
   
