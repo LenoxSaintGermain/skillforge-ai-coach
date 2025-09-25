@@ -31,7 +31,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
   const [userProgress, setUserProgress] = useState<any>(null);
   const [showCoachChat, setShowCoachChat] = useState(false);
   
-  const { } = useAI();
+  const { coachService } = useAI();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { currentUser, isAuthenticated } = useUser();
@@ -109,7 +109,6 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
       setUpdatedScenario(refreshedScenario);
 
       // Update coach context with new progress
-      const { coachService } = useAI();
       if (coachService && showCoachChat) {
         coachService.updateScenarioProgress(newCompletedSteps, currentStep);
       }
