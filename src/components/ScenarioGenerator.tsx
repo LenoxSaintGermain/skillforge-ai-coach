@@ -140,7 +140,7 @@ const ScenarioGenerator = () => {
             Generate Personalized Learning Scenario
           </CardTitle>
           <CardDescription>
-            Create a custom AI learning scenario tailored to your role and industry
+            Create a custom, hands-on AI learning scenario that guides you through using Google's Gemini and AI Studio tools in your role and industry
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -364,6 +364,31 @@ const ScenarioGenerator = () => {
             <div>
               <h4 className="font-medium mb-1">Challenge</h4>
               <p className="text-sm text-muted-foreground">{generatedScenario.challenge}</p>
+            </div>
+            
+            <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+              <h4 className="font-medium mb-1 text-blue-900 dark:text-blue-100">🚀 AI Tools Required</h4>
+              <p className="text-xs text-blue-800 dark:text-blue-200 mb-2">
+                You'll use these Google AI tools to complete the scenario tasks:
+              </p>
+              <div className="flex gap-2">
+                <a 
+                  href="https://gemini.google.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
+                >
+                  Gemini →
+                </a>
+                <a 
+                  href="https://aistudio.google.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
+                >
+                  AI Studio →
+                </a>
+              </div>
             </div>
             
             <div>

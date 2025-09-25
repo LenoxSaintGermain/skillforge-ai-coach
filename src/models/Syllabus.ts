@@ -1,4 +1,12 @@
 
+export interface ScenarioTask {
+  id: string;
+  description: string;
+  aiActions?: string[];
+  evaluationTips?: string;
+  isCompleted: boolean;
+}
+
 export interface SyllabusPhase {
   id: number;
   title: string;

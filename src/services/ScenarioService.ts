@@ -471,33 +471,66 @@ AI Knowledge Level: ${userProfile.aiKnowledgeLevel}
 Learning Goals: ${learningGoalsText}
 ${description ? `Additional Context: ${description}` : ''}
 
+IMPORTANT: This scenario must be designed for hands-on learning with Google's Gemini AI and AI Studio. Users will complete tasks by actually using these tools.
+
 Create a detailed scenario that includes:
 1. An engaging title that reflects the role and industry
 2. A realistic context that puts the learner in a professional situation
-3. A specific challenge that requires AI knowledge and skills
-4. 5 progressive tasks that guide learning (each with a clear description)
-5. 6-8 relevant resources to support learning
-6. 5 evaluation criteria for success
-7. 3-4 skills that will be developed
+3. A specific challenge that requires hands-on AI tool usage
+4. 5 progressive tasks that guide learning - EACH TASK MUST INCLUDE:
+   - Clear objective and expected outcome
+   - Specific prompts to try in Gemini/AI Studio
+   - Instructions on how to access the AI tools
+   - Guidance on evaluating AI responses
+5. 6-8 relevant resources including links to gemini.google.com and aistudio.google.com
+6. 5 evaluation criteria focused on AI tool proficiency
+7. 3-4 skills that will be developed through AI interaction
 8. Appropriate difficulty level (Beginner/Intermediate/Advanced)
-9. Estimated completion time (30-120 minutes)
+9. Estimated completion time (45-120 minutes)
 
-The scenario should be practical, engaging, and directly applicable to their work environment.
+The scenario should be practical, hands-on, and require active use of Google's AI tools to complete.
 
 Please format the response as a structured JSON object with the following structure:
 {
   "title": "Scenario title",
-  "context": "Detailed background context",
-  "challenge": "Specific challenge to solve", 
+  "context": "Detailed background context explaining the professional situation",
+  "challenge": "Specific challenge that requires AI tool usage to solve", 
   "tasks": [
-    {"description": "Task 1 description"},
-    {"description": "Task 2 description"},
-    {"description": "Task 3 description"},
-    {"description": "Task 4 description"},
-    {"description": "Task 5 description"}
+    {
+      "description": "Task 1 objective",
+      "aiActions": [
+        "Go to gemini.google.com or aistudio.google.com",
+        "Try this prompt: [specific prompt text]",
+        "Expected response pattern: [what to look for in AI output]",
+        "Next steps based on AI response"
+      ],
+      "evaluationTips": "How to know if you've succeeded with this task"
+    },
+    {
+      "description": "Task 2 objective", 
+      "aiActions": [
+        "Build on previous prompt results",
+        "Try this enhanced prompt: [specific prompt text]",
+        "Compare different AI responses",
+        "Refine based on outputs"
+      ],
+      "evaluationTips": "Success criteria for this task"
+    }
   ],
-  "resources": ["Resource 1", "Resource 2", ...],
-  "evaluationCriteria": ["Criteria 1", "Criteria 2", ...],
+  "resources": [
+    "https://gemini.google.com - Main Gemini interface",
+    "https://aistudio.google.com - Google AI Studio for advanced features",
+    "Industry-specific resource 1",
+    "Best practices guide for prompt engineering",
+    "Documentation link relevant to the scenario"
+  ],
+  "evaluationCriteria": [
+    "Effective use of AI prompting techniques",
+    "Quality of AI responses obtained",
+    "Successful completion of AI-guided tasks",
+    "Understanding of AI tool capabilities",
+    "Practical application to work scenario"
+  ],
   "skillsAddressed": ["Skill 1", "Skill 2", ...],
   "difficultyLevel": "Intermediate",
   "estimatedTime": "90 minutes"
@@ -552,6 +585,8 @@ Please format the response as a structured JSON object with the following struct
         tasks: (parsedData.tasks || []).map((task: any, index: number) => ({
           id: `t-ai-${Date.now()}-${index}`,
           description: task.description || task,
+          aiActions: task.aiActions || [],
+          evaluationTips: task.evaluationTips || '',
           isCompleted: false
         })),
         resources: parsedData.resources || [],
@@ -582,6 +617,150 @@ Please format the response as a structured JSON object with the following struct
    * Fallback scenario generation when AI fails
    */
   private generateFallbackScenario(userProfile: UserProfile, learningGoals: LearningGoal[], description?: string): Scenario {
+    const scenarioFocus = description 
+      ? `focusing on: ${description}` 
+      : `based on role: ${userProfile.role} in ${userProfile.industry}`;
+
+    return {
+      id: `fallback-${Date.now()}`,
+      title: `AI Learning Scenario - ${userProfile.role}`,
+      context: `As a ${userProfile.role} in ${userProfile.industry}, you need hands-on experience with AI tools.`,
+      challenge: `Complete real-world tasks using Google's Gemini and AI Studio tools ${scenarioFocus}`,
+      tasks: [
+        {
+          id: 'fallback-task-1',
+          description: 'Use AI to analyze a work challenge',
+          isCompleted: false
+        },
+        {
+          id: 'fallback-task-2', 
+          description: 'Create professional content using AI',
+          isCompleted: false
+        }
+      ],
+      resources: [
+        'https://gemini.google.com - Google Gemini AI assistant',
+        'https://aistudio.google.com - Google AI Studio for advanced prompting'
+      ],
+      evaluationCriteria: [
+        'Effective use of AI prompting techniques',
+        'Quality of AI-generated outputs'
+      ],
+      skillsAddressed: ['AI Tool Usage', 'Prompt Engineering'],
+      difficultyLevel: userProfile.aiKnowledgeLevel || 'Intermediate',
+      estimatedTime: '60 minutes',
+      completionStats: {
+        percentComplete: 0,
+        timeSpent: '0 minutes',
+        skillProgress: [
+          { skillName: 'AI Tool Usage', progress: 0 }
+        ],
+        coachInteractions: 0
+      }
+    };
+  }
+      'Marketing Manager': {
+        title: 'AI-Powered Marketing Campaign Development',
+        context: 'As a Marketing Manager, you need to create a comprehensive marketing campaign using AI tools to analyze market trends, generate content, and optimize messaging for maximum impact.',
+        challenge: 'Develop a multi-channel marketing campaign using Google\'s AI tools to create compelling content, analyze target audiences, and optimize campaign performance.',
+        tasks: [
+          {
+            id: 'fallback-task-1',
+            description: 'Use AI to analyze your target market and create customer personas',
+            aiActions: [
+              'Go to gemini.google.com',
+              'Try this prompt: "Analyze the target market for [your product/service] and create 3 detailed customer personas including demographics, pain points, and buying behaviors"',
+              'Expected response: Detailed persona profiles with actionable insights',
+              'Refine with follow-up questions about specific demographics or behaviors'
+            ],
+            evaluationTips: 'Look for specific, actionable insights that you can use in your marketing strategy',
+            isCompleted: false
+          },
+          {
+            id: 'fallback-task-2',
+            description: 'Generate compelling marketing copy for different channels',
+            aiActions: [
+              'Open AI Studio (aistudio.google.com) for more advanced prompting',
+              'Try this prompt: "Create marketing copy variations for [product] targeting persona [X] across email, social media, and web ads. Keep email under 150 words, social posts under 50 words"',
+              'Expected response: Channel-specific copy variations',
+              'Test different tones (professional, casual, urgent) with follow-up prompts'
+            ],
+            evaluationTips: 'Copy should be tailored to each channel and speak directly to your target personas',
+            isCompleted: false
+          }
+        ]
+      },
+      'Software Developer': {
+        title: 'AI-Assisted Code Development and Documentation',
+        context: 'As a Software Developer, you need to leverage AI tools to accelerate development, improve code quality, and create comprehensive documentation for your projects.',
+        challenge: 'Use Google\'s AI tools to assist in code development, debugging, and creating technical documentation that improves team productivity.',
+        tasks: [
+          {
+            id: 'fallback-task-1',
+            description: 'Generate and optimize code solutions using AI',
+            aiActions: [
+              'Go to gemini.google.com',
+              'Try this prompt: "Write a Python function that [describe your functionality]. Include error handling, type hints, and docstrings following PEP standards"',
+              'Expected response: Clean, well-documented code with explanations',
+              'Ask follow-up questions about optimization, alternative approaches, or testing'
+            ],
+            evaluationTips: 'Code should be production-ready with proper error handling and documentation',
+            isCompleted: false
+          },
+          {
+            id: 'fallback-task-2',
+            description: 'Create comprehensive technical documentation',
+            aiActions: [
+              'Use AI Studio for more complex documentation tasks',
+              'Try this prompt: "Create technical documentation for [your project/feature] including API endpoints, usage examples, and troubleshooting guide. Format in markdown"',
+              'Expected response: Structured, comprehensive documentation',
+              'Iterate to add specific sections like installation guides or contributing guidelines'
+            ],
+            evaluationTips: 'Documentation should be clear, comprehensive, and easily understood by other developers',
+            isCompleted: false
+          }
+        ]
+      }
+    };
+
+    const roleScenario = scenarios[userProfile.role] || scenarios['Marketing Manager'];
+    
+    return {
+      id: `fallback-${Date.now()}`,
+      title: roleScenario.title,
+      context: roleScenario.context,
+      challenge: roleScenario.challenge,
+      tasks: roleScenario.tasks,
+      resources: [
+        'https://gemini.google.com - Main Gemini interface for AI assistance',
+        'https://aistudio.google.com - Google AI Studio for advanced prompting',
+        'Google AI Documentation - Best practices and guides',
+        'Prompt Engineering Guide - Tips for effective AI interactions',
+        'Industry Best Practices - Resources specific to your field'
+      ],
+      evaluationCriteria: [
+        'Effective use of AI prompting techniques',
+        'Quality and relevance of AI-generated outputs',
+        'Successful completion of role-specific tasks',
+        'Understanding of AI tool capabilities and limitations',
+        'Practical application to real-world scenarios'
+      ],
+      skillsAddressed: ['AI Tool Proficiency', 'Prompt Engineering', 'Critical Thinking', 'Problem Solving'],
+      difficultyLevel: userProfile.aiKnowledgeLevel || 'Intermediate',
+      estimatedTime: '60-90 minutes',
+      completionStats: {
+        percentComplete: 0,
+        timeSpent: '0 minutes',
+        skillProgress: [
+          { skillName: 'AI Tool Proficiency', progress: 0 },
+          { skillName: 'Prompt Engineering', progress: 0 },
+          { skillName: 'Critical Thinking', progress: 0 },
+          { skillName: 'Problem Solving', progress: 0 }
+        ],
+        coachInteractions: 0
+      }
+    };
+  }
     const scenarioFocus = description 
       ? `with focus on: ${description}`
       : 'focusing on general AI adoption';

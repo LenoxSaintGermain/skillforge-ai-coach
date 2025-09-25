@@ -267,25 +267,75 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
       icon: <Puzzle className="h-5 w-5" />,
       content: (
         <div className="space-y-4">
+          <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+            <h3 className="text-lg font-medium text-blue-900 dark:text-blue-100 mb-2">🚀 AI-Guided Learning</h3>
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              Complete these tasks by using <strong>Google's Gemini AI</strong> and <strong>AI Studio</strong>. 
+              Each task includes specific prompts and guidance for hands-on AI tool usage.
+            </p>
+            <div className="flex gap-2 mt-2">
+              <a 
+                href="https://gemini.google.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
+              >
+                Open Gemini →
+              </a>
+              <a 
+                href="https://aistudio.google.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
+              >
+                Open AI Studio →
+              </a>
+            </div>
+          </div>
+
           <h3 className="text-lg font-medium">Required Tasks</h3>
-          <ul className="space-y-3">
+          <ul className="space-y-4">
             {(updatedScenario.tasks || []).map((task, index) => (
-              <li key={task.id || index} className="flex items-start">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-primary mr-2">
-                  {completedSteps.includes(String(task.id)) ? 
-                    <CheckCircle className="h-4 w-4 text-primary" /> : 
-                    <span className="text-xs font-medium">{index + 1}</span>
-                  }
+              <li key={task.id || index} className="border-l-4 border-primary pl-4 py-3 bg-muted/50 rounded-r-lg">
+                <div className="flex items-start justify-between mb-2">
+                  <span className="text-sm font-medium text-primary mr-2">Task {index + 1}</span>
+                  {completedSteps.includes(String(task.id)) && (
+                    <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  )}
                 </div>
-                <div>
-                  <p className="text-sm">{task.description}</p>
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">{task.description}</p>
+                  
+                  {(task as any).aiActions && (task as any).aiActions.length > 0 && (
+                    <div className="bg-background p-3 rounded border">
+                      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                        AI Actions Required:
+                      </h4>
+                      <ol className="text-xs space-y-1 text-muted-foreground">
+                        {(task as any).aiActions.map((action: string, actionIndex: number) => (
+                          <li key={actionIndex} className="flex items-start">
+                            <span className="mr-2 font-mono">{actionIndex + 1}.</span>
+                            <span>{action}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+                  
+                  {(task as any).evaluationTips && (
+                    <div className="bg-green-50 dark:bg-green-950 p-2 rounded text-xs">
+                      <strong className="text-green-800 dark:text-green-200">Success Tip:</strong>
+                      <span className="text-green-700 dark:text-green-300 ml-1">{(task as any).evaluationTips}</span>
+                    </div>
+                  )}
+                  
                   <Button 
-                    variant={completedSteps.includes(String(task.id)) ? "secondary" : "ghost"}
+                    variant={completedSteps.includes(String(task.id)) ? "secondary" : "default"}
                     size="sm" 
-                    className="mt-1 h-7 text-xs"
+                    className="mt-2 h-8 text-xs"
                     onClick={() => handleMarkTaskComplete(String(task.id), !completedSteps.includes(String(task.id)))}
                   >
-                    {completedSteps.includes(String(task.id)) ? "Completed ✓" : "Mark as complete"}
+                    {completedSteps.includes(String(task.id)) ? "Completed ✓" : "Mark as Complete"}
                   </Button>
                 </div>
               </li>
@@ -322,20 +372,44 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
             ))}
           </ul>
           
-          <div className="mt-6 p-4 bg-muted rounded-lg">
-            <h4 className="font-medium mb-2">Need Help?</h4>
-            <p className="text-sm mb-3">
-              Ask your AI coach specific questions about this scenario. Your coach can provide guidance, additional resources, and help you work through challenging aspects.
-            </p>
-            <Button 
-              className="w-full bg-skillforge-primary hover:bg-skillforge-primary/90"
-              onClick={handleOpenCoachChat}
-            >
-              Chat with AI Coach
-            </Button>
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              AI coach interactions so far: {updatedScenario.completionStats?.coachInteractions || 0}
-            </p>
+          <div className="mt-6 space-y-4">
+            <div className="p-4 bg-orange-50 dark:bg-orange-950 rounded-lg">
+              <h4 className="font-medium mb-2 text-orange-900 dark:text-orange-100">🎯 Quick Access Links</h4>
+              <div className="grid grid-cols-2 gap-2">
+                <a 
+                  href="https://gemini.google.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm bg-blue-600 text-white px-3 py-2 rounded text-center hover:bg-blue-700"
+                >
+                  Launch Gemini
+                </a>
+                <a 
+                  href="https://aistudio.google.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm bg-green-600 text-white px-3 py-2 rounded text-center hover:bg-green-700"
+                >
+                  Launch AI Studio
+                </a>
+              </div>
+            </div>
+
+            <div className="p-4 bg-muted rounded-lg">
+              <h4 className="font-medium mb-2">Need Help?</h4>
+              <p className="text-sm mb-3">
+                Ask your AI coach specific questions about this scenario. Your coach can provide guidance, additional resources, and help you work through challenging aspects.
+              </p>
+              <Button 
+                className="w-full bg-skillforge-primary hover:bg-skillforge-primary/90"
+                onClick={handleOpenCoachChat}
+              >
+                Chat with AI Coach
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                AI coach interactions so far: {updatedScenario.completionStats?.coachInteractions || 0}
+              </p>
+            </div>
           </div>
         </div>
       )
