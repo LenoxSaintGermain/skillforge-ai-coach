@@ -104,6 +104,12 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
       };
       
       setUpdatedScenario(refreshedScenario);
+
+      // Update coach context with new progress
+      const { coachService } = useAI();
+      if (coachService && showCoachChat) {
+        coachService.updateScenarioProgress(newCompletedSteps, currentStep);
+      }
       
       toast({
         title: isCompleted ? "Task completed!" : "Task marked as incomplete",

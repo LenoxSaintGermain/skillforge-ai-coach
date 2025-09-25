@@ -105,6 +105,28 @@ export class AICoachService {
       estimatedTime: scenario.estimatedTime,
       difficultyLevel: scenario.difficultyLevel
     };
+    
+    console.log('🎯 Coach context updated:', {
+      scenario: scenario.title,
+      completedTasks: this.userContext.currentScenario.completedTasks.length,
+      totalTasks: this.userContext.currentScenario.tasks.length,
+      currentStep: this.userContext.currentScenario.currentStep
+    });
+  }
+
+  /**
+   * Update progress when user completes tasks
+   */
+  public updateScenarioProgress(completedTasks: string[], currentStep: number): void {
+    if (this.userContext.currentScenario) {
+      this.userContext.currentScenario.completedTasks = completedTasks;
+      this.userContext.currentScenario.currentStep = currentStep;
+      
+      console.log('📈 Coach progress updated:', {
+        completedTasks: completedTasks.length,
+        currentStep: currentStep
+      });
+    }
   }
   
   /**
@@ -359,9 +381,39 @@ Key guidelines:
 - Keep responses conversational and encouraging
 - Focus on helping users learn by doing`;
 
-    // Add scenario-specific context if available
+    // Add detailed scenario-specific context if available
     if (this.userContext.currentScenario) {
-      systemPrompt += `\n\nCurrent scenario context: ${JSON.stringify(this.userContext.currentScenario)}`;
+      const scenario = this.userContext.currentScenario;
+      const completedCount = scenario.completedTasks?.length || 0;
+      const totalCount = scenario.tasks?.length || 0;
+      const progressPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+      
+      systemPrompt += `
+
+CURRENT SCENARIO CONTEXT:
+- Scenario: "${scenario.title}"
+- Main Challenge: ${scenario.challenge}
+- Skills Being Developed: ${scenario.skillsAddressed?.join(', ')}
+- Progress: ${completedCount}/${totalCount} tasks completed (${progressPercentage}%)
+- Current Step: ${scenario.currentStep + 1}
+- Difficulty: ${scenario.difficultyLevel}
+- Estimated Time: ${scenario.estimatedTime}
+
+TASK BREAKDOWN:
+${scenario.tasks?.map((task: any, index: number) => {
+  const isCompleted = scenario.completedTasks?.includes(task.id);
+  const status = isCompleted ? '✅ COMPLETED' : '🔲 PENDING';
+  return `${index + 1}. ${task.title} - ${status}
+   ${task.description || 'No description available'}`;
+}).join('\n\n') || 'No tasks available'}
+
+COACHING INSTRUCTIONS:
+- Always reference specific tasks and scenario elements in your responses
+- Provide guidance relevant to the "${scenario.challenge}" challenge
+- Help users understand how tasks connect to the overall learning objective
+- Celebrate completed tasks and guide users toward next steps
+- If asked about progress, reference specific completed/pending tasks by name
+- Tailor advice to focus on: ${scenario.skillsAddressed?.join(', ')}`;
     }
 
     // Add user activity context
