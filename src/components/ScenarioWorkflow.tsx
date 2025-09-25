@@ -86,13 +86,16 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
     setCompletedSteps(newCompletedSteps);
     
     try {
+      console.log('🔄 Updating task progress:', { taskId, isCompleted, currentUser: currentUser.user_id });
+      
       // Update progress in database
       await scenarioService.updateScenarioProgress(scenario.id, currentUser.user_id, newCompletedSteps);
       
       // Update local scenario state
       const refreshedScenario = { ...updatedScenario };
       (refreshedScenario.tasks || []).forEach(task => {
-        task.isCompleted = newCompletedSteps.includes(task.id);
+        // Ensure task.id is always a string for comparison
+        task.isCompleted = newCompletedSteps.includes(String(task.id));
       });
       
       // Update completion stats
@@ -117,10 +120,10 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
         duration: 3000,
       });
     } catch (error) {
-      console.error('Error updating progress:', error);
+      console.error('❌ Error updating progress:', error);
       toast({
-        title: "Error",
-        description: "Failed to save progress. Please try again.",
+        title: "Failed to save progress",
+        description: error.message || "Please check your connection and try again.",
         variant: "destructive",
       });
       // Revert local state on error
@@ -268,9 +271,9 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
           <h3 className="text-lg font-medium">Required Tasks</h3>
           <ul className="space-y-3">
             {(updatedScenario.tasks || []).map((task, index) => (
-              <li key={index} className="flex items-start">
+              <li key={task.id || index} className="flex items-start">
                 <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-primary mr-2">
-                  {completedSteps.includes(task.id) ? 
+                  {completedSteps.includes(String(task.id)) ? 
                     <CheckCircle className="h-4 w-4 text-primary" /> : 
                     <span className="text-xs font-medium">{index + 1}</span>
                   }
@@ -278,12 +281,12 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
                 <div>
                   <p className="text-sm">{task.description}</p>
                   <Button 
-                    variant={completedSteps.includes(task.id) ? "secondary" : "ghost"}
+                    variant={completedSteps.includes(String(task.id)) ? "secondary" : "ghost"}
                     size="sm" 
                     className="mt-1 h-7 text-xs"
-                    onClick={() => handleMarkTaskComplete(task.id, !completedSteps.includes(task.id))}
+                    onClick={() => handleMarkTaskComplete(String(task.id), !completedSteps.includes(String(task.id)))}
                   >
-                    {completedSteps.includes(task.id) ? "Completed ✓" : "Mark as complete"}
+                    {completedSteps.includes(String(task.id)) ? "Completed ✓" : "Mark as complete"}
                   </Button>
                 </div>
               </li>
@@ -487,7 +490,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
       <div className="bg-background border rounded-lg p-4">
         <div className="flex items-center justify-between mb-6">
           {steps.map((step, index) => (
-            <React.Fragment key={index}>
+            <div key={index} className="flex items-center flex-1">
               <div 
                 className={`flex flex-col items-center ${currentStep === index ? 'text-primary' : 
                   completedSteps.length > 0 && index === 0 ? 'text-primary/70' : 'text-muted-foreground'}`}
@@ -505,7 +508,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
                   index < currentStep ? 'bg-primary/70' : 'bg-muted'
                 }`} />
               )}
-            </React.Fragment>
+            </div>
           ))}
         </div>
         

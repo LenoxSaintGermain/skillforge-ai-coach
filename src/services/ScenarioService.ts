@@ -661,10 +661,10 @@ Please format the response as a structured JSON object with the following struct
         typeof resource === 'string' ? resource : resource.title || resource.url || 'Resource'
       ) : ['Scenario resources will be provided'];
     
-    // Extract tasks properly
+    // Extract tasks properly and ensure IDs are strings
     const tasks = scenarioData.tasks ? 
-      scenarioData.tasks.map((task: any) => ({
-        id: task.id || `task-${Math.random().toString(36).substr(2, 9)}`,
+      scenarioData.tasks.map((task: any, index: number) => ({
+        id: String(task.id || `task-${index + 1}-${Math.random().toString(36).substr(2, 9)}`),
         description: task.description || task.title || 'Complete task',
         isCompleted: task.isCompleted || false
       })) : [
@@ -828,49 +828,58 @@ Please format the response as a structured JSON object with the following struct
     try {
       const { supabase } = await import('@/integrations/supabase/client');
       
-      // Get user's current progress or create new record
-      const { data: existingProgress } = await supabase
-        .from('user_scenario_progress')
-        .select('*')
-        .eq('scenario_id', scenarioId)
-        .eq('user_id', userId)
-        .single();
+      if (!userId || !scenarioId) {
+        throw new Error('User ID and Scenario ID are required');
+      }
 
+      // Get the actual scenario to determine total tasks
+      const scenario = await this.getScenarioById(scenarioId);
+      const totalTasks = scenario?.tasks?.length || 5; // Fallback to 5
+      
+      // Standardized progress data structure
       const progressData = {
-        completed_tasks: completedTasks,
-        current_step: completedTasks.length,
-        total_steps: 4 // Default workflow steps
+        completedTasks: completedTasks,
+        currentStep: Math.min(completedTasks.length, 3), // 0-3 for workflow steps
+        totalTasks: totalTasks,
+        lastUpdated: new Date().toISOString()
       };
 
-      const totalTasks = 4; // Default number of tasks
       const percentComplete = Math.round((completedTasks.length / totalTasks) * 100);
+      const isCompleted = percentComplete >= 100;
 
-      if (existingProgress) {
-        // Update existing progress
-        await supabase
-          .from('user_scenario_progress')
-          .update({
-            progress_data: progressData,
-            status: percentComplete === 100 ? 'completed' : 'in_progress',
-            ...(percentComplete === 100 && { completed_at: new Date().toISOString() })
-          })
-          .eq('id', existingProgress.id);
-      } else {
-        // Create new progress record
-        await supabase
-          .from('user_scenario_progress')
-          .insert({
-            user_id: userId,
-            scenario_id: scenarioId,
-            progress_data: progressData,
-            status: 'in_progress',
-            started_at: new Date().toISOString()
-          });
+      console.log('💾 Saving progress:', {
+        scenarioId,
+        userId: userId.substring(0, 8) + '...',
+        completedCount: completedTasks.length,
+        totalTasks,
+        percentComplete
+      });
+
+      // Use upsert for more reliable insert/update logic
+      const { error } = await supabase
+        .from('user_scenario_progress')
+        .upsert({
+          user_id: userId,
+          scenario_id: scenarioId,
+          progress_data: progressData,
+          status: isCompleted ? 'completed' : 'in_progress',
+          updated_at: new Date().toISOString(),
+          ...(isCompleted && { completed_at: new Date().toISOString() }),
+          // Only set started_at on first creation
+          ...(!completedTasks.length && { started_at: new Date().toISOString() })
+        }, {
+          onConflict: 'user_id,scenario_id'
+        });
+
+      if (error) {
+        console.error('Database error saving progress:', error);
+        throw error;
       }
       
-      console.log(`Updated progress for scenario ${scenarioId}, user ${userId}: completed tasks ${completedTasks.join(', ')}`);
+      console.log('✅ Progress saved successfully');
     } catch (error) {
-      console.warn('Failed to update scenario progress in database:', error);
+      console.error('❌ Failed to update scenario progress:', error);
+      throw new Error(`Failed to save progress: ${error.message}`);
     }
 
     // Also update local scenarios for immediate UI feedback
@@ -910,6 +919,20 @@ Please format the response as a structured JSON object with the following struct
         .maybeSingle();
 
       if (error) throw error;
+      
+      // Normalize progress data structure
+      if (data && data.progress_data) {
+        const progressData = data.progress_data as any;
+        
+        // Handle different formats of progress data
+        return {
+          ...data,
+          completedTasks: progressData?.completedTasks || progressData?.completed_tasks || [],
+          currentStep: progressData?.currentStep || progressData?.current_step || 0,
+          totalTasks: progressData?.totalTasks || progressData?.total_steps || 5
+        };
+      }
+      
       return data;
     } catch (error) {
       console.error('Error getting scenario progress:', error);
