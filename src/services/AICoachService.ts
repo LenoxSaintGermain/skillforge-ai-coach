@@ -285,29 +285,115 @@ export class AICoachService {
     }
 
     try {
-      // This part would normally call the Gemini API and get a structured response.
-      // For now, we are mocking the response.
-      const responseText = "Great question! Let's add a database to our architecture.";
+      // Build contextual prompt with scenario information
+      const recentHistory = this.conversationHistory.slice(-6); // Last 6 exchanges
+      const contextualPrompt = this.buildContextualPrompt(message, recentHistory);
+      
+      // Create scenario-aware system prompt
+      const systemPrompt = this.buildScenarioSystemPrompt();
+      
+      // Call actual Gemini API
+      const responseText = await this.callGeminiAPI(contextualPrompt, systemPrompt);
       this.addToConversationHistory('assistant', responseText);
+      
+      // Generate canvas objects based on response content
+      const canvasActions = this.generateCanvasActions(responseText, message);
+      
       return {
         actions: [
           { type: 'speech', content: responseText },
-          { type: 'canvas_object', object: 'rect', label: 'Database', params: { left: 100, top: 300, fill: '#f59e0b', width: 150, height: 75 } },
+          ...canvasActions
         ]
       };
 
     } catch (error) {
       console.error('Error processing user message:', error);
       
-      const fallbackText = "I'm having trouble connecting right now, but let's try something. How about we add a text box to describe the issue?";
+      const fallbackText = this.getFallbackResponse(message);
       this.addToConversationHistory('assistant', fallbackText);
+      
       return {
         actions: [
           { type: 'speech', content: fallbackText },
-          { type: 'canvas_object', object: 'text', label: 'Issue Description', params: { left: 400, top: 300, fill: '#ef4444', text: 'Connectivity Issue' } },
+          { type: 'canvas_object', object: 'text', label: 'Coach Available', params: { left: 400, top: 300, fill: '#10b981', text: 'I\'m here to help!' } },
         ]
       };
     }
+  }
+
+  /**
+   * Builds scenario-aware system prompt
+   */
+  private buildScenarioSystemPrompt(): string {
+    let systemPrompt = `You are Jarvis, an AI learning coach helping users develop AI skills through interactive scenarios. You are supportive, knowledgeable, and provide actionable guidance.
+
+Key guidelines:
+- Provide specific, practical advice related to the current scenario
+- Ask thoughtful follow-up questions to deepen understanding
+- Reference real-world applications and examples
+- Keep responses conversational and encouraging
+- Focus on helping users learn by doing`;
+
+    // Add scenario-specific context if available
+    if (this.userContext.currentScenario) {
+      systemPrompt += `\n\nCurrent scenario context: ${JSON.stringify(this.userContext.currentScenario)}`;
+    }
+
+    // Add user activity context
+    if (this.userContext.lastInteractions && this.userContext.lastInteractions.length > 0) {
+      systemPrompt += `\n\nRecent user interactions: ${this.userContext.lastInteractions.join(', ')}`;
+    }
+
+    return systemPrompt;
+  }
+
+  /**
+   * Generates canvas actions based on response content
+   */
+  private generateCanvasActions(responseText: string, userMessage: string): CanvasObjectAction[] {
+    const actions: CanvasObjectAction[] = [];
+    const lowerResponse = responseText.toLowerCase();
+    const lowerMessage = userMessage.toLowerCase();
+
+    // Generate relevant canvas objects based on content
+    if (lowerResponse.includes('database') || lowerMessage.includes('database')) {
+      actions.push({
+        type: 'canvas_object',
+        object: 'rect',
+        label: 'Database',
+        params: { left: 100, top: 300, fill: '#f59e0b', width: 150, height: 75 }
+      });
+    }
+
+    if (lowerResponse.includes('api') || lowerMessage.includes('api')) {
+      actions.push({
+        type: 'canvas_object',
+        object: 'circle',
+        label: 'API',
+        params: { left: 300, top: 200, fill: '#8b5cf6', radius: 40 }
+      });
+    }
+
+    if (lowerResponse.includes('user') || lowerMessage.includes('user')) {
+      actions.push({
+        type: 'canvas_object',
+        object: 'circle',
+        label: 'User',
+        params: { left: 500, top: 150, fill: '#10b981', radius: 45 }
+      });
+    }
+
+    // Default helpful object if none generated
+    if (actions.length === 0) {
+      actions.push({
+        type: 'canvas_object',
+        object: 'text',
+        label: 'Learning Point',
+        params: { left: 350, top: 250, fill: '#3b82f6', text: 'Key Concept' }
+      });
+    }
+
+    return actions;
   }
 
   /**
