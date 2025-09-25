@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
 import { Textarea } from "@/components/ui/textarea";
 import { useUser } from '@/contexts/UserContext';
+import CoachChatPanel from '@/components/CoachChatPanel';
 
 interface ScenarioWorkflowProps {
   scenario: Scenario;
@@ -28,6 +29,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackText, setFeedbackText] = useState('');
   const [userProgress, setUserProgress] = useState<any>(null);
+  const [showCoachChat, setShowCoachChat] = useState(false);
   
   const { } = useAI();
   const { toast } = useToast();
@@ -124,7 +126,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
   };
   
   const handleOpenCoachChat = () => {
-    // Display a toast message
+    setShowCoachChat(true);
     toast({
       title: "Coach activated",
       description: "Your coach is ready to help with this scenario.",
@@ -546,6 +548,13 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
       </div>
       
       <FeedbackDialog />
+      
+      {/* Coach Chat Panel */}
+      <CoachChatPanel 
+        isExpanded={showCoachChat}
+        scenario={updatedScenario}
+        userProgress={userProgress}
+      />
     </div>
   );
 };

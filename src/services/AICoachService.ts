@@ -83,6 +83,31 @@ export class AICoachService {
   }
   
   /**
+   * Set user context for personalized responses
+   */
+  public setUserContext(context: Partial<UserContext>): void {
+    this.userContext = { ...this.userContext, ...context };
+  }
+
+  /**
+   * Set scenario context for scenario-specific guidance
+   */
+  public setScenarioContext(scenario: any, userProgress: any): void {
+    this.userContext.currentScenario = {
+      id: scenario.id,
+      title: scenario.title,
+      context: scenario.context,
+      challenge: scenario.challenge,
+      tasks: scenario.tasks || [],
+      completedTasks: userProgress?.progress_data?.completedTasks || [],
+      currentStep: userProgress?.currentStep || 0,
+      skillsAddressed: scenario.skillsAddressed || [],
+      estimatedTime: scenario.estimatedTime,
+      difficultyLevel: scenario.difficultyLevel
+    };
+  }
+  
+  /**
    * Gets a response from the AI Coach based on a prompt
    */
   public async getResponse(prompt: string): Promise<string> {

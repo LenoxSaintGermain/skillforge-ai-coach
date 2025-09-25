@@ -73,12 +73,16 @@ interface CoachChatPanelProps {
   isExpanded?: boolean;
   initialExpanded?: boolean;
   className?: string;
+  scenario?: any;
+  userProgress?: any;
 }
 
 const CoachChatPanel = ({ 
   isExpanded: controlledExpanded, 
   initialExpanded = false,
-  className = '' 
+  className = '',
+  scenario,
+  userProgress
 }: CoachChatPanelProps) => {
   const [isExpanded, setIsExpanded] = useState(initialExpanded);
   const [inputValue, setInputValue] = useState('');
@@ -91,8 +95,11 @@ const CoachChatPanel = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initializationRef = useRef<{ userId?: string; context?: string }>({});
   
-  // Determine context based on current route
+  // Determine context based on current route and scenario
   const getCoachContext = () => {
+    if (scenario) {
+      return `the "${scenario.title}" scenario focused on ${scenario.skillsAddressed?.join(', ') || 'AI skills'}`;
+    }
     if (location.pathname.includes('gemini-training')) {
       return 'Gemini AI training and best practices';
     }
@@ -134,6 +141,11 @@ const CoachChatPanel = ({
         
         // Mark as initializing to prevent duplicates
         initializationRef.current = { userId: currentUser.id, context };
+        
+        // Set scenario context if available
+        if (scenario && userProgress) {
+          coachService.setScenarioContext(scenario, userProgress);
+        }
         
         const welcomeMessageResponse = await coachService.initializeCoach(currentUser, context);
         const welcomeMessageText = extractTextFromAIResponse(welcomeMessageResponse);
