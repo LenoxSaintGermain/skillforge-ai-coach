@@ -56,6 +56,39 @@ export interface EnhancedScenario {
 export class EnhancedScenarioService {
   
   /**
+   * Clean AI response by removing markdown code blocks and extra formatting
+   */
+  private cleanAIResponse(response: string): string {
+    // Remove markdown code blocks
+    let cleaned = response.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+    
+    // Remove any leading/trailing whitespace
+    cleaned = cleaned.trim();
+    
+    // If the response starts with text before JSON, try to extract just the JSON
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      cleaned = jsonMatch[0];
+    }
+    
+    return cleaned;
+  }
+  
+  /**
+   * Safely parse JSON with proper error handling
+   */
+  private safeJSONParse(jsonString: string, fallback: any = {}): any {
+    try {
+      const cleaned = this.cleanAIResponse(jsonString);
+      return JSON.parse(cleaned);
+    } catch (error) {
+      console.error('JSON parsing error:', error);
+      console.error('Original string:', jsonString);
+      return fallback;
+    }
+  }
+  
+  /**
    * Generate an enhanced scenario with real-time progress updates
    */
   public async generateEnhancedScenario(
@@ -169,7 +202,7 @@ Provide a JSON analysis with:
     template?: ScenarioTemplate | null
   ): string {
     const basePrompt = template?.template_content || this.getDefaultTemplate();
-    const analysisData = analysis ? JSON.parse(analysis) : null;
+    const analysisData = analysis ? this.safeJSONParse(analysis) : null;
 
     return `
 Create a cutting-edge AI learning scenario using the latest Gemini capabilities:
@@ -190,7 +223,7 @@ Skill Gaps: ${analysisData.skill_gaps?.join(', ')}
 ` : ''}
 
 REQUIREMENTS:
-1. Use Gemini 2.0 Flash capabilities for advanced scenario generation
+1. Use Gemini 2.5 Flash capabilities for advanced scenario generation
 2. Include real-world industry-specific challenges
 3. Provide hands-on tasks using gemini.google.com and aistudio.google.com
 4. Include multi-turn AI interactions and prompt refinement
@@ -294,7 +327,20 @@ Return only a number between 1-100.`;
     qualityScore: number
   ): EnhancedScenario {
     try {
-      const parsedData = JSON.parse(response);
+      const parsedData = this.safeJSONParse(response, {
+        title: 'Generated Scenario',
+        description: 'AI-generated learning scenario',
+        context: 'Practice scenario for AI learning',
+        challenge: 'Complete the AI learning tasks',
+        tasks: [],
+        resources: [],
+        evaluation_criteria: [],
+        skills_addressed: [],
+        difficulty_level: 'Intermediate',
+        estimated_duration: 90,
+        learning_objectives: [],
+        tags: []
+      });
       
       return {
         id: `enhanced-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -474,9 +520,9 @@ Return only a number between 1-100.`;
         description: scenario.description,
         context: scenario.description,
         challenge: scenario.description,
-        tasks: JSON.parse(typeof scenario.scenario_data === 'string' ? scenario.scenario_data : '{}').tasks || [],
-        resources: JSON.parse(typeof scenario.scenario_data === 'string' ? scenario.scenario_data : '{}').resources || [],
-        evaluation_criteria: JSON.parse(typeof scenario.scenario_data === 'string' ? scenario.scenario_data : '{}').evaluation_criteria || [],
+        tasks: this.safeJSONParse(typeof scenario.scenario_data === 'string' ? scenario.scenario_data : JSON.stringify(scenario.scenario_data || {})).tasks || [],
+        resources: this.safeJSONParse(typeof scenario.scenario_data === 'string' ? scenario.scenario_data : JSON.stringify(scenario.scenario_data || {})).resources || [],
+        evaluation_criteria: this.safeJSONParse(typeof scenario.scenario_data === 'string' ? scenario.scenario_data : JSON.stringify(scenario.scenario_data || {})).evaluation_criteria || [],
         skills_addressed: Array.isArray(scenario.learning_objectives) ? scenario.learning_objectives : [],
         difficulty_level: scenario.difficulty_level,
         estimated_duration: scenario.estimated_duration,
@@ -484,9 +530,9 @@ Return only a number between 1-100.`;
         industry: scenario.industry || '',
         learning_objectives: Array.isArray(scenario.learning_objectives) ? scenario.learning_objectives : [],
         tags: Array.isArray(scenario.tags) ? scenario.tags : [],
-        quality_score: JSON.parse(typeof scenario.scenario_data === 'string' ? scenario.scenario_data : '{}').generation_metadata?.quality_score,
+        quality_score: this.safeJSONParse(typeof scenario.scenario_data === 'string' ? scenario.scenario_data : JSON.stringify(scenario.scenario_data || {})).generation_metadata?.quality_score,
         created_at: scenario.created_at,
-        scenario_data: JSON.parse(typeof scenario.scenario_data === 'string' ? scenario.scenario_data : '{}')
+        scenario_data: this.safeJSONParse(typeof scenario.scenario_data === 'string' ? scenario.scenario_data : JSON.stringify(scenario.scenario_data || {}))
       })) || [];
     } catch (error) {
       console.error('Error getting user scenario history:', error);
@@ -506,7 +552,7 @@ The scenario should:
 - Showcase advanced AI features and techniques
 - Include multi-step problem solving with AI
 - Provide clear value to the user's career/role
-- Use the latest Gemini 2.0 Flash features effectively
+- Use the latest Gemini 2.5 Flash features effectively
 - Include hands-on practice with both Gemini and AI Studio
 
 Focus on practical skills that users can immediately apply in their work.

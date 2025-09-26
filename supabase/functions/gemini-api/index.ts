@@ -46,7 +46,7 @@ serve(async (req) => {
     console.log('Calling Gemini API with prompt:', prompt.substring(0, 100) + '...');
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
       {
         method: 'POST',
         headers: {
@@ -77,7 +77,7 @@ serve(async (req) => {
       JSON.stringify({ 
         generatedText,
         usage: data.usageMetadata || {},
-        model: 'gemini-2.0-flash-exp'
+        model: 'gemini-2.5-flash'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -88,7 +88,7 @@ serve(async (req) => {
     console.error('Error in gemini-api function:', error);
     return new Response(
       JSON.stringify({ 
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
         details: 'Check function logs for more information'
       }),
       {
