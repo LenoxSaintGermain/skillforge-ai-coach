@@ -181,27 +181,34 @@ export class ScenarioService {
       }
 
       if (dbScenarios && dbScenarios.length > 0) {
-        const formattedScenarios = dbScenarios.map(scenario => ({
-          id: scenario.id,
-          title: scenario.title,
-          context: scenario.description,
-          challenge: scenario.description,
-          tasks: JSON.parse(scenario.scenario_data as string).tasks || [],
-          resources: JSON.parse(scenario.scenario_data as string).resources || [],
-          evaluationCriteria: JSON.parse(scenario.scenario_data as string).evaluationCriteria || [],
-          skillsAddressed: scenario.learning_objectives || [],
-          difficultyLevel: scenario.difficulty_level,
-          estimatedTime: `${scenario.estimated_duration} minutes`,
-          completionStats: {
-            percentComplete: 0,
-            timeSpent: '0 minutes',
-            skillProgress: scenario.learning_objectives.map((skill: string) => ({
-              skillName: skill,
-              progress: 0
-            })),
-            coachInteractions: 0
-          }
-        }));
+        const formattedScenarios = dbScenarios.map(scenario => {
+          // Safely parse scenario_data - it might already be an object
+          const scenarioData = typeof scenario.scenario_data === 'string' 
+            ? JSON.parse(scenario.scenario_data) 
+            : scenario.scenario_data || {};
+          
+          return {
+            id: scenario.id,
+            title: scenario.title,
+            context: scenario.description,
+            challenge: scenario.description,
+            tasks: scenarioData.tasks || [],
+            resources: scenarioData.resources || [],
+            evaluationCriteria: scenarioData.evaluationCriteria || [],
+            skillsAddressed: scenario.learning_objectives || [],
+            difficultyLevel: scenario.difficulty_level,
+            estimatedTime: `${scenario.estimated_duration} minutes`,
+            completionStats: {
+              percentComplete: 0,
+              timeSpent: '0 minutes',
+              skillProgress: scenario.learning_objectives.map((skill: string) => ({
+                skillName: skill,
+                progress: 0
+              })),
+              coachInteractions: 0
+            }
+          };
+        });
         
         return [...formattedScenarios, ...this.scenarios];
       }
@@ -310,7 +317,7 @@ export class ScenarioService {
         throw new Error('Failed to generate scenario with AI');
       }
 
-      return this.parseScenarioResponse(data.response, userProfile, learningGoals);
+      return this.parseScenarioResponse(data.generatedText, userProfile, learningGoals);
       
     } catch (error) {
       console.error('Error generating scenario:', error);
