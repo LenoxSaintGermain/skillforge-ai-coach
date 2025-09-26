@@ -1,5 +1,5 @@
 
-import ScenarioGenerator from "@/components/ScenarioGenerator";
+import EnhancedScenarioGenerator from "@/components/EnhancedScenarioGenerator";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -21,7 +21,7 @@ const ScenarioGeneratorPage = () => {
         </p>
       </div>
       
-      <ScenarioGenerator />
+      <EnhancedScenarioGenerator />
     </div>
   );
 };
