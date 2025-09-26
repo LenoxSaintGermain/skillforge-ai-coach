@@ -108,9 +108,13 @@ const ScenarioGenerator = () => {
     
     try {
       const userProfile = {
+        id: currentUser?.id || 'temp-user',
+        user_id: currentUser?.user_id || 'temp-user',
+        name: currentUser?.name || 'Temp User',
+        email: currentUser?.email || 'temp@example.com',
         role,
         industry,
-        aiKnowledgeLevel: currentUser?.ai_knowledge_level || 'Beginner'
+        ai_knowledge_level: currentUser?.ai_knowledge_level || 'Beginner'
       };
       
       const learningGoals = currentUser?.learning_goals || [];

@@ -42,11 +42,11 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
       
       try {
         // Load user progress for this scenario
-        const progress = await scenarioService.getUserScenarioProgress(scenario.id, currentUser.user_id);
+        const progress = await scenarioService.getUserScenarioProgress(scenario.id);
         setUserProgress(progress);
         
-        // Initialize completed steps from progress data
-        const completedTaskIds = progress?.progress_data?.completedTasks || [];
+        // Initialize completed steps from progress
+        const completedTaskIds = [];
         setCompletedSteps(completedTaskIds);
         
         // Update scenario with completion status
@@ -57,7 +57,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
         }));
         
         setUpdatedScenario(updatedScenarioData);
-        setIsSubmitted(progress?.status === 'completed');
+        setIsSubmitted(progress?.percentComplete === 100);
       } catch (error) {
         console.error('Error loading scenario progress:', error);
         // Initialize with default values
@@ -89,7 +89,9 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
       console.log('🔄 Updating task progress:', { taskId, isCompleted, currentUser: currentUser.user_id });
       
       // Update progress in database
-      await scenarioService.updateScenarioProgress(scenario.id, currentUser.user_id, newCompletedSteps);
+      await scenarioService.updateScenarioProgress(scenario.id, {
+        percentComplete: Math.round((newCompletedSteps.length / (updatedScenario.tasks?.length || 1)) * 100)
+      });
       
       // Update local scenario state
       const refreshedScenario = { ...updatedScenario };
@@ -158,7 +160,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
       setCompletedSteps(allTaskIds);
       
       // Mark scenario as completed in database
-      await scenarioService.completeScenario(scenario.id, currentUser.user_id, solutionText);
+      await scenarioService.completeScenario(scenario.id);
       
       setIsSubmitted(true);
       
@@ -200,7 +202,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
 
     try {
       // Save feedback to database
-      await scenarioService.saveFeedback(scenario.id, currentUser.user_id, feedbackText, feedbackRating);
+      await scenarioService.saveFeedback(scenario.id, feedbackText);
       
       setShowFeedbackDialog(false);
       
