@@ -377,7 +377,7 @@ const ScenarioGenerator = () => {
               </p>
               <div className="flex gap-2">
                 <a 
-                  href="https://gemini.google.com" 
+                  href="https://gemini.google.com/app/" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
@@ -385,7 +385,7 @@ const ScenarioGenerator = () => {
                   Gemini →
                 </a>
                 <a 
-                  href="https://aistudio.google.com" 
+                  href="https://aistudio.google.com/prompts/new_chat" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"

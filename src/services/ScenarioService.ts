@@ -79,8 +79,8 @@ export class ScenarioService {
           }
         ],
         resources: [
-          'https://gemini.google.com - Google Gemini AI assistant',
-          'https://aistudio.google.com - Google AI Studio for advanced prompting',
+          'https://gemini.google.com/app/ - Google Gemini AI assistant',
+          'https://aistudio.google.com/prompts/new_chat - Google AI Studio for advanced prompting',
           'Customer Support Best Practices Guide',
           'AI-Powered Support Tools Overview'
         ],
@@ -136,8 +136,8 @@ export class ScenarioService {
           }
         ],
         resources: [
-          'https://gemini.google.com - Google Gemini AI assistant',
-          'https://aistudio.google.com - Google AI Studio for advanced prompting',
+          'https://gemini.google.com/app/ - Google Gemini AI assistant',
+          'https://aistudio.google.com/prompts/new_chat - Google AI Studio for advanced prompting',
           'Content Marketing Strategy Guide',
           'Platform-Specific Content Guidelines'
         ],
@@ -368,8 +368,8 @@ Return a JSON object with this exact structure:
     }
   ],
   "resources": [
-    "https://gemini.google.com - Google Gemini AI assistant",
-    "https://aistudio.google.com - Google AI Studio for advanced AI experimentation"
+    "https://gemini.google.com/app/ - Google Gemini AI assistant",
+    "https://aistudio.google.com/prompts/new_chat - Google AI Studio for advanced AI experimentation"
   ],
   "evaluationCriteria": ["Criteria focused on effective AI tool usage"],
   "skillsAddressed": ["AI Tool Usage", "Prompt Engineering", "relevant professional skills"],

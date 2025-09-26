@@ -277,7 +277,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
             </p>
             <div className="flex gap-2 mt-2">
               <a 
-                href="https://gemini.google.com" 
+                href="https://gemini.google.com/app/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
@@ -285,7 +285,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
                 Open Gemini →
               </a>
               <a 
-                href="https://aistudio.google.com" 
+                href="https://aistudio.google.com/prompts/new_chat" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
@@ -379,7 +379,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
               <h4 className="font-medium mb-2 text-orange-900 dark:text-orange-100">🎯 Quick Access Links</h4>
               <div className="grid grid-cols-2 gap-2">
                 <a 
-                  href="https://gemini.google.com" 
+                  href="https://gemini.google.com/app/" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-sm bg-blue-600 text-white px-3 py-2 rounded text-center hover:bg-blue-700"
@@ -387,7 +387,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
                   Launch Gemini
                 </a>
                 <a 
-                  href="https://aistudio.google.com" 
+                  href="https://aistudio.google.com/prompts/new_chat" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-sm bg-green-600 text-white px-3 py-2 rounded text-center hover:bg-green-700"
