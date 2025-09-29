@@ -34,8 +34,8 @@ const ScenarioDetailPage = () => {
           setIsLoading(true);
           setError(null);
           
-          // Validate scenario ID format
-          if (!id.match(/^[a-f0-9-]{36}$/) && !id.startsWith('enhanced-')) {
+          // Validate scenario ID format (UUID, enhanced-, or fallback-)
+          if (!id.match(/^[a-f0-9-]{36}$/) && !id.startsWith('enhanced-') && !id.startsWith('fallback-')) {
             throw new Error('Invalid scenario ID format');
           }
           
