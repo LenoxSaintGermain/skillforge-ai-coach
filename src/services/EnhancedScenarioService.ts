@@ -389,7 +389,7 @@ Generate a comprehensive scenario JSON with enhanced structure:
           body: { 
             prompt,
             temperature: type === 'generation' ? 0.8 : 0.3,
-            maxTokens: type === 'generation' ? 2000 : 800,
+            maxTokens: type === 'generation' ? 16000 : 8000,
             systemPrompt: type === 'analysis' 
               ? 'You are an expert learning analyst. Analyze user profiles and provide structured insights for personalized AI training scenarios.'
               : 'You are an expert AI training specialist using Gemini 2.5 Flash capabilities. Create engaging, realistic scenarios that showcase modern AI tool usage. Always respond with valid JSON.'
