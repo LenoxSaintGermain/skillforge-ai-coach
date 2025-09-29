@@ -7,11 +7,14 @@ import { ArrowLeft } from 'lucide-react';
 import ScenarioWorkflow from '@/components/ScenarioWorkflow';
 import ScenarioAnalytics from '@/components/analytics/ScenarioAnalytics';
 import { ScenarioService } from '@/services/ScenarioService';
+import { EnhancedScenarioService } from '@/services/EnhancedScenarioService';
 import CoachChatPanel from "@/components/CoachChatPanel";
 import { useAI } from '@/contexts/AIContext';
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const scenarioService = new ScenarioService();
+const enhancedScenarioService = new EnhancedScenarioService();
 
 const ScenarioDetailPage = () => {
   const { id } = useParams();
@@ -30,11 +33,49 @@ const ScenarioDetailPage = () => {
         try {
           setIsLoading(true);
           setError(null);
-          const foundScenario = await scenarioService.getScenarioById(id);
+          
+          // Validate scenario ID format
+          if (!id.match(/^[a-f0-9-]{36}$/) && !id.startsWith('enhanced-')) {
+            throw new Error('Invalid scenario ID format');
+          }
+          
+          // Try to load from enhanced scenarios first, then fall back to regular scenarios
+          let foundScenario = await scenarioService.getScenarioById(id);
+          
+          if (!foundScenario) {
+            console.log('Scenario not found in regular service, checking enhanced scenarios...');
+            // If not found, try loading from database directly for enhanced scenarios
+            const { data, error } = await supabase
+              .from('scenarios')
+              .select('*')
+              .eq('id', id)
+              .maybeSingle();
+              
+            if (!error && data) {
+              // Transform database scenario to component format
+              const scenarioData = typeof data.scenario_data === 'string' 
+                ? JSON.parse(data.scenario_data) 
+                : data.scenario_data || {};
+              
+              foundScenario = {
+                id: data.id,
+                title: data.title,
+                context: scenarioData.context || data.description,
+                challenge: scenarioData.challenge || 'Complete the learning tasks',
+                tasks: scenarioData.tasks || [],
+                resources: scenarioData.resources || [],
+                evaluationCriteria: scenarioData.evaluation_criteria || [],
+                skillsAddressed: scenarioData.skills_addressed || data.tags || [],
+                difficultyLevel: data.difficulty_level || 'Intermediate',
+                estimatedTime: `${data.estimated_duration || 90} minutes`
+              };
+            }
+          }
+          
           setScenario(foundScenario || null);
         } catch (err) {
           console.error('Error loading scenario:', err);
-          setError('Failed to load scenario');
+          setError(`Failed to load scenario: ${err.message}`);
         } finally {
           setIsLoading(false);
         }

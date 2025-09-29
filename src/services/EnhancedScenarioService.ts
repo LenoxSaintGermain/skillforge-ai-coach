@@ -59,19 +59,18 @@ export class EnhancedScenarioService {
    * Clean AI response by removing markdown code blocks and extra formatting
    */
   private cleanAIResponse(response: string): string {
-    // Remove markdown code blocks
-    let cleaned = response.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-    
-    // Remove any leading/trailing whitespace
-    cleaned = cleaned.trim();
-    
-    // If the response starts with text before JSON, try to extract just the JSON
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      cleaned = jsonMatch[0];
-    }
-    
-    return cleaned;
+    // Remove markdown code blocks and common AI response artifacts
+    return response
+      .replace(/```json\s*/gi, '')
+      .replace(/```javascript\s*/gi, '')
+      .replace(/```\s*/g, '')
+      .replace(/^```/gm, '')
+      .replace(/```$/gm, '')
+      .replace(/^\s*Here's?\s+.*?:\s*/gi, '') // Remove "Here's the scenario:" type intros
+      .replace(/^\s*Based\s+on.*?:\s*/gi, '') // Remove "Based on your profile:" type intros
+      .replace(/\*\*.*?\*\*/g, '') // Remove bold markdown
+      .replace(/\n\s*\n/g, '\n') // Remove excessive whitespace
+      .trim();
   }
   
   /**
@@ -79,13 +78,78 @@ export class EnhancedScenarioService {
    */
   private safeJSONParse(jsonString: string, fallback: any = {}): any {
     try {
-      const cleaned = this.cleanAIResponse(jsonString);
-      return JSON.parse(cleaned);
+      let cleaned = this.cleanAIResponse(jsonString);
+      
+      // Try to find JSON object in the response
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        cleaned = jsonMatch[0];
+      }
+      
+      // Validate it looks like JSON before parsing
+      if (!cleaned.startsWith('{') || !cleaned.endsWith('}')) {
+        throw new Error('Response does not appear to be valid JSON');
+      }
+      
+      const parsed = JSON.parse(cleaned);
+      
+      // Validate required fields exist for scenarios
+      if (fallback.title !== undefined && (!parsed.title || !parsed.context)) {
+        throw new Error('Parsed JSON missing required fields');
+      }
+      
+      return parsed;
     } catch (error) {
-      console.error('JSON parsing error:', error);
-      console.error('Original string:', jsonString);
+      console.error('JSON parsing failed:', error);
+      console.error('Raw response:', jsonString.substring(0, 500) + '...');
+      console.error('Cleaned response:', this.cleanAIResponse(jsonString).substring(0, 500) + '...');
       return fallback;
     }
+  }
+
+  /**
+   * Create fallback scenario when AI generation fails
+   */
+  private createFallbackScenario(userProfile: User, learningGoals: LearningGoal[]): EnhancedScenario {
+    const goalAreas = learningGoals.map(g => g.skill_area).join(', ') || 'AI and Technology';
+    
+    return {
+      id: crypto.randomUUID(),
+      title: `AI Learning Scenario for ${userProfile.role || 'Professional'}`,
+      description: `A personalized learning scenario focused on ${goalAreas}`,
+      context: `You are a ${userProfile.role || 'professional'} working in ${userProfile.industry || 'technology'}. This scenario will help you develop skills in ${goalAreas}.`,
+      challenge: `Apply your knowledge of ${goalAreas} to solve real-world problems in your field.`,
+      tasks: [
+        {
+          id: crypto.randomUUID(),
+          description: 'Explore the Challenge: Review the scenario context and identify key learning objectives.',
+          estimated_time: 15,
+          ai_actions: ['Use Gemini to analyze the problem domain', 'Research best practices and methodologies'],
+          evaluation_tips: 'Ensure your analysis covers all key aspects mentioned in the context'
+        },
+        {
+          id: crypto.randomUUID(), 
+          description: 'Apply Your Knowledge: Work through practical exercises related to your learning goals.',
+          estimated_time: 30,
+          ai_actions: ['Develop solutions using AI tools', 'Test and refine your approach'],
+          evaluation_tips: 'Solutions should be practical and applicable to real-world scenarios'
+        }
+      ],
+      resources: [
+        'https://gemini.google.com/app/ - Gemini AI Assistant',
+        'https://aistudio.google.com/prompts/new_chat - Advanced AI Studio'
+      ],
+      evaluation_criteria: ['Completeness of analysis', 'Quality of solutions', 'Application of AI tools'],
+      skills_addressed: learningGoals.map(g => g.skill_area),
+      learning_objectives: learningGoals.map(g => g.description),
+      estimated_duration: 45,
+      difficulty_level: userProfile.ai_knowledge_level || 'Beginner',
+      industry: userProfile.industry || 'General',
+      role: userProfile.role || 'Professional',
+      tags: [userProfile.role, userProfile.industry, 'AI Training'].filter(Boolean),
+      user_id: userProfile.user_id,
+      created_at: new Date().toISOString()
+    };
   }
   
   /**
@@ -143,7 +207,8 @@ export class EnhancedScenarioService {
         progress: 90
       });
 
-      const enhancedScenario = this.parseEnhancedScenario(scenarioData, userProfile, qualityScore);
+      // Parse the enhanced scenario with fallback
+      const enhancedScenario = this.parseEnhancedScenario(scenarioData, userProfile, qualityScore) || this.createFallbackScenario(userProfile, learningGoals);
       const savedScenario = await this.saveScenarioToDatabase(enhancedScenario);
 
       onProgress?.({
@@ -387,6 +452,13 @@ Return only a number between 1-100.`;
    */
   private async saveScenarioToDatabase(scenario: EnhancedScenario): Promise<EnhancedScenario> {
     try {
+      console.log('💾 Saving scenario to database...');
+      
+      // Ensure user_id is set for RLS policy compliance
+      if (!scenario.user_id) {
+        throw new Error('Cannot save scenario: user_id is required for RLS policy');
+      }
+      
       const { data, error } = await supabase
         .from('scenarios')
         .insert({
@@ -398,16 +470,26 @@ Return only a number between 1-100.`;
           industry: scenario.industry,
           learning_objectives: scenario.learning_objectives,
           tags: scenario.tags,
-          scenario_data: scenario.scenario_data
+          user_id: scenario.user_id, // Required for RLS policy
+          scenario_data: {
+            context: scenario.context,
+            challenge: scenario.challenge,
+            tasks: scenario.tasks,
+            resources: scenario.resources,
+            evaluation_criteria: scenario.evaluation_criteria,
+            skills_addressed: scenario.skills_addressed,
+            ...scenario.scenario_data
+          }
         })
         .select()
         .single();
 
       if (error) {
-        console.error('Error saving scenario to database:', error);
-        throw error;
+        console.error('Database error:', error);
+        throw new Error(`Failed to save scenario: ${error.message}`);
       }
 
+      console.log('✅ Scenario saved successfully with ID:', data.id);
       return {
         ...scenario,
         id: data.id,
