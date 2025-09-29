@@ -112,41 +112,74 @@ export class EnhancedScenarioService {
    */
   private createFallbackScenario(userProfile: User, learningGoals: LearningGoal[]): EnhancedScenario {
     const goalAreas = learningGoals.map(g => g.skill_area).join(', ') || 'AI and Technology';
+    const primaryGoal = learningGoals[0] || { skill_area: 'AI Tools', description: 'Learn AI fundamentals' };
     
     return {
-      id: crypto.randomUUID(),
-      title: `AI Learning Scenario for ${userProfile.role || 'Professional'}`,
-      description: `A personalized learning scenario focused on ${goalAreas}`,
-      context: `You are a ${userProfile.role || 'professional'} working in ${userProfile.industry || 'technology'}. This scenario will help you develop skills in ${goalAreas}.`,
-      challenge: `Apply your knowledge of ${goalAreas} to solve real-world problems in your field.`,
+      id: `fallback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title: `Hands-On ${primaryGoal.skill_area} Training for ${userProfile.role || 'Professionals'}`,
+      description: `An interactive learning experience designed to help ${userProfile.role || 'professionals'} in ${userProfile.industry || 'your industry'} master practical AI skills in ${goalAreas}.`,
+      context: `As a ${userProfile.role || 'professional'} in ${userProfile.industry || 'your field'}, you'll explore how AI tools like Gemini can transform your daily work. This scenario is built around real-world applications of ${goalAreas}, giving you hands-on experience with cutting-edge AI capabilities.`,
+      challenge: `Your challenge is to complete a series of practical exercises that demonstrate mastery of ${primaryGoal.skill_area}. You'll work with Gemini AI to ${primaryGoal.description.toLowerCase() || 'solve real problems'}, building confidence and competence along the way.`,
       tasks: [
         {
           id: crypto.randomUUID(),
-          description: 'Explore the Challenge: Review the scenario context and identify key learning objectives.',
-          estimated_time: 15,
-          ai_actions: ['Use Gemini to analyze the problem domain', 'Research best practices and methodologies'],
-          evaluation_tips: 'Ensure your analysis covers all key aspects mentioned in the context'
+          description: `Introduction to ${primaryGoal.skill_area}: Familiarize yourself with key concepts and tools`,
+          estimated_time: 20,
+          difficulty: 'Beginner',
+          ai_actions: [
+            'Open Gemini at https://gemini.google.com/app/',
+            `Ask: "What are the most important concepts in ${primaryGoal.skill_area} for ${userProfile.role || 'professionals'}?"`,
+            'Review the response and identify 3-5 key takeaways',
+            'Ask follow-up questions to clarify any unclear concepts'
+          ],
+          evaluation_tips: 'You should have a clear understanding of core concepts and how they apply to your role'
         },
         {
           id: crypto.randomUUID(), 
-          description: 'Apply Your Knowledge: Work through practical exercises related to your learning goals.',
+          description: `Practical Application: Apply ${primaryGoal.skill_area} to a real-world scenario`,
           estimated_time: 30,
-          ai_actions: ['Develop solutions using AI tools', 'Test and refine your approach'],
-          evaluation_tips: 'Solutions should be practical and applicable to real-world scenarios'
+          difficulty: 'Intermediate',
+          ai_actions: [
+            'Think of a specific challenge from your work that relates to this skill area',
+            `Ask Gemini: "How can I use ${primaryGoal.skill_area} to solve [your specific challenge]?"`,
+            'Evaluate the AI\'s suggestions and refine your approach through follow-up questions',
+            'Document your learning and key insights'
+          ],
+          evaluation_tips: 'Your solution should be practical, specific to your context, and demonstrate clear application of AI tools'
+        },
+        {
+          id: crypto.randomUUID(),
+          description: 'Advanced Exploration: Push your understanding further with complex scenarios',
+          estimated_time: 25,
+          difficulty: 'Advanced',
+          ai_actions: [
+            'Visit AI Studio at https://aistudio.google.com/prompts/new_chat for advanced experimentation',
+            'Create a multi-step prompt that combines multiple aspects of your learning',
+            'Test different approaches and compare results',
+            'Reflect on what you\'ve learned and how you\'ll apply it'
+          ],
+          evaluation_tips: 'You should demonstrate creative use of AI tools and ability to tackle complex, multi-faceted challenges'
         }
       ],
       resources: [
-        'https://gemini.google.com/app/ - Gemini AI Assistant',
-        'https://aistudio.google.com/prompts/new_chat - Advanced AI Studio'
+        'https://gemini.google.com/app/ - Gemini AI Assistant for interactive learning',
+        'https://aistudio.google.com/prompts/new_chat - AI Studio for advanced experimentation',
+        `Additional resources specific to ${primaryGoal.skill_area} available in your industry`
       ],
-      evaluation_criteria: ['Completeness of analysis', 'Quality of solutions', 'Application of AI tools'],
+      evaluation_criteria: [
+        'Demonstrated understanding of core concepts',
+        'Effective use of AI tools (Gemini) to solve problems',
+        'Quality and creativity of solutions',
+        'Ability to apply learning to real-world scenarios',
+        'Clear documentation of insights and learnings'
+      ],
       skills_addressed: learningGoals.map(g => g.skill_area),
       learning_objectives: learningGoals.map(g => g.description),
-      estimated_duration: 45,
+      estimated_duration: 75,
       difficulty_level: userProfile.ai_knowledge_level || 'Beginner',
       industry: userProfile.industry || 'General',
       role: userProfile.role || 'Professional',
-      tags: [userProfile.role, userProfile.industry, 'AI Training'].filter(Boolean),
+      tags: [userProfile.role, userProfile.industry, primaryGoal.skill_area, 'AI Training', 'Hands-On'].filter(Boolean),
       user_id: userProfile.user_id,
       created_at: new Date().toISOString()
     };
@@ -220,8 +253,20 @@ export class EnhancedScenarioService {
       return savedScenario;
 
     } catch (error) {
-      console.error('Error generating enhanced scenario:', error);
-      throw new Error('Failed to generate enhanced scenario');
+      console.error('❌ Error generating enhanced scenario:', error);
+      
+      // Provide detailed error message to user
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (errorMessage.includes('safety filters')) {
+        throw new Error('The AI content filter blocked the generation. Please try with different learning goals or description.');
+      } else if (errorMessage.includes('blocked')) {
+        throw new Error('Content generation was blocked. Please adjust your input and try again.');
+      } else if (errorMessage.includes('after') && errorMessage.includes('attempts')) {
+        throw new Error('Unable to connect to AI service after multiple attempts. Please check your internet connection and try again.');
+      }
+      
+      throw new Error(`Failed to generate scenario: ${errorMessage}`);
     }
   }
 
@@ -331,26 +376,62 @@ Generate a comprehensive scenario JSON with enhanced structure:
   }
 
   /**
-   * Call Gemini API with enhanced prompts
+   * Call Gemini API with enhanced prompts and retry logic
    */
-  private async callGeminiAPI(prompt: string, type: 'analysis' | 'generation'): Promise<string> {
-    const { data, error } = await supabase.functions.invoke('gemini-api', {
-      body: { 
-        prompt,
-        temperature: type === 'generation' ? 0.8 : 0.3,
-        maxTokens: type === 'generation' ? 2000 : 800,
-        systemPrompt: type === 'analysis' 
-          ? 'You are an expert learning analyst. Analyze user profiles and provide structured insights for personalized AI training scenarios.'
-          : 'You are an expert AI training specialist using Gemini 2.0 Flash capabilities. Create engaging, realistic scenarios that showcase modern AI tool usage. Always respond with valid JSON.'
-      }
-    });
+  private async callGeminiAPI(prompt: string, type: 'analysis' | 'generation', retries = 3): Promise<string> {
+    let lastError: any = null;
+    
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        console.log(`🤖 Calling Gemini API (attempt ${attempt}/${retries}) for ${type}...`);
+        
+        const { data, error } = await supabase.functions.invoke('gemini-api', {
+          body: { 
+            prompt,
+            temperature: type === 'generation' ? 0.8 : 0.3,
+            maxTokens: type === 'generation' ? 2000 : 800,
+            systemPrompt: type === 'analysis' 
+              ? 'You are an expert learning analyst. Analyze user profiles and provide structured insights for personalized AI training scenarios.'
+              : 'You are an expert AI training specialist using Gemini 2.5 Flash capabilities. Create engaging, realistic scenarios that showcase modern AI tool usage. Always respond with valid JSON.'
+          }
+        });
 
-    if (error) {
-      console.error(`Error calling Gemini API for ${type}:`, error);
-      throw new Error(`Failed to call Gemini API for ${type}`);
+        if (error) {
+          lastError = error;
+          console.error(`❌ Error calling Gemini API for ${type} (attempt ${attempt}):`, error);
+          
+          // Don't retry if it's a safety filter or content policy issue
+          if (error.message?.includes('safety filters') || error.message?.includes('blocked')) {
+            throw new Error(`Content blocked by AI safety filters: ${error.message}`);
+          }
+          
+          // Wait before retry with exponential backoff
+          if (attempt < retries) {
+            const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+            console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            continue;
+          }
+        } else {
+          console.log(`✅ Successfully received response from Gemini API`);
+          return data.generatedText;
+        }
+      } catch (error) {
+        lastError = error;
+        console.error(`❌ Exception calling Gemini API (attempt ${attempt}):`, error);
+        
+        if (attempt < retries && !(error instanceof Error && error.message.includes('safety filters'))) {
+          const waitTime = Math.pow(2, attempt) * 1000;
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+      }
     }
 
-    return data.generatedText;
+    // All retries failed
+    const errorMessage = lastError?.message || 'Unknown error';
+    console.error('❌ All retry attempts failed:', errorMessage);
+    throw new Error(`Failed to call Gemini API after ${retries} attempts: ${errorMessage}`);
   }
 
   /**

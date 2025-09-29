@@ -24,7 +24,7 @@ serve(async (req) => {
       throw new Error('GEMINI_API_KEY not configured');
     }
 
-    // Prepare the request body for Gemini API
+    // Prepare the request body for Gemini API with safety settings
     const requestBody = {
       contents: [
         {
@@ -40,7 +40,25 @@ serve(async (req) => {
         maxOutputTokens: maxTokens,
         topP: 0.8,
         topK: 40
-      }
+      },
+      safetySettings: [
+        {
+          category: "HARM_CATEGORY_HARASSMENT",
+          threshold: "BLOCK_ONLY_HIGH"
+        },
+        {
+          category: "HARM_CATEGORY_HATE_SPEECH",
+          threshold: "BLOCK_ONLY_HIGH"
+        },
+        {
+          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          threshold: "BLOCK_ONLY_HIGH"
+        },
+        {
+          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+          threshold: "BLOCK_ONLY_HIGH"
+        }
+      ]
     };
 
     console.log('Calling Gemini API with prompt:', prompt.substring(0, 100) + '...');
@@ -64,12 +82,41 @@ serve(async (req) => {
 
     const data = await response.json();
     
-    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-      console.error('Unexpected Gemini API response structure:', data);
-      throw new Error('Unexpected response structure from Gemini API');
+    // Log full response for debugging
+    console.log('Gemini API response structure:', JSON.stringify(data, null, 2));
+    
+    // Validate response structure
+    if (!data.candidates || data.candidates.length === 0) {
+      console.error('No candidates in response:', data);
+      throw new Error('Gemini API returned no response candidates. This may be due to content being blocked by safety filters.');
     }
 
-    const generatedText = data.candidates[0].content.parts[0].text;
+    const candidate = data.candidates[0];
+    
+    // Check for safety filter blocks
+    if (candidate.finishReason === 'SAFETY') {
+      console.error('Content blocked by safety filters:', candidate.safetyRatings);
+      throw new Error('Content was blocked by Gemini safety filters. Please try rephrasing your request.');
+    }
+    
+    // Check for other finish reasons
+    if (candidate.finishReason && candidate.finishReason !== 'STOP') {
+      console.error('Unexpected finish reason:', candidate.finishReason);
+      throw new Error(`Generation stopped unexpectedly: ${candidate.finishReason}`);
+    }
+    
+    // Validate content structure
+    if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+      console.error('Invalid content structure:', candidate);
+      throw new Error('Gemini API response missing content parts');
+    }
+
+    const generatedText = candidate.content.parts[0].text;
+    
+    if (!generatedText) {
+      console.error('Empty text in response:', candidate);
+      throw new Error('Gemini API returned empty response text');
+    }
     
     console.log('Gemini API response received successfully');
 
