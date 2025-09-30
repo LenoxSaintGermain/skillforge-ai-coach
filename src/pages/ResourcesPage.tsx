@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -11,10 +10,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, FileIcon, BookOpen, Video, Globe, Download, Search, Sparkles, ThumbsUp, Loader2 } from "lucide-react";
+import { ArrowRight, FileIcon, BookOpen, Video, Globe, Download, Search, Sparkles, Loader2, ThumbsUp, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Resource {
   id: string;
@@ -23,7 +23,7 @@ interface Resource {
   type: 'documentation' | 'video' | 'tutorial' | 'template' | 'article';
   url: string;
   tags: string[];
-  source?: string;
+  source?: 'ai-curated' | 'manual';
   quality_score?: number;
   votes?: number;
   created_at?: string;
@@ -101,123 +101,123 @@ const ResourcesPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchStatus, setSearchStatus] = useState('');
-  const [aiResources, setAiResources] = useState<Resource[]>([]);
+  const [dynamicResources, setDynamicResources] = useState<Resource[]>([]);
   const [allResources, setAllResources] = useState<Resource[]>(resources);
   const { toast } = useToast();
 
-  // Load AI-discovered resources from database
+  // Load dynamic resources from database
   useEffect(() => {
-    loadAiResources();
+    loadDynamicResources();
   }, []);
 
-  const loadAiResources = async () => {
+  const loadDynamicResources = async () => {
     try {
       const { data, error } = await supabase
         .from('learning_resources')
         .select('*')
         .order('votes', { ascending: false })
-        .order('quality_score', { ascending: false })
-        .limit(20);
+        .order('created_at', { ascending: false })
+        .limit(50);
 
       if (error) throw error;
 
       if (data) {
-        const formattedResources: Resource[] = data.map(r => ({
-          id: r.id,
-          title: r.title,
-          description: r.description,
-          type: r.type as Resource['type'],
-          url: r.url,
-          tags: r.tags || [],
-          source: r.source,
-          quality_score: r.quality_score || undefined,
-          votes: r.votes || 0,
-          created_at: r.created_at,
+        const formattedResources: Resource[] = data.map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.description,
+          type: item.type as Resource['type'],
+          url: item.url,
+          tags: item.tags || [],
+          source: item.source as 'ai-curated' | 'manual',
+          quality_score: item.quality_score || undefined,
+          votes: item.votes || 0,
+          created_at: item.created_at
         }));
-        setAiResources(formattedResources);
+        setDynamicResources(formattedResources);
         setAllResources([...resources, ...formattedResources]);
       }
     } catch (error) {
-      console.error('Error loading AI resources:', error);
+      console.error('Error loading resources:', error);
     }
   };
 
   const discoverResources = async () => {
     if (!searchQuery.trim()) {
       toast({
-        title: "Please enter a topic",
-        description: "Tell us what you want to learn about",
-        variant: "destructive",
+        title: "Search query required",
+        description: "Please enter a topic to discover resources about",
+        variant: "destructive"
       });
       return;
     }
 
     setIsSearching(true);
-    setSearchStatus('Searching the web...');
+    setSearchStatus('Searching the web with Gemini...');
 
     try {
+      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       const { data, error } = await supabase.functions.invoke('discover-resources', {
         body: { 
           query: searchQuery,
-          userId: user?.id 
+          userId: user?.id
         }
       });
 
       if (error) throw error;
 
-      setSearchStatus(`Found ${data.count} resources!`);
-      
-      toast({
-        title: "Resources discovered! ✨",
-        description: `Found ${data.count} high-quality resources about "${searchQuery}"`,
-      });
+      setSearchStatus(`Found ${data.count || 0} resources! Analyzing quality...`);
 
-      // Reload resources
-      await loadAiResources();
-      setSearchQuery('');
+      setTimeout(() => {
+        toast({
+          title: "Resources discovered!",
+          description: `Added ${data.count || 0} new resources about "${searchQuery}"`,
+        });
+        
+        // Reload resources
+        loadDynamicResources();
+        setSearchQuery('');
+        setSearchStatus('');
+      }, 1000);
 
     } catch (error) {
-      console.error('Error discovering resources:', error);
+      console.error('Discovery error:', error);
       toast({
         title: "Discovery failed",
         description: error instanceof Error ? error.message : "Failed to discover resources",
-        variant: "destructive",
+        variant: "destructive"
       });
+      setSearchStatus('');
     } finally {
       setIsSearching(false);
-      setTimeout(() => setSearchStatus(''), 3000);
     }
   };
 
-  const handleVote = async (resourceId: string) => {
+  const handleVote = async (resourceId: string, currentVotes: number) => {
     try {
-      const resource = allResources.find(r => r.id === resourceId);
-      if (!resource || resource.source !== 'ai-curated') return;
-
       const { error } = await supabase
         .from('learning_resources')
-        .update({ votes: (resource.votes || 0) + 1 })
+        .update({ votes: currentVotes + 1 })
         .eq('id', resourceId);
 
       if (error) throw error;
 
       // Update local state
-      setAllResources(prev => 
+      setDynamicResources(prev => 
         prev.map(r => r.id === resourceId ? { ...r, votes: (r.votes || 0) + 1 } : r)
       );
-      setAiResources(prev => 
+      setAllResources(prev =>
         prev.map(r => r.id === resourceId ? { ...r, votes: (r.votes || 0) + 1 } : r)
       );
 
       toast({
-        title: "Vote recorded!",
-        description: "Thanks for helping improve our resource quality",
+        title: "Vote recorded",
+        description: "Thanks for helping improve our resource quality!",
       });
-
     } catch (error) {
-      console.error('Error voting:', error);
+      console.error('Vote error:', error);
     }
   };
 
@@ -227,40 +227,40 @@ const ResourcesPage: React.FC = () => {
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">AI Learning Resources</h1>
           <p className="text-muted-foreground">
-            Discover high-quality resources powered by AI web search
+            Explore curated resources or let AI discover new ones for your learning journey
           </p>
         </div>
 
-        {/* AI Search Interface */}
-        <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
+        {/* AI Discovery Interface */}
+        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              Discover Resources with AI
-            </CardTitle>
+              <CardTitle>AI-Powered Resource Discovery</CardTitle>
+            </div>
             <CardDescription>
-              Tell us what you want to learn, and AI will search the web for the best resources
+              Use Gemini with Google Search to discover the best learning resources on any topic
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="flex gap-2">
               <Input
-                placeholder="e.g., RAG systems, LangChain tutorials, prompt engineering..."
+                placeholder="What do you want to learn? (e.g., 'RAG systems', 'LangChain tutorials')"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && discoverResources()}
+                onKeyPress={(e) => e.key === 'Enter' && discoverResources()}
                 disabled={isSearching}
                 className="flex-1"
               />
               <Button 
-                onClick={discoverResources} 
-                disabled={isSearching}
+                onClick={discoverResources}
+                disabled={isSearching || !searchQuery.trim()}
                 size="lg"
               >
                 {isSearching ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Searching...
+                    Searching
                   </>
                 ) : (
                   <>
@@ -270,27 +270,55 @@ const ResourcesPage: React.FC = () => {
                 )}
               </Button>
             </div>
+
             {searchStatus && (
-              <p className="mt-2 text-sm text-muted-foreground flex items-center gap-2">
-                <Sparkles className="h-4 w-4 animate-pulse" />
-                {searchStatus}
-              </p>
+              <Alert>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <AlertDescription>{searchStatus}</AlertDescription>
+              </Alert>
             )}
+
+            <div className="flex flex-wrap gap-2">
+              <span className="text-sm text-muted-foreground">Try:</span>
+              {['Vector databases', 'Prompt engineering', 'Fine-tuning LLMs', 'RAG pipelines'].map(topic => (
+                <Button
+                  key={topic}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSearchQuery(topic)}
+                  disabled={isSearching}
+                >
+                  {topic}
+                </Button>
+              ))}
+            </div>
           </CardContent>
         </Card>
+
+        {/* Dynamic Resources Count */}
+        {dynamicResources.length > 0 && (
+          <Alert>
+            <Sparkles className="h-4 w-4" />
+            <AlertDescription>
+              <span className="font-semibold">{dynamicResources.length}</span> AI-discovered resources available
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Resources Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {allResources.map((resource) => (
             <Card key={resource.id} className="flex flex-col">
               <CardHeader>
-                <div className="flex items-center gap-2 mb-2">
-                  {getIconForResourceType(resource.type)}
-                  <Badge>{resource.type}</Badge>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    {getIconForResourceType(resource.type)}
+                    <Badge>{resource.type}</Badge>
+                  </div>
                   {resource.source === 'ai-curated' && (
-                    <Badge variant="secondary" className="ml-auto">
-                      <Sparkles className="h-3 w-3 mr-1" />
-                      AI-Discovered
+                    <Badge variant="secondary" className="gap-1">
+                      <Sparkles className="h-3 w-3" />
+                      AI
                     </Badge>
                   )}
                 </div>
@@ -307,32 +335,43 @@ const ResourcesPage: React.FC = () => {
                     </Badge>
                   ))}
                 </div>
+                
                 {resource.quality_score && (
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground">Quality:</span>
-                    <Badge variant={resource.quality_score >= 8 ? "default" : "secondary"}>
-                      {resource.quality_score}/10
-                    </Badge>
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: 10 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className={`h-2 w-2 rounded-full ${
+                            i < resource.quality_score! ? 'bg-primary' : 'bg-muted'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="font-semibold">{resource.quality_score}/10</span>
                   </div>
                 )}
-              </CardContent>
-              <CardFooter className="flex gap-2">
-                <Button asChild className="flex-1">
-                  <Link to={resource.url.startsWith('http') ? resource.url : resource.url} target={resource.url.startsWith('http') ? "_blank" : undefined}>
-                    View Resource
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                {resource.source === 'ai-curated' && (
+
+                {resource.votes !== undefined && resource.source === 'ai-curated' && (
                   <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handleVote(resource.id)}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleVote(resource.id, resource.votes || 0)}
+                    className="w-full"
                   >
-                    <ThumbsUp className="h-4 w-4" />
-                    {resource.votes ? <span className="ml-1 text-xs">{resource.votes}</span> : null}
+                    <ThumbsUp className="mr-2 h-4 w-4" />
+                    Helpful ({resource.votes})
                   </Button>
                 )}
+              </CardContent>
+              <CardFooter>
+                <Button asChild className="w-full">
+                  <a href={resource.url} target="_blank" rel="noopener noreferrer">
+                    View Resource
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
               </CardFooter>
             </Card>
           ))}
