@@ -91,3 +91,6 @@ verify_jwt = false
 
 [functions.prompt-engineering-ai]
 verify_jwt = true
+
+[functions.discover-resources]
+verify_jwt = false

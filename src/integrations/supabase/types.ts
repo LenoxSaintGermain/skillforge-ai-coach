@@ -196,6 +196,54 @@ export type Database = {
         }
         Relationships: []
       }
+      learning_resources: {
+        Row: {
+          added_by_user_id: string | null
+          created_at: string
+          description: string
+          id: string
+          is_verified: boolean | null
+          quality_score: number | null
+          source: string
+          tags: string[] | null
+          title: string
+          topic_area: string | null
+          type: string
+          url: string
+          votes: number | null
+        }
+        Insert: {
+          added_by_user_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          is_verified?: boolean | null
+          quality_score?: number | null
+          source?: string
+          tags?: string[] | null
+          title: string
+          topic_area?: string | null
+          type: string
+          url: string
+          votes?: number | null
+        }
+        Update: {
+          added_by_user_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          is_verified?: boolean | null
+          quality_score?: number | null
+          source?: string
+          tags?: string[] | null
+          title?: string
+          topic_area?: string | null
+          type?: string
+          url?: string
+          votes?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           ai_knowledge_level: string | null
