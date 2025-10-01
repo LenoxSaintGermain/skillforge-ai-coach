@@ -77,7 +77,7 @@ const FeedbackModal = ({ open, onOpenChange, prefilledType }: FeedbackModalProps
       const { data, error } = await supabase
         .from("beta_feedback")
         .insert({
-          user_id: currentUser.id,
+          user_id: currentUser.user_id,
           feedback_type: feedbackType,
           title,
           description,
