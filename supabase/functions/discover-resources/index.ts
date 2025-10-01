@@ -37,31 +37,31 @@ serve(async (req) => {
       throw new Error('GEMINI_API_KEY not configured');
     }
 
-    // Call Gemini API with Google Search grounding
+    // Call Gemini API
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `Find the 8 best learning resources about: "${query}"
+              text: `You are an expert learning resource curator. Based on your knowledge, recommend the 8 best learning resources about: "${query}"
 
-For each resource provide:
+For each resource, provide:
 - title: Clear, descriptive title
 - description: 2-3 sentence summary of what the resource covers
-- url: Full URL to the resource
+- url: Full URL to the resource (use well-known, authoritative sources)
 - type: One of: documentation, video, tutorial, article, template
 - tags: 3-5 relevant keywords (lowercase, hyphenated)
-- quality_score: Rate 1-10 based on authority, recency, clarity, and relevance
+- quality_score: Rate 1-10 based on authority, clarity, and educational value
 
-Prioritize:
-- Official documentation and authoritative sources
-- Recent content (2023-2025)
-- Clear, beginner-friendly tutorials
-- High-quality video tutorials from reputable channels
-- Practical, hands-on resources
+Prioritize well-known sources:
+- Official documentation (e.g., docs.python.org, developer.mozilla.org, reactjs.org)
+- Reputable educational platforms (e.g., YouTube channels like freeCodeCamp, Fireship, Traversy Media)
+- Major tech company tutorials (e.g., Google Codelabs, AWS Tutorials, Microsoft Learn)
+- Well-established learning sites (e.g., MDN, W3Schools, Real Python)
+- Popular GitHub repositories and templates
 
 Return ONLY a valid JSON array with this exact structure:
 [
@@ -78,16 +78,8 @@ Return ONLY a valid JSON array with this exact structure:
 Do not include any markdown formatting, code blocks, or explanatory text - only the JSON array.`
             }]
           }],
-          tools: [{
-            googleSearchRetrieval: {
-              dynamicRetrievalConfig: {
-                mode: "MODE_DYNAMIC",
-                dynamicThreshold: 0.7
-              }
-            }
-          }],
           generationConfig: {
-            temperature: 0.3,
+            temperature: 0.4,
             maxOutputTokens: 4000
           }
         })
