@@ -11,10 +11,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useUser } from "@/contexts/UserContext";
 import { Link } from "react-router-dom";
-import { Brain, LogOut, Settings, User, BookOpen, Trophy } from "lucide-react";
+import { Brain, LogOut, Settings, User, BookOpen, Trophy, MessageSquare } from "lucide-react";
+import { useState } from "react";
+import FeedbackModal from "./feedback/FeedbackModal";
 
 const Header = () => {
   const { currentUser, logout } = useUser();
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   
   return (
     <header className="border-b border-border sticky top-0 bg-background z-10">
@@ -81,6 +84,11 @@ const Header = () => {
                 <span>Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setIsFeedbackOpen(true)}>
+                <MessageSquare className="mr-2 h-4 w-4" />
+                <span>Give Feedback</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => logout()}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
@@ -89,6 +97,8 @@ const Header = () => {
           </DropdownMenu>
         </div>
       </div>
+      
+      <FeedbackModal open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen} />
     </header>
   );
 };

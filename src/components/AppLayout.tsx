@@ -4,6 +4,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import Header from "./Header";
 import CoachChatPanel from "./CoachChatPanel";
+import FeedbackWidget from "./feedback/FeedbackWidget";
 import { Toaster } from "@/components/ui/toaster";
 
 const AppLayout = () => {
@@ -45,6 +46,7 @@ const AppLayout = () => {
         </Suspense>
       </main>
       
+      <FeedbackWidget />
       <Toaster />
     </div>
   );

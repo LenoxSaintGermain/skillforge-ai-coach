@@ -85,6 +85,54 @@ export type Database = {
           },
         ]
       }
+      beta_feedback: {
+        Row: {
+          admin_response: string | null
+          attachments: string[] | null
+          browser_info: Json | null
+          created_at: string
+          current_page: string | null
+          description: string
+          feedback_type: string
+          id: string
+          priority: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_response?: string | null
+          attachments?: string[] | null
+          browser_info?: Json | null
+          created_at?: string
+          current_page?: string | null
+          description: string
+          feedback_type: string
+          id?: string
+          priority?: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_response?: string | null
+          attachments?: string[] | null
+          browser_info?: Json | null
+          created_at?: string
+          current_page?: string | null
+          description?: string
+          feedback_type?: string
+          id?: string
+          priority?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       content_cache: {
         Row: {
           content: string
