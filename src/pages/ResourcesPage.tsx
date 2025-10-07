@@ -10,11 +10,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, FileIcon, BookOpen, Video, Globe, Download, Search, Sparkles, Loader2, ThumbsUp, AlertCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowRight, FileIcon, BookOpen, Video, Globe, Download, Search, Sparkles, Loader2, ThumbsUp, AlertCircle, Edit, Trash2, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useUser } from "@/contexts/UserContext";
 
 interface Resource {
   id: string;
@@ -27,6 +33,7 @@ interface Resource {
   quality_score?: number;
   votes?: number;
   created_at?: string;
+  added_by_user_id?: string;
 }
 
 const resources: Resource[] = [
@@ -103,7 +110,12 @@ const ResourcesPage: React.FC = () => {
   const [searchStatus, setSearchStatus] = useState('');
   const [dynamicResources, setDynamicResources] = useState<Resource[]>([]);
   const [allResources, setAllResources] = useState<Resource[]>(resources);
+  const [activeTab, setActiveTab] = useState('all');
+  const [editingResource, setEditingResource] = useState<Resource | null>(null);
+  const [deleteResourceId, setDeleteResourceId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ title: '', description: '', tags: '' });
   const { toast } = useToast();
+  const { currentUser } = useUser();
 
   // Load dynamic resources from database
   useEffect(() => {
@@ -132,7 +144,8 @@ const ResourcesPage: React.FC = () => {
           source: item.source as 'ai-curated' | 'manual',
           quality_score: item.quality_score || undefined,
           votes: item.votes || 0,
-          created_at: item.created_at
+          created_at: item.created_at,
+          added_by_user_id: item.added_by_user_id || undefined
         }));
         setDynamicResources(formattedResources);
         setAllResources([...resources, ...formattedResources]);
@@ -221,6 +234,102 @@ const ResourcesPage: React.FC = () => {
     }
   };
 
+  const handleEditResource = (resource: Resource) => {
+    setEditingResource(resource);
+    setEditForm({
+      title: resource.title,
+      description: resource.description,
+      tags: resource.tags.join(', ')
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingResource) return;
+
+    try {
+      const tagsArray = editForm.tags.split(',').map(tag => tag.trim()).filter(Boolean);
+      
+      const { error } = await supabase
+        .from('learning_resources')
+        .update({
+          title: editForm.title,
+          description: editForm.description,
+          tags: tagsArray
+        })
+        .eq('id', editingResource.id);
+
+      if (error) throw error;
+
+      // Update local state
+      const updatedResource = {
+        ...editingResource,
+        title: editForm.title,
+        description: editForm.description,
+        tags: tagsArray
+      };
+
+      setDynamicResources(prev => 
+        prev.map(r => r.id === editingResource.id ? updatedResource : r)
+      );
+      setAllResources(prev =>
+        prev.map(r => r.id === editingResource.id ? updatedResource : r)
+      );
+
+      toast({
+        title: "Resource updated",
+        description: "Your changes have been saved successfully",
+      });
+
+      setEditingResource(null);
+    } catch (error) {
+      console.error('Edit error:', error);
+      toast({
+        title: "Update failed",
+        description: error instanceof Error ? error.message : "Failed to update resource",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteResource = async () => {
+    if (!deleteResourceId) return;
+
+    try {
+      const { error } = await supabase
+        .from('learning_resources')
+        .delete()
+        .eq('id', deleteResourceId);
+
+      if (error) throw error;
+
+      // Update local state
+      setDynamicResources(prev => prev.filter(r => r.id !== deleteResourceId));
+      setAllResources(prev => prev.filter(r => r.id !== deleteResourceId));
+
+      toast({
+        title: "Resource deleted",
+        description: "The resource has been removed successfully",
+      });
+
+      setDeleteResourceId(null);
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({
+        title: "Delete failed",
+        description: error instanceof Error ? error.message : "Failed to delete resource",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const filteredResources = activeTab === 'my-discoveries' 
+    ? allResources.filter(r => r.added_by_user_id === currentUser?.user_id)
+    : allResources;
+
+  const isOwnedByUser = (resource: Resource) => {
+    return currentUser && resource.added_by_user_id === currentUser.user_id;
+  };
+
   return (
     <div className="container py-8">
       <div className="flex flex-col gap-6">
@@ -295,33 +404,61 @@ const ResourcesPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Dynamic Resources Count */}
-        {dynamicResources.length > 0 && (
-          <Alert>
-            <Sparkles className="h-4 w-4" />
-            <AlertDescription>
-              <span className="font-semibold">{dynamicResources.length}</span> AI-discovered resources available
-            </AlertDescription>
-          </Alert>
-        )}
+        {/* Tabs for filtering */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="all">All Resources</TabsTrigger>
+            <TabsTrigger value="my-discoveries">
+              <User className="mr-2 h-4 w-4" />
+              My Discoveries
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Resources Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {allResources.map((resource) => (
-            <Card key={resource.id} className="flex flex-col">
-              <CardHeader>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {getIconForResourceType(resource.type)}
-                    <Badge>{resource.type}</Badge>
-                  </div>
-                  {resource.source === 'ai-curated' && (
-                    <Badge variant="secondary" className="gap-1">
-                      <Sparkles className="h-3 w-3" />
-                      AI
-                    </Badge>
-                  )}
-                </div>
+          <TabsContent value={activeTab} className="mt-6">
+            {/* Dynamic Resources Count */}
+            {activeTab === 'all' && dynamicResources.length > 0 && (
+              <Alert className="mb-6">
+                <Sparkles className="h-4 w-4" />
+                <AlertDescription>
+                  <span className="font-semibold">{dynamicResources.length}</span> AI-discovered resources available
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {activeTab === 'my-discoveries' && filteredResources.length === 0 && (
+              <Alert className="mb-6">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  You haven't discovered any resources yet. Use the AI search above to find resources!
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Resources Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredResources.map((resource) => (
+                <Card key={resource.id} className="flex flex-col">
+                  <CardHeader>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        {getIconForResourceType(resource.type)}
+                        <Badge>{resource.type}</Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {resource.source === 'ai-curated' && (
+                          <Badge variant="secondary" className="gap-1">
+                            <Sparkles className="h-3 w-3" />
+                            AI
+                          </Badge>
+                        )}
+                        {isOwnedByUser(resource) && (
+                          <Badge variant="outline" className="gap-1">
+                            <User className="h-3 w-3" />
+                            Mine
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
                 <CardTitle className="line-clamp-2">{resource.title}</CardTitle>
                 <CardDescription className="line-clamp-3">
                   {resource.description}
@@ -353,30 +490,124 @@ const ResourcesPage: React.FC = () => {
                   </div>
                 )}
 
-                {resource.votes !== undefined && resource.source === 'ai-curated' && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleVote(resource.id, resource.votes || 0)}
-                    className="w-full"
-                  >
-                    <ThumbsUp className="mr-2 h-4 w-4" />
-                    Helpful ({resource.votes})
-                  </Button>
-                )}
-              </CardContent>
-              <CardFooter>
-                <Button asChild className="w-full">
-                  <a href={resource.url} target="_blank" rel="noopener noreferrer">
-                    View Resource
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </a>
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+                    {resource.votes !== undefined && resource.source === 'ai-curated' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleVote(resource.id, resource.votes || 0)}
+                        className="w-full"
+                      >
+                        <ThumbsUp className="mr-2 h-4 w-4" />
+                        Helpful ({resource.votes})
+                      </Button>
+                    )}
+                  </CardContent>
+                  <CardFooter className="flex flex-col gap-2">
+                    <Button asChild className="w-full">
+                      <a href={resource.url} target="_blank" rel="noopener noreferrer">
+                        View Resource
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </a>
+                    </Button>
+                    
+                    {isOwnedByUser(resource) && (
+                      <div className="flex gap-2 w-full">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditResource(resource)}
+                          className="flex-1"
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setDeleteResourceId(resource.id)}
+                          className="flex-1"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </Button>
+                      </div>
+                    )}
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
+
+      {/* Edit Resource Dialog */}
+      <Dialog open={!!editingResource} onOpenChange={(open) => !open && setEditingResource(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Resource</DialogTitle>
+            <DialogDescription>
+              Update the details of your discovered resource
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Title</Label>
+              <Input
+                id="edit-title"
+                value={editForm.title}
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                placeholder="Resource title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                placeholder="Resource description"
+                rows={4}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-tags">Tags</Label>
+              <Input
+                id="edit-tags"
+                value={editForm.tags}
+                onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
+                placeholder="tag1, tag2, tag3"
+              />
+              <p className="text-sm text-muted-foreground">Separate tags with commas</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingResource(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteResourceId} onOpenChange={(open) => !open && setDeleteResourceId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this resource. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteResource} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
