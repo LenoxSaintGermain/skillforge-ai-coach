@@ -167,27 +167,52 @@ export class AICoachService {
   /**
    * Calls the Gemini API via edge function
    */
-  private async callGeminiAPI(prompt: string, systemPrompt?: string): Promise<string> {
+  private async callGeminiAPI(prompt: string, systemPrompt?: string, maxRetries = 2): Promise<string> {
     const { supabase } = await import('@/integrations/supabase/client');
 
-    const { data, error } = await supabase.functions.invoke('gemini-api', {
-      body: {
-        prompt,
-        systemPrompt,
-        temperature: 0.7,
-        maxTokens: 1000
+    // Detect if this is an assessment generation request (needs more tokens)
+    const isAssessment = prompt.includes('assessment') || prompt.includes('questions');
+    const maxTokens = isAssessment ? 4096 : 1000;
+
+    let lastError: Error | null = null;
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const { data, error } = await supabase.functions.invoke('gemini-api', {
+          body: {
+            prompt,
+            systemPrompt,
+            temperature: 0.7,
+            maxTokens: maxTokens * (attempt + 1) // Increase tokens on retry
+          }
+        });
+
+        if (error) {
+          throw new Error(`Gemini API error: ${error.message}`);
+        }
+
+        if (!data?.generatedText) {
+          throw new Error('No response from Gemini API');
+        }
+
+        return data.generatedText;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Unknown error');
+        console.error(`Attempt ${attempt + 1} failed:`, lastError.message);
+        
+        // Don't retry if it's not a MAX_TOKENS error
+        if (!lastError.message.includes('MAX_TOKENS') && attempt < maxRetries) {
+          throw lastError;
+        }
+        
+        // Wait before retry
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        }
       }
-    });
-
-    if (error) {
-      throw new Error(`Gemini API error: ${error.message}`);
     }
 
-    if (!data?.generatedText) {
-      throw new Error('No response from Gemini API');
-    }
-
-    return data.generatedText;
+    throw lastError || new Error('Failed after retries');
   }
 
   /**

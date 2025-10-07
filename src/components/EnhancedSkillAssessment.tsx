@@ -29,18 +29,43 @@ const EnhancedSkillAssessment = () => {
   const { currentUser, isAuthenticated } = useUser();
   const { coachService } = useAI();
 
-  // Assessment state
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [questions, setQuestions] = useState<AssessmentQuestion[]>([]);
-  const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
+  // Assessment state with session persistence
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(() => {
+    const saved = sessionStorage.getItem('assessment_current_index');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+  const [questions, setQuestions] = useState<AssessmentQuestion[]>(() => {
+    const saved = sessionStorage.getItem('assessment_questions');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [userAnswers, setUserAnswers] = useState<Record<string, string>>(() => {
+    const saved = sessionStorage.getItem('assessment_answers');
+    return saved ? JSON.parse(saved) : {};
+  });
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const [assessmentComplete, setAssessmentComplete] = useState(false);
   const [assessmentResult, setAssessmentResult] = useState<AssessmentResult | null>(null);
+  const [sessionId] = useState(() => Date.now().toString()); // Unique session ID
   
   // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Persist state to sessionStorage
+  useEffect(() => {
+    if (questions.length > 0) {
+      sessionStorage.setItem('assessment_questions', JSON.stringify(questions));
+    }
+  }, [questions]);
+
+  useEffect(() => {
+    sessionStorage.setItem('assessment_answers', JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  useEffect(() => {
+    sessionStorage.setItem('assessment_current_index', currentQuestionIndex.toString());
+  }, [currentQuestionIndex]);
 
   // Generate AI-powered assessment questions
   const generateAssessmentQuestions = useCallback(async () => {
@@ -90,18 +115,40 @@ Make questions challenging but fair for the user's level. Include practical scen
         throw new Error('Failed to generate assessment questions');
       }
 
-      // Parse JSON response
+      // Validate and parse JSON response
       let questionsData;
       try {
-        questionsData = JSON.parse(response);
-      } catch (parseError) {
-        console.error('JSON parse error:', parseError);
-        // Fallback to default questions if AI response is malformed
-        questionsData = getDefaultQuestions();
-      }
+        // Check if response looks like it was truncated
+        const trimmedResponse = response.trim();
+        if (!trimmedResponse.endsWith('}') && !trimmedResponse.endsWith(']')) {
+          console.warn('Response appears truncated, retrying...');
+          throw new Error('Truncated response detected');
+        }
 
-      if (!questionsData.questions || !Array.isArray(questionsData.questions)) {
-        throw new Error('Invalid questions format received');
+        // Try to extract JSON from response (in case there's extra text)
+        const jsonMatch = trimmedResponse.match(/\{[\s\S]*\}/);
+        const jsonString = jsonMatch ? jsonMatch[0] : trimmedResponse;
+        
+        questionsData = JSON.parse(jsonString);
+        
+        // Validate structure
+        if (!questionsData.questions || !Array.isArray(questionsData.questions)) {
+          throw new Error('Invalid questions format in response');
+        }
+        
+        // Validate each question has required fields
+        const isValid = questionsData.questions.every((q: any) => 
+          q.id && q.question && Array.isArray(q.options) && q.category
+        );
+        
+        if (!isValid) {
+          throw new Error('Questions missing required fields');
+        }
+      } catch (parseError) {
+        console.error('JSON parse/validation error:', parseError);
+        console.error('Response received:', response.substring(0, 200));
+        toast.error('Failed to generate questions. Using default assessment.');
+        questionsData = getDefaultQuestions();
       }
 
       setQuestions(questionsData.questions);
@@ -114,12 +161,12 @@ Make questions challenging but fair for the user's level. Include practical scen
     }
   }, [currentUser, coachService]);
 
-  // Initialize assessment
+  // Initialize assessment only if no saved session exists
   useEffect(() => {
-    if (currentUser && !questions.length) {
+    if (currentUser && questions.length === 0 && !assessmentComplete) {
       generateAssessmentQuestions();
     }
-  }, [currentUser, questions.length, generateAssessmentQuestions]);
+  }, [currentUser, assessmentComplete, generateAssessmentQuestions]);
 
   // Default questions fallback
   const getDefaultQuestions = () => ({
@@ -230,12 +277,20 @@ Make questions challenging but fair for the user's level. Include practical scen
   };
 
   const handleRestart = () => {
+    // Clear session storage
+    sessionStorage.removeItem('assessment_questions');
+    sessionStorage.removeItem('assessment_answers');
+    sessionStorage.removeItem('assessment_current_index');
+    
+    // Reset state
     setCurrentQuestionIndex(0);
     setUserAnswers({});
     setShowExplanation(false);
     setAssessmentComplete(false);
     setAssessmentResult(null);
     setQuestions([]);
+    
+    // Generate new questions
     generateAssessmentQuestions();
   };
 

@@ -102,6 +102,14 @@ serve(async (req) => {
     // Check for other finish reasons
     if (candidate.finishReason && candidate.finishReason !== 'STOP') {
       console.error('Unexpected finish reason:', candidate.finishReason);
+      
+      // For MAX_TOKENS, return partial content with error flag
+      if (candidate.finishReason === 'MAX_TOKENS') {
+        const partialText = candidate.content?.parts?.[0]?.text || '';
+        console.warn('Response truncated due to MAX_TOKENS. Partial length:', partialText.length);
+        throw new Error(`MAX_TOKENS: Response was truncated. Please increase maxTokens parameter.`);
+      }
+      
       throw new Error(`Generation stopped unexpectedly: ${candidate.finishReason}`);
     }
     
