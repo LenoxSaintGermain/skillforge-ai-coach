@@ -16,6 +16,7 @@ interface UserAnalyticsData {
     skillName: string;
     progress: number;
     completedScenarios: number;
+    type: 'scenario' | 'syllabus';
   }>;
   monthlyActivity: Array<{
     month: string;
@@ -109,7 +110,13 @@ const UserAnalytics = () => {
     // Skill progress analysis - separate scenario-based and syllabus-based skills
     const scenarioSkillMap = new Map();
     completedScenarios.forEach(scenario => {
-      const skills = scenario.scenarios?.scenario_data?.skillsAddressed || [];
+      // Try multiple sources for skills data
+      const scenarioData = scenario.scenarios?.scenario_data || {};
+      const skills = scenarioData.skillsAddressed 
+        || scenario.scenarios?.learning_objectives 
+        || scenario.scenarios?.tags 
+        || [];
+      
       skills.forEach((skill: string) => {
         if (!scenarioSkillMap.has(skill)) {
           scenarioSkillMap.set(skill, { count: 0, totalScore: 0, type: 'scenario' });
@@ -125,17 +132,27 @@ const UserAnalytics = () => {
 
     // Add syllabus progress as separate skill entries
     syllabusData.forEach(syllabus => {
-      const syllabusSkill = `${syllabus.syllabus_name}`;
+      // Format syllabus name nicely
+      const formatSyllabusName = (name: string) => {
+        return name
+          .split('-')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+      };
+      
+      const syllabusSkill = formatSyllabusName(syllabus.syllabus_name);
       scenarioSkillMap.set(syllabusSkill, { 
-        count: 1, 
-        totalScore: syllabus.progress_percentage,
+        count: syllabus.completed_modules?.length || 0,
+        totalScore: syllabus.progress_percentage || 0,
         type: 'syllabus'
       });
     });
 
     const skillProgress = Array.from(scenarioSkillMap.entries()).map(([skillName, data]) => ({
       skillName,
-      progress: Math.round(data.totalScore / data.count) || 0,
+      progress: data.type === 'syllabus' 
+        ? data.totalScore 
+        : Math.round(data.totalScore / data.count) || 0,
       completedScenarios: data.count,
       type: data.type
     }));
@@ -272,7 +289,14 @@ const UserAnalytics = () => {
               <Clock className="h-8 w-8 text-secondary mr-3" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Time</p>
-                <p className="text-2xl font-bold">{analyticsData.totalTimeSpent}h</p>
+                <p className="text-2xl font-bold">
+                  {analyticsData.totalTimeSpent > 0 
+                    ? `${analyticsData.totalTimeSpent}h` 
+                    : '—'}
+                </p>
+                {analyticsData.totalTimeSpent === 0 && (
+                  <p className="text-xs text-muted-foreground">Time tracking active</p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -361,20 +385,28 @@ const UserAnalytics = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {analyticsData.skillProgress.map((skill, index) => (
-              <div key={index} className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">{skill.skillName}</span>
-                  <div className="text-right">
-                    <span className="text-sm font-medium">{skill.progress}%</span>
-                    <span className="text-xs text-muted-foreground ml-2">
-                      ({skill.completedScenarios} scenarios)
-                    </span>
+            {analyticsData.skillProgress.length > 0 ? (
+              analyticsData.skillProgress.map((skill, index) => (
+                <div key={index} className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">{skill.skillName}</span>
+                    <div className="text-right">
+                      <span className="text-sm font-medium">{skill.progress}%</span>
+                      <span className="text-xs text-muted-foreground ml-2">
+                        {skill.type === 'syllabus' 
+                          ? `(${skill.completedScenarios} modules)`
+                          : `(${skill.completedScenarios} scenarios)`}
+                      </span>
+                    </div>
                   </div>
+                  <Progress value={skill.progress} className="h-2" />
                 </div>
-                <Progress value={skill.progress} className="h-2" />
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Complete scenarios or explore syllabi to track skill development
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -387,20 +419,26 @@ const UserAnalytics = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {analyticsData.recentCompletions.map((completion, index) => (
-              <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                <div>
-                  <p className="font-medium">{completion.scenarioTitle}</p>
-                  <p className="text-sm text-muted-foreground">
-                    <Calendar className="inline h-3 w-3 mr-1" />
-                    {formatDistanceToNow(new Date(completion.completedAt), { addSuffix: true })}
-                  </p>
+            {analyticsData.recentCompletions.length > 0 ? (
+              analyticsData.recentCompletions.map((completion, index) => (
+                <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                  <div>
+                    <p className="font-medium">{completion.scenarioTitle}</p>
+                    <p className="text-sm text-muted-foreground">
+                      <Calendar className="inline h-3 w-3 mr-1" />
+                      {formatDistanceToNow(new Date(completion.completedAt), { addSuffix: true })}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-medium text-primary">{completion.score}%</span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="font-medium text-primary">{completion.score}%</span>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No completed scenarios yet
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

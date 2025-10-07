@@ -30,6 +30,7 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
   const [feedbackText, setFeedbackText] = useState('');
   const [userProgress, setUserProgress] = useState<any>(null);
   const [showCoachChat, setShowCoachChat] = useState(false);
+  const [startTime] = useState<Date>(new Date());
   
   const { coachService } = useAI();
   const { toast } = useToast();
@@ -159,8 +160,21 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
       const allTaskIds = (updatedScenario.tasks || []).map(task => task.id);
       setCompletedSteps(allTaskIds);
       
-      // Mark scenario as completed in database
+      // Calculate completion time
+      const completionTimeMinutes = Math.round((new Date().getTime() - startTime.getTime()) / 60000);
+      const hours = Math.floor(completionTimeMinutes / 60);
+      const minutes = completionTimeMinutes % 60;
+      const timeSpent = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+      
+      // Mark scenario as completed in database with completion time
       await scenarioService.completeScenario(scenario.id);
+      
+      // Update progress with completion time
+      await scenarioService.updateScenarioProgress(scenario.id, {
+        percentComplete: 100,
+        completedDate: new Date(),
+        timeSpent: timeSpent
+      });
       
       setIsSubmitted(true);
       

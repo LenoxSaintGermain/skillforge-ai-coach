@@ -511,6 +511,7 @@ Return only a number between 1-100.`;
         user_id: userProfile.user_id,
         scenario_data: {
           ...parsedData,
+          skillsAddressed: parsedData.skills_addressed || parsedData.skillsAddressed || [],
           generation_metadata: {
             generated_at: new Date().toISOString(),
             user_profile: {
