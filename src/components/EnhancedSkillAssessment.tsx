@@ -264,6 +264,11 @@ Requirements:
         toast.success('Assessment completed and saved!');
       }
       
+      // Clear session storage on completion to ensure fresh start on next visit
+      sessionStorage.removeItem('assessment_questions');
+      sessionStorage.removeItem('assessment_answers');
+      sessionStorage.removeItem('assessment_current_index');
+      
       setAssessmentComplete(true);
     } catch (error) {
       console.error('Error completing assessment:', error);
@@ -272,6 +277,12 @@ Requirements:
       // Still show results even if save failed
       const result = SkillAssessmentService.analyzeAssessmentResults(questions, userAnswers);
       setAssessmentResult(result);
+      
+      // Clear session storage even on error
+      sessionStorage.removeItem('assessment_questions');
+      sessionStorage.removeItem('assessment_answers');
+      sessionStorage.removeItem('assessment_current_index');
+      
       setAssessmentComplete(true);
     } finally {
       setIsLoading(false);
