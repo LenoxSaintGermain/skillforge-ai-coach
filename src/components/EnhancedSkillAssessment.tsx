@@ -26,7 +26,7 @@ import { SkillAssessmentService, AssessmentQuestion, AssessmentResult } from '@/
 
 const EnhancedSkillAssessment = () => {
   const navigate = useNavigate();
-  const { currentUser, isAuthenticated } = useUser();
+  const { currentUser, isAuthenticated, refreshUserData } = useUser();
   const { coachService } = useAI();
 
   // Assessment state with session persistence
@@ -255,8 +255,11 @@ Requirements:
           result
         );
         
-        // Update learning progress
+        // Update learning progress and profile knowledge level
         await SkillAssessmentService.updateLearningProgress(currentUser.user_id, result);
+        
+        // Refresh user data to show updated knowledge level on dashboard
+        await refreshUserData();
         
         toast.success('Assessment completed and saved!');
       }

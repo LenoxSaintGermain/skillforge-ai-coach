@@ -238,6 +238,13 @@ const Dashboard = () => {
                 />
                 
                 <RecommendationCard 
+                  title="Assess My Skills" 
+                  description="Take a comprehensive assessment to evaluate your prompt engineering expertise."
+                  icon={<Award className="h-4 w-4 text-skillforge-accent" />}
+                  onClick={() => navigate('/skill-assessment')}
+                />
+                
+                <RecommendationCard 
                   title="Prompt Engineering" 
                   description="Learn advanced techniques to craft effective prompts for AI models."
                   icon={<Brain className="h-4 w-4 text-skillforge-primary" />}

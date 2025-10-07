@@ -324,6 +324,19 @@ export class SkillAssessmentService {
 
         if (error) throw error;
       }
+
+      // CRITICAL: Update profile's ai_knowledge_level to match assessment result
+      // Map skill level to user-friendly display format
+      const knowledgeLevel = result.skillLevel.charAt(0).toUpperCase() + result.skillLevel.slice(1);
+      
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ ai_knowledge_level: knowledgeLevel })
+        .eq('user_id', userId);
+
+      if (profileError) {
+        console.error('Error updating profile knowledge level:', profileError);
+      }
     } catch (error) {
       console.error('Error updating learning progress:', error);
       // Don't throw - this is non-critical
