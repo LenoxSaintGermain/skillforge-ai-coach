@@ -364,7 +364,7 @@ Requirements:
         {/* Back navigation */}
         <Button 
           variant="ghost" 
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate('/')}
           className="mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -547,7 +547,7 @@ Requirements:
       {/* Back navigation */}
       <Button 
         variant="ghost" 
-        onClick={() => navigate('/dashboard')}
+        onClick={() => navigate('/')}
         className="mb-4"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
