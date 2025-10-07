@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, temperature = 0.7, maxTokens = 1000, systemPrompt } = await req.json();
+    const { prompt, temperature = 0.7, maxTokens = 8192, systemPrompt, responseSchema } = await req.json();
     
     if (!prompt) {
       throw new Error('Prompt is required');
@@ -25,7 +25,7 @@ serve(async (req) => {
     }
 
     // Prepare the request body for Gemini API with safety settings
-    const requestBody = {
+    const requestBody: any = {
       contents: [
         {
           parts: [
@@ -39,7 +39,9 @@ serve(async (req) => {
         temperature: temperature,
         maxOutputTokens: maxTokens,
         topP: 0.8,
-        topK: 40
+        topK: 40,
+        responseMimeType: responseSchema ? "application/json" : undefined,
+        responseSchema: responseSchema || undefined
       },
       safetySettings: [
         {
@@ -60,6 +62,13 @@ serve(async (req) => {
         }
       ]
     };
+
+    // Disable extended thinking mode to save tokens
+    if (!responseSchema) {
+      requestBody.thoughtConfig = {
+        mode: "DISABLED"
+      };
+    }
 
     console.log('Calling Gemini API with prompt:', prompt.substring(0, 100) + '...');
 

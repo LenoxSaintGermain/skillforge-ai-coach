@@ -79,57 +79,54 @@ const EnhancedSkillAssessment = () => {
       const userRole = currentUser.role || 'Professional';
       const userIndustry = currentUser.industry || 'General';
 
-      const prompt = `Generate a comprehensive prompt engineering skill assessment with 7 questions adapted for a ${userLevel} level ${userRole} in ${userIndustry}.
+      const systemPrompt = `You are Jarvis, an AI learning coach. Generate a prompt engineering skill assessment tailored to the user.
 
-**Requirements:**
-1. Create questions that test different aspects: prompt structure, context management, output optimization, advanced techniques, and real-world application
-2. Include a mix of multiple choice and scenario-based questions
-3. Adapt difficulty to ${userLevel} level
-4. Make questions relevant to ${userRole} role
-5. Include practical examples and case studies
-
-**Response Format (JSON only):**
+Return ONLY valid JSON in this exact format:
 {
   "questions": [
     {
       "id": "q1",
-      "question": "Question text here",
+      "question": "...",
       "options": [
-        {"id": "a", "text": "Option A", "isCorrect": false, "explanation": "Why this is wrong"},
-        {"id": "b", "text": "Option B", "isCorrect": true, "explanation": "Why this is correct"},
-        {"id": "c", "text": "Option C", "isCorrect": false, "explanation": "Why this is wrong"},
-        {"id": "d", "text": "Option D", "isCorrect": false, "explanation": "Why this is wrong"}
+        {"id": "a", "text": "...", "isCorrect": false, "explanation": "..."},
+        {"id": "b", "text": "...", "isCorrect": true, "explanation": "..."}
       ],
-      "category": "Prompt Structure|Context Management|Output Optimization|Advanced Techniques|Real-world Application",
+      "category": "Prompt Structure|Context Management|Output Optimization|Advanced Techniques|Real-world",
       "difficulty": "beginner|intermediate|advanced",
-      "scenario": "Optional real-world scenario context"
+      "scenario": "Real-world context"
     }
   ]
-}
+}`;
 
-Make questions challenging but fair for the user's level. Include practical scenarios they would encounter in their role.`;
+      const prompt = `Create 7 prompt engineering assessment questions for:
+- Level: ${userLevel}
+- Role: ${userRole}
+- Industry: ${userIndustry}
 
-      const response = await coachService?.getResponse(prompt);
+Requirements:
+• Test: prompt structure, context, output optimization, advanced techniques, real-world scenarios
+• Multiple choice with 4 options each
+• One correct answer per question
+• Brief explanations (2-3 sentences max)
+• Practical ${userRole} scenarios
+• Appropriate ${userLevel} difficulty`;
+
+      // Use structured output for reliable JSON generation
+      const response = await coachService?.callGeminiAPI(prompt, systemPrompt, 2, true);
 
       if (!response) {
         throw new Error('Failed to generate assessment questions');
       }
 
-      // Validate and parse JSON response
+      console.log('📝 Raw assessment response:', response.substring(0, 200));
+
+      // Parse JSON response with repair fallback
       let questionsData;
       try {
-        // Check if response looks like it was truncated
         const trimmedResponse = response.trim();
-        if (!trimmedResponse.endsWith('}') && !trimmedResponse.endsWith(']')) {
-          console.warn('Response appears truncated, retrying...');
-          throw new Error('Truncated response detected');
-        }
-
-        // Try to extract JSON from response (in case there's extra text)
-        const jsonMatch = trimmedResponse.match(/\{[\s\S]*\}/);
-        const jsonString = jsonMatch ? jsonMatch[0] : trimmedResponse;
         
-        questionsData = JSON.parse(jsonString);
+        // Try direct parse first
+        questionsData = JSON.parse(trimmedResponse);
         
         // Validate structure
         if (!questionsData.questions || !Array.isArray(questionsData.questions)) {
@@ -144,9 +141,11 @@ Make questions challenging but fair for the user's level. Include practical scen
         if (!isValid) {
           throw new Error('Questions missing required fields');
         }
+        
+        console.log(`✅ Parsed ${questionsData.questions.length} valid questions`);
       } catch (parseError) {
         console.error('JSON parse/validation error:', parseError);
-        console.error('Response received:', response.substring(0, 200));
+        console.error('Response received:', response.substring(0, 500));
         toast.error('Failed to generate questions. Using default assessment.');
         questionsData = getDefaultQuestions();
       }

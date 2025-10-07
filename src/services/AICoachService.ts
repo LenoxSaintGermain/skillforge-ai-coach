@@ -167,23 +167,63 @@ export class AICoachService {
   /**
    * Calls the Gemini API via edge function
    */
-  private async callGeminiAPI(prompt: string, systemPrompt?: string, maxRetries = 2): Promise<string> {
+  public async callGeminiAPI(prompt: string, systemPrompt?: string, maxRetries = 2, useStructuredOutput = false): Promise<string> {
     const { supabase } = await import('@/integrations/supabase/client');
 
     // Detect if this is an assessment generation request (needs more tokens)
     const isAssessment = prompt.includes('assessment') || prompt.includes('questions');
-    const maxTokens = isAssessment ? 4096 : 1000;
+    const baseTokens = isAssessment ? 8192 : 1000;
 
     let lastError: Error | null = null;
     
+    // Define schema for structured output (assessment questions)
+    const assessmentSchema = useStructuredOutput ? {
+      type: "object",
+      properties: {
+        questions: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              question: { type: "string" },
+              options: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string" },
+                    text: { type: "string" },
+                    isCorrect: { type: "boolean" },
+                    explanation: { type: "string" }
+                  },
+                  required: ["id", "text", "isCorrect", "explanation"]
+                }
+              },
+              category: { type: "string" },
+              difficulty: { type: "string" },
+              scenario: { type: "string" }
+            },
+            required: ["id", "question", "options", "category", "difficulty", "scenario"]
+          }
+        }
+      },
+      required: ["questions"]
+    } : undefined;
+    
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
+        const currentMaxTokens = Math.floor(baseTokens * Math.pow(1.5, attempt)); // 1.5x multiplier on retry
+        
+        console.log(`🔄 Gemini API call attempt ${attempt + 1}, maxTokens: ${currentMaxTokens}`);
+        
         const { data, error } = await supabase.functions.invoke('gemini-api', {
           body: {
             prompt,
             systemPrompt,
             temperature: 0.7,
-            maxTokens: maxTokens * (attempt + 1) // Increase tokens on retry
+            maxTokens: currentMaxTokens,
+            responseSchema: assessmentSchema
           }
         });
 
@@ -195,10 +235,11 @@ export class AICoachService {
           throw new Error('No response from Gemini API');
         }
 
+        console.log(`✅ Gemini API success on attempt ${attempt + 1}`);
         return data.generatedText;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Unknown error');
-        console.error(`Attempt ${attempt + 1} failed:`, lastError.message);
+        console.error(`❌ Attempt ${attempt + 1} failed:`, lastError.message);
         
         // Don't retry if it's not a MAX_TOKENS error
         if (!lastError.message.includes('MAX_TOKENS') && attempt < maxRetries) {
@@ -207,12 +248,57 @@ export class AICoachService {
         
         // Wait before retry
         if (attempt < maxRetries) {
+          console.log(`⏳ Waiting before retry...`);
           await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
         }
       }
     }
 
     throw lastError || new Error('Failed after retries');
+  }
+
+  /**
+   * Attempts to repair truncated or malformed JSON
+   */
+  private attemptJSONRepair(text: string): any {
+    // Try to parse as-is first
+    try {
+      return JSON.parse(text);
+    } catch {}
+    
+    // Extract JSON block from markdown code fences
+    const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/);
+    if (jsonMatch) {
+      try {
+        return JSON.parse(jsonMatch[1]);
+      } catch {}
+    }
+    
+    // Extract anything between first { and last }
+    const firstBrace = text.indexOf('{');
+    const lastBrace = text.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      const extracted = text.slice(firstBrace, lastBrace + 1);
+      try {
+        return JSON.parse(extracted);
+      } catch {}
+    }
+    
+    // Try to close incomplete JSON by adding closing brackets
+    const attempts = [
+      text + '}',
+      text + ']}',
+      text + '}]}',
+      text + '"}}]}'
+    ];
+    
+    for (const attempt of attempts) {
+      try {
+        return JSON.parse(attempt);
+      } catch {}
+    }
+    
+    throw new Error('Could not parse or repair JSON');
   }
 
   /**
