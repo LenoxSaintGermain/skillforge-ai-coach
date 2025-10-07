@@ -10,13 +10,15 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { useUser } from "@/contexts/UserContext";
+import { useAdminRole } from "@/hooks/useAdminRole";
 import { Link } from "react-router-dom";
-import { Brain, LogOut, Settings, User, BookOpen, Trophy, MessageSquare } from "lucide-react";
+import { Brain, LogOut, Settings, User, BookOpen, Trophy, MessageSquare, Shield } from "lucide-react";
 import { useState } from "react";
 import FeedbackModal from "./feedback/FeedbackModal";
 
 const Header = () => {
   const { currentUser, logout } = useUser();
+  const { isAdmin } = useAdminRole();
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   
   return (
@@ -83,6 +85,17 @@ const Header = () => {
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
               </DropdownMenuItem>
+              {isAdmin && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin" className="cursor-pointer">
+                      <Shield className="mr-2 h-4 w-4" />
+                      <span>Admin Dashboard</span>
+                    </Link>
+                  </DropdownMenuItem>
+                </>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsFeedbackOpen(true)}>
                 <MessageSquare className="mr-2 h-4 w-4" />

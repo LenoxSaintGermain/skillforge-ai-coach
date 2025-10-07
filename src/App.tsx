@@ -17,6 +17,8 @@ import GeminiTrainingPage from "./pages/GeminiTrainingPage";
 import PromptEngineeringPage from "./pages/PromptEngineeringPage";
 import ResourcesPage from "./pages/ResourcesPage";
 import NotFound from "./pages/NotFound";
+import AdminLayout from "./components/AdminLayout";
+import AdminDashboard from "./pages/AdminDashboard";
 import { UserProvider } from "./contexts/UserContext";
 import { AIProvider } from "./contexts/AIContext";
 
@@ -44,11 +46,17 @@ const App = () => (
                     <Route path="/scenario/generate" element={<ScenarioGeneratorPage />} />
                     <Route path="/assessment" element={<SkillAssessmentPage />} />
                     <Route path="/gemini-training" element={<GeminiTrainingPage />} />
-                    <Route path="/prompt-engineering" element={<PromptEngineeringPage />} />
-                    <Route path="/resources" element={<ResourcesPage />} />
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  </Route>
-                  <Route path="*" element={<NotFound />} />
+                  <Route path="/prompt-engineering" element={<PromptEngineeringPage />} />
+                  <Route path="/resources" element={<ResourcesPage />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                </Route>
+
+                {/* Admin routes with admin-only layout */}
+                <Route element={<AdminLayout />}>
+                  <Route path="/admin" element={<AdminDashboard />} />
+                </Route>
+
+                <Route path="*" element={<NotFound />} />
                 </Routes>
               </ErrorBoundary>
             </React.StrictMode>

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, MessageSquare, BookOpen, Activity } from 'lucide-react';
+import FeedbackManagement from '@/components/admin/FeedbackManagement';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -110,15 +111,7 @@ const AdminDashboard = () => {
         </TabsList>
 
         <TabsContent value="feedback" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Feedback Management</CardTitle>
-              <CardDescription>Review and respond to user feedback</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">Feedback management interface coming soon...</p>
-            </CardContent>
-          </Card>
+          <FeedbackManagement />
         </TabsContent>
 
         <TabsContent value="users" className="space-y-4">
