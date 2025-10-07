@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Calendar, Clock, Trophy, Target, TrendingUp, BookOpen } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
+import { formatDistanceToNow } from 'date-fns';
 
 interface UserAnalyticsData {
   totalScenariosCompleted: number;
@@ -105,34 +106,38 @@ const UserAnalytics = () => {
       ? totalTimeSpent / totalScenariosCompleted 
       : 0;
 
-    // Skill progress analysis
-    const skillMap = new Map();
+    // Skill progress analysis - separate scenario-based and syllabus-based skills
+    const scenarioSkillMap = new Map();
     completedScenarios.forEach(scenario => {
       const skills = scenario.scenarios?.scenario_data?.skillsAddressed || [];
       skills.forEach((skill: string) => {
-        if (!skillMap.has(skill)) {
-          skillMap.set(skill, { count: 0, totalScore: 0 });
+        if (!scenarioSkillMap.has(skill)) {
+          scenarioSkillMap.set(skill, { count: 0, totalScore: 0, type: 'scenario' });
         }
-        const current = skillMap.get(skill);
-        skillMap.set(skill, {
+        const current = scenarioSkillMap.get(skill);
+        scenarioSkillMap.set(skill, {
           count: current.count + 1,
-          totalScore: current.totalScore + (scenario.score || 0)
+          totalScore: current.totalScore + (scenario.score || 0),
+          type: 'scenario'
         });
       });
     });
 
-    // Add syllabus progress to skill tracking
+    // Add syllabus progress as separate skill entries
     syllabusData.forEach(syllabus => {
       const syllabusSkill = `${syllabus.syllabus_name}`;
-      if (!skillMap.has(syllabusSkill)) {
-        skillMap.set(syllabusSkill, { count: 1, totalScore: syllabus.progress_percentage });
-      }
+      scenarioSkillMap.set(syllabusSkill, { 
+        count: 1, 
+        totalScore: syllabus.progress_percentage,
+        type: 'syllabus'
+      });
     });
 
-    const skillProgress = Array.from(skillMap.entries()).map(([skillName, data]) => ({
+    const skillProgress = Array.from(scenarioSkillMap.entries()).map(([skillName, data]) => ({
       skillName,
-      progress: Math.round((data.totalScore / data.count) || 0),
-      completedScenarios: data.count
+      progress: Math.round(data.totalScore / data.count) || 0,
+      completedScenarios: data.count,
+      type: data.type
     }));
 
     // Monthly activity (last 6 months)
@@ -279,7 +284,9 @@ const UserAnalytics = () => {
               <Target className="h-8 w-8 text-accent mr-3" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Avg. Completion</p>
-                <p className="text-2xl font-bold">{analyticsData.averageCompletionTime}h</p>
+                <p className="text-2xl font-bold">
+                  {analyticsData.averageCompletionTime > 0 ? `${analyticsData.averageCompletionTime}h` : 'N/A'}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -308,14 +315,12 @@ const UserAnalytics = () => {
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={analyticsData.monthlyActivity}>
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="completed" fill="var(--color-completed)" />
-                </BarChart>
-              </ResponsiveContainer>
+              <BarChart data={analyticsData.monthlyActivity}>
+                <XAxis dataKey="month" />
+                <YAxis />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="completed" fill="var(--color-completed)" />
+              </BarChart>
             </ChartContainer>
           </CardContent>
         </Card>
@@ -328,23 +333,21 @@ const UserAnalytics = () => {
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={analyticsData.difficultyDistribution}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    dataKey="count"
-                    label={({ level, percentage }) => `${level}: ${percentage}%`}
-                  >
-                    {analyticsData.difficultyDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                </PieChart>
-              </ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={analyticsData.difficultyDistribution}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  dataKey="count"
+                  label={({ level, percentage }) => `${level}: ${percentage}%`}
+                >
+                  {analyticsData.difficultyDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <ChartTooltip content={<ChartTooltipContent />} />
+              </PieChart>
             </ChartContainer>
           </CardContent>
         </Card>
@@ -390,7 +393,7 @@ const UserAnalytics = () => {
                   <p className="font-medium">{completion.scenarioTitle}</p>
                   <p className="text-sm text-muted-foreground">
                     <Calendar className="inline h-3 w-3 mr-1" />
-                    {new Date(completion.completedAt).toLocaleDateString()}
+                    {formatDistanceToNow(new Date(completion.completedAt), { addSuffix: true })}
                   </p>
                 </div>
                 <div className="text-right">

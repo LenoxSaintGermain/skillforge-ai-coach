@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { geminiProgressService } from "@/services/GeminiProgressService";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { SKILL_AREAS } from "@/constants/skillAreas";
 
 const SkillCard = ({ skill, progress }: { skill: string; progress: number }) => {
   return (
@@ -178,14 +179,14 @@ const Dashboard = () => {
                       </div>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs text-muted-foreground">
-                          Phase {geminiProgress.completedPhases} of {geminiProgress.totalPhases} completed
+                          {geminiProgress.exploredPhases.length} of {geminiProgress.totalPhases} phases explored
                         </span>
                         <span className="text-xs font-medium">{geminiProgress.progress}%</span>
                       </div>
                       <Progress value={geminiProgress.progress} className="h-2" />
                       <div className="flex justify-between items-center mt-2">
                         <span className="text-xs text-muted-foreground">
-                          {geminiProgress.completedPhases === geminiProgress.totalPhases ? 'Completed!' : 'In Progress'}
+                          {geminiProgress.progress === 100 ? 'All phases explored!' : 'In Progress'}
                         </span>
                         <div className="flex items-center gap-2">
                           <Button 
@@ -210,7 +211,7 @@ const Dashboard = () => {
                   )}
                   
                   {/* Regular Learning Goals */}
-                  {currentUser.learning_goals?.filter(goal => goal.skill_area !== 'Gemini Training').map((goal, index) => (
+                  {currentUser.learning_goals?.filter(goal => goal.skill_area !== SKILL_AREAS.GEMINI_TRAINING).map((goal, index) => (
                     <div key={index} className="space-y-2">
                       <div className="text-sm font-medium">{goal.skill_area}</div>
                       <div className="flex items-center justify-between mb-1">
@@ -241,7 +242,7 @@ const Dashboard = () => {
                   title="Assess My Skills" 
                   description="Take a comprehensive assessment to evaluate your prompt engineering expertise."
                   icon={<Award className="h-4 w-4 text-skillforge-accent" />}
-                  onClick={() => navigate('/skill-assessment')}
+                  onClick={() => navigate('/assessment')}
                 />
                 
                 <RecommendationCard 
@@ -252,9 +253,10 @@ const Dashboard = () => {
                 />
                 
                 <RecommendationCard 
-                  title="AI Implementation" 
-                  description="Explore strategies for integrating AI into product workflows."
+                  title="Learning Resources" 
+                  description="Explore curated AI learning resources, tutorials, and documentation."
                   icon={<Target className="h-4 w-4 text-skillforge-secondary" />}
+                  onClick={() => navigate('/resources')}
                 />
               </CardContent>
             </Card>
