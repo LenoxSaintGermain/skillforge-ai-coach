@@ -4,6 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, MessageSquare, BookOpen, Activity } from 'lucide-react';
 import FeedbackManagement from '@/components/admin/FeedbackManagement';
+import UserManagement from '@/components/admin/UserManagement';
+import ContentOversight from '@/components/admin/ContentOversight';
+import PlatformAnalytics from '@/components/admin/PlatformAnalytics';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -115,39 +118,15 @@ const AdminDashboard = () => {
         </TabsContent>
 
         <TabsContent value="users" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>User Management</CardTitle>
-              <CardDescription>Manage user accounts and roles</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">User management interface coming soon...</p>
-            </CardContent>
-          </Card>
+          <UserManagement />
         </TabsContent>
 
         <TabsContent value="content" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Content Oversight</CardTitle>
-              <CardDescription>Monitor and manage platform content</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">Content oversight interface coming soon...</p>
-            </CardContent>
-          </Card>
+          <ContentOversight />
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Platform Analytics</CardTitle>
-              <CardDescription>View detailed platform usage analytics</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">Analytics interface coming soon...</p>
-            </CardContent>
-          </Card>
+          <PlatformAnalytics />
         </TabsContent>
       </Tabs>
     </div>
