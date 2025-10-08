@@ -9,7 +9,7 @@ export const useAdminRole = () => {
 
   useEffect(() => {
     const checkAdminRole = async () => {
-      if (!currentUser?.id) {
+      if (!currentUser?.user_id) {
         setIsAdmin(false);
         setIsLoading(false);
         return;
@@ -19,7 +19,7 @@ export const useAdminRole = () => {
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
-          .eq('user_id', currentUser.id)
+          .eq('user_id', currentUser.user_id)
           .eq('role', 'admin')
           .maybeSingle();
 
@@ -38,7 +38,7 @@ export const useAdminRole = () => {
     };
 
     checkAdminRole();
-  }, [currentUser?.id]);
+  }, [currentUser?.user_id]);
 
   return { isAdmin, isLoading };
 };
