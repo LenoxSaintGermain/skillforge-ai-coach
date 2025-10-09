@@ -143,6 +143,7 @@ export type Database = {
           id: string
           interaction_type: string
           phase_id: string
+          subject_id: string | null
           success_score: number | null
           updated_at: string
           usage_count: number | null
@@ -157,6 +158,7 @@ export type Database = {
           id?: string
           interaction_type: string
           phase_id: string
+          subject_id?: string | null
           success_score?: number | null
           updated_at?: string
           usage_count?: number | null
@@ -171,12 +173,21 @@ export type Database = {
           id?: string
           interaction_type?: string
           phase_id?: string
+          subject_id?: string | null
           success_score?: number | null
           updated_at?: string
           usage_count?: number | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "content_cache_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "learning_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       content_templates: {
         Row: {
@@ -289,6 +300,75 @@ export type Database = {
           type?: string
           url?: string
           votes?: number | null
+        }
+        Relationships: []
+      }
+      learning_subjects: {
+        Row: {
+          content_cached_count: number | null
+          created_at: string | null
+          created_by: string | null
+          hero_description: string | null
+          id: string
+          is_default: boolean | null
+          logo_url: string | null
+          overall_goal: string
+          phase_context_profiles: Json | null
+          primary_color: string | null
+          secondary_color: string | null
+          skill_areas: Json | null
+          status: Database["public"]["Enums"]["subject_status"] | null
+          subject_key: string
+          syllabus_data: Json
+          system_prompt_template: string
+          tagline: string | null
+          title: string
+          total_enrollments: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          content_cached_count?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          hero_description?: string | null
+          id?: string
+          is_default?: boolean | null
+          logo_url?: string | null
+          overall_goal: string
+          phase_context_profiles?: Json | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          skill_areas?: Json | null
+          status?: Database["public"]["Enums"]["subject_status"] | null
+          subject_key: string
+          syllabus_data: Json
+          system_prompt_template: string
+          tagline?: string | null
+          title: string
+          total_enrollments?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          content_cached_count?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          hero_description?: string | null
+          id?: string
+          is_default?: boolean | null
+          logo_url?: string | null
+          overall_goal?: string
+          phase_context_profiles?: Json | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          skill_areas?: Json | null
+          status?: Database["public"]["Enums"]["subject_status"] | null
+          subject_key?: string
+          syllabus_data?: Json
+          system_prompt_template?: string
+          tagline?: string | null
+          title?: string
+          total_enrollments?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -741,6 +821,41 @@ export type Database = {
           },
         ]
       }
+      user_subject_enrollments: {
+        Row: {
+          enrolled_at: string | null
+          id: string
+          is_primary: boolean | null
+          last_accessed: string | null
+          subject_id: string
+          user_id: string
+        }
+        Insert: {
+          enrolled_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          last_accessed?: string | null
+          subject_id: string
+          user_id: string
+        }
+        Update: {
+          enrolled_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          last_accessed?: string | null
+          subject_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subject_enrollments_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "learning_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -756,6 +871,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      subject_status: "draft" | "active" | "archived"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -884,6 +1000,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      subject_status: ["draft", "active", "archived"],
     },
   },
 } as const
