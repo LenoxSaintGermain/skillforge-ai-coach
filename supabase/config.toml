@@ -84,13 +84,13 @@ gcp_project_number = ""
 gcp_jwt_path = "supabase/gcp.json"
 
 [functions.gemini-api]
-verify_jwt = false
+verify_jwt = true
 
 [functions.vertex-ai]
-verify_jwt = false
+verify_jwt = true
 
 [functions.prompt-engineering-ai]
 verify_jwt = true
 
 [functions.discover-resources]
-verify_jwt = false
+verify_jwt = true

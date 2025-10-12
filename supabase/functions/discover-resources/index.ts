@@ -21,7 +21,37 @@ serve(async (req) => {
   }
 
   try {
-    const { query, userId } = await req.json();
+    // Validate authentication
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: corsHeaders }
+      );
+    }
+
+    // Initialize Supabase client for auth validation
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error('Authentication error:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication' }),
+        { status: 401, headers: corsHeaders }
+      );
+    }
+
+    console.log('Authenticated request from user:', user.id);
+
+    const { query } = await req.json();
+    // Use authenticated user ID instead of client-provided userId
+    const userId = user.id;
     
     if (!query || typeof query !== 'string') {
       return new Response(
@@ -123,10 +153,10 @@ Do not include any markdown formatting, code blocks, or explanatory text - only 
 
     console.log(`Discovered ${resources.length} resources`);
 
-    // Initialize Supabase client
+    // Use service role key for database operations
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
     // Save resources to database
     const resourcesToInsert = resources.map(resource => ({
@@ -143,7 +173,7 @@ Do not include any markdown formatting, code blocks, or explanatory text - only 
       is_verified: false
     }));
 
-    const { data: savedResources, error: dbError } = await supabase
+    const { data: savedResources, error: dbError } = await supabaseAdmin
       .from('learning_resources')
       .insert(resourcesToInsert)
       .select();
