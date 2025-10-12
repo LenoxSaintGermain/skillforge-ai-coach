@@ -1,4 +1,6 @@
 // Phase-specific context service for comprehensive, blog-style content generation
+import { SubjectConfig } from './SubjectConfigService';
+
 export interface PhaseProfile {
   id: number;
   titleShort: string;
@@ -11,7 +13,8 @@ export interface PhaseProfile {
 export class PhaseContextService {
   private static instance: PhaseContextService;
   
-  private readonly phaseProfiles: Record<number, PhaseProfile> = {
+  // Default Gemini profiles (used as fallback)
+  private readonly defaultPhaseProfiles: Record<number, PhaseProfile> = {
     1: {
       id: 1,
       titleShort: "GenAI Fundamentals",
@@ -61,12 +64,28 @@ export class PhaseContextService {
     return PhaseContextService.instance;
   }
 
-  getPhaseProfile(phaseId: number): PhaseProfile | null {
-    return this.phaseProfiles[phaseId] || null;
+  /**
+   * Get phase profile with subject-aware fallback
+   */
+  getPhaseProfile(phaseId: number, subjectConfig?: SubjectConfig | null): PhaseProfile | null {
+    // Try subject-specific profile first
+    if (subjectConfig?.phase_context_profiles?.[phaseId]) {
+      return subjectConfig.phase_context_profiles[phaseId];
+    }
+    // Fallback to default
+    return this.defaultPhaseProfiles[phaseId] || null;
   }
 
-  buildComprehensivePrompt(phaseId: number, phaseObjective: string, keyConcepts: { title: string; description: string }[]): string {
-    const profile = this.getPhaseProfile(phaseId);
+  /**
+   * Build comprehensive prompt with subject-aware context
+   */
+  buildComprehensivePrompt(
+    phaseId: number, 
+    phaseObjective: string, 
+    keyConcepts: { title: string; description: string }[],
+    subjectConfig?: SubjectConfig | null
+  ): string {
+    const profile = this.getPhaseProfile(phaseId, subjectConfig);
 
     if (!profile) {
       return 'Generate a helpful beginner-level article about the fundamentals of AI.';

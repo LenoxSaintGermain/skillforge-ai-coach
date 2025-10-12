@@ -1,5 +1,6 @@
 
 import { ConversationItem, UserContext } from './AICoachService';
+import { SubjectConfig } from './SubjectConfigService';
 
 export interface JarvisContext {
   currentPhaseId: number;
@@ -22,14 +23,27 @@ export interface UserSyllabusProgress {
 }
 
 export class JarvisCoachService {
+  private static instance: JarvisCoachService;
   private conversationHistory: ConversationItem[];
   private userContext: UserContext;
   private jarvisContext: JarvisContext;
-  private systemPrompt: string;
+  private subjectConfig: SubjectConfig | null;
   
-  constructor() {
+  private readonly defaultSystemPrompt = `You are 'Jarvis', a highly intelligent, personalized AI training assistant specifically designed to guide a user through the provided syllabus titled "Building with Gemini: From Idea to Prototype". Your primary function is to act as the user's personal tutor and motivator, helping them understand and complete the exercises and training outlined in each phase of the syllabus. Your tone is supportive, knowledgeable, encouraging, and slightly formal, befitting a sophisticated AI assistant.`;
+
+  static getInstance(subjectConfig?: SubjectConfig | null): JarvisCoachService {
+    if (!JarvisCoachService.instance) {
+      JarvisCoachService.instance = new JarvisCoachService(subjectConfig);
+    } else if (subjectConfig) {
+      JarvisCoachService.instance.setSubjectConfig(subjectConfig);
+    }
+    return JarvisCoachService.instance;
+  }
+  
+  private constructor(subjectConfig?: SubjectConfig | null) {
     this.conversationHistory = [];
     this.userContext = {};
+    this.subjectConfig = subjectConfig || null;
     this.jarvisContext = {
       currentPhaseId: 1,
       userProgress: {
@@ -46,9 +60,14 @@ export class JarvisCoachService {
       },
       previousResponses: []
     };
-    
-    // Initialize the Jarvis system prompt
-    this.systemPrompt = `You are 'Jarvis', a highly intelligent, personalized AI training assistant specifically designed to guide a user through the provided syllabus titled "Building with Gemini: From Idea to Prototype". Your primary function is to act as the user's personal tutor and motivator, helping them understand and complete the exercises and training outlined in each phase of the syllabus. Your tone is supportive, knowledgeable, encouraging, and slightly formal, befitting a sophisticated AI assistant.`;
+  }
+
+  setSubjectConfig(config: SubjectConfig | null): void {
+    this.subjectConfig = config;
+  }
+
+  private getSystemPrompt(): string {
+    return this.subjectConfig?.system_prompt_template || this.defaultSystemPrompt;
   }
   
   /**
@@ -73,9 +92,9 @@ export class JarvisCoachService {
       const recentHistory = this.conversationHistory.slice(-8);
       const contextPrompt = this.buildJarvisContextualPrompt(message, recentHistory);
       
-      const systemPrompt = `${this.systemPrompt}
+      const systemPrompt = `${this.getSystemPrompt()}
 
-You are guiding a user through the "Building with Gemini: From Idea to Prototype" syllabus.
+You are guiding a user through their learning syllabus.
 
 Current user progress:
 - Current Phase: ${this.jarvisContext.currentPhaseId}

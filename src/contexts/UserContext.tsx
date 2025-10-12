@@ -1,7 +1,7 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { subjectConfigService, SubjectConfig } from '@/services/SubjectConfigService';
 
 export interface User {
   id: string;
@@ -43,6 +43,8 @@ interface UserContextType {
   hasSession: boolean;
   isLoading: boolean;
   session: Session | null;
+  activeSubject: SubjectConfig | null;
+  setActiveSubject: (subject: SubjectConfig | null) => void;
   login: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
   logout: () => Promise<void>;
@@ -56,6 +58,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [activeSubject, setActiveSubject] = useState<SubjectConfig | null>(null);
 
   // Fetch user profile and related data
   const fetchUserData = async (userId: string): Promise<User | null> => {
@@ -127,6 +130,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (session?.user?.id) {
       const userData = await fetchUserData(session.user.id);
       setCurrentUser(userData);
+      
+      // Load active subject
+      if (userData?.user_id) {
+        const subject = await subjectConfigService.getActiveSubject(userData.user_id);
+        setActiveSubject(subject);
+      }
     }
   };
 
@@ -143,15 +152,23 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             try {
               const userData = await fetchUserData(session.user.id);
               setCurrentUser(userData);
+              
+              // Load active subject
+              if (userData?.user_id) {
+                const subject = await subjectConfigService.getActiveSubject(userData.user_id);
+                setActiveSubject(subject);
+              }
             } catch (error) {
               console.error('Error fetching user data:', error);
               setCurrentUser(null);
+              setActiveSubject(null);
             } finally {
               setIsLoading(false);
             }
           }, 0);
         } else {
           setCurrentUser(null);
+          setActiveSubject(null);
           setIsLoading(false);
         }
       }
@@ -256,6 +273,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       hasSession: !!session?.user,
       isLoading,
       session,
+      activeSubject,
+      setActiveSubject,
       login,
       signUp, 
       logout, 

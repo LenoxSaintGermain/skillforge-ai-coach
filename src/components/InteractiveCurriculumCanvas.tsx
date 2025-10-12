@@ -16,6 +16,7 @@ interface InteractiveCurriculumCanvasProps {
   phase: SyllabusPhase;
   onBackToSyllabus: () => void;
   onPhaseChange?: (phaseId: number) => void;
+  subjectId?: string;
 }
 
 interface InteractionData {
@@ -40,7 +41,8 @@ interface CurriculumContext {
 const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = ({ 
   phase, 
   onBackToSyllabus,
-  onPhaseChange 
+  onPhaseChange,
+  subjectId
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const isInitializing = useRef(false);
@@ -182,6 +184,7 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
         userId: currentUser.user_id,
         phaseId: phase.id.toString(),
         interactionType,
+        subjectId: subjectId,
         context: {
           phase: phase.title,
           objective: phase.objective,

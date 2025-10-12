@@ -2,12 +2,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { contentCacheService } from "./ContentCacheService";
 import { phaseContextService } from "./PhaseContextService";
 import { videoService } from "./VideoService";
+import { subjectConfigService, SubjectConfig } from "./SubjectConfigService";
 
 interface GenerationRequest {
   userId: string;
   phaseId: string;
   interactionType: 'introduction' | 'generate_full_content';
   userInput?: string;
+  subjectId?: string;
   context: {
     phase: string;
     objective: string;
@@ -115,12 +117,20 @@ export class OptimizedGeminiService {
   private async generateOptimizedContent(request: GenerationRequest): Promise<string> {
     const phaseId = parseInt(request.phaseId);
     
-    console.log('DEBUG: generateOptimizedContent - phaseId:', phaseId);
+    console.log('DEBUG: generateOptimizedContent - phaseId:', phaseId, 'subjectId:', request.subjectId);
+
+    // Load subject config if subjectId provided
+    let subjectConfig: SubjectConfig | null = null;
+    if (request.subjectId) {
+      subjectConfig = await subjectConfigService.getSubjectById(request.subjectId);
+      console.log('DEBUG: Loaded subject config:', subjectConfig?.title);
+    }
 
     const optimizedPrompt = phaseContextService.buildComprehensivePrompt(
       phaseId,
       request.context.objective,
-      request.context.keyConcepts
+      request.context.keyConcepts,
+      subjectConfig
     );
 
     console.log('DEBUG: Generated prompt length:', optimizedPrompt?.length, 'Preview:', optimizedPrompt?.substring(0, 200));

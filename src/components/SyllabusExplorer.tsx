@@ -76,11 +76,15 @@ const PhaseCard = ({
 
 const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (isLearning: boolean) => void }) => {
   const { coachService, isServiceReady, error } = useAI();
-  const { currentUser, isAuthenticated, hasSession } = useUser();
+  const { currentUser, isAuthenticated, hasSession, activeSubject } = useUser();
   const [currentPhaseId, setCurrentPhaseId] = useState(1);
   const [isLearningMode, setIsLearningMode] = useState(false);
   const [exploredPhases, setExploredPhases] = useState<Set<number>>(new Set());
   const [isLoadingProgress, setIsLoadingProgress] = useState(false);
+
+  // Use active subject syllabus or fallback to Gemini
+  const syllabus = activeSubject ? activeSubject.syllabus_data : geminiSyllabus;
+  const currentPhase = syllabus.phases.find(p => p.id === currentPhaseId);
 
   // Load explored phases from database
   useEffect(() => {
@@ -170,8 +174,6 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
     onLearningModeChange?.(true);
   };
   
-  const currentPhase = geminiSyllabus.phases.find(phase => phase.id === currentPhaseId) || geminiSyllabus.phases[0];
-
   if (isLearningMode && currentPhase) {
     return (
       <InteractiveCurriculumCanvas 
