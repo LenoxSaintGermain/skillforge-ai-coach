@@ -55,18 +55,26 @@ export class ContentCacheService {
   }
 
   // Check cache for existing content
-  async getCachedContent(context: UserContext, additionalData?: any): Promise<string | null> {
+  async getCachedContent(context: UserContext, additionalData?: any, subjectId?: string): Promise<string | null> {
     try {
       const contextHash = this.generateContextHash(context, additionalData);
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('content_cache')
         .select('content, id, generation_metadata')
         .eq('user_id', context.userId)
         .eq('context_hash', contextHash)
         .eq('phase_id', context.phaseId)
         .eq('interaction_type', context.interactionType)
-        .gt('expires_at', new Date().toISOString())
+        .gt('expires_at', new Date().toISOString());
+
+      if (subjectId) {
+        query = query.eq('subject_id', subjectId);
+      } else {
+        query = query.is('subject_id', null);
+      }
+
+      const { data, error } = await query
         .order('usage_count', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -99,7 +107,7 @@ export class ContentCacheService {
   }
 
   // Cache new content with extended expiration for completed content
-  async cacheContent(context: UserContext, content: string, additionalData?: any, isCompleted: boolean = false): Promise<void> {
+  async cacheContent(context: UserContext, content: string, additionalData?: any, isCompleted: boolean = false, subjectId?: string): Promise<void> {
     try {
       const contextHash = this.generateContextHash(context, additionalData);
       
@@ -116,6 +124,7 @@ export class ContentCacheService {
           phase_id: context.phaseId,
           interaction_type: context.interactionType,
           content,
+          subject_id: subjectId || null,
           expires_at: expirationDate.toISOString(),
           generation_metadata: { additionalData, generatedAt: new Date().toISOString(), version: CURRENT_CACHE_VERSION, isCompleted },
           usage_count: 1
@@ -123,7 +132,7 @@ export class ContentCacheService {
 
       // If insert fails due to duplicate, try update instead
       if (insertError && insertError.code === '23505') {
-        const { error: updateError } = await supabase
+        let updateQuery = supabase
           .from('content_cache')
           .update({
             content,
@@ -135,6 +144,14 @@ export class ContentCacheService {
           .eq('context_hash', contextHash)
           .eq('phase_id', context.phaseId)
           .eq('interaction_type', context.interactionType);
+
+        if (subjectId) {
+          updateQuery = updateQuery.eq('subject_id', subjectId);
+        } else {
+          updateQuery = updateQuery.is('subject_id', null);
+        }
+
+        const { error: updateError } = await updateQuery;
 
         if (updateError) {
           console.error('Error updating cached content:', updateError);
@@ -305,14 +322,21 @@ export class ContentCacheService {
   }
 
   // Get explored phases for a user (phases with cached content)
-  async getExploredPhases(userId: string): Promise<number[]> {
+  async getExploredPhases(userId: string, subjectId?: string): Promise<number[]> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('content_cache')
         .select('phase_id')
         .eq('user_id', userId)
-        .gt('expires_at', new Date().toISOString())
-        .order('phase_id', { ascending: true });
+        .gt('expires_at', new Date().toISOString());
+
+      if (subjectId) {
+        query = query.eq('subject_id', subjectId);
+      } else {
+        query = query.is('subject_id', null);
+      }
+
+      const { data, error } = await query.order('phase_id', { ascending: true });
 
       if (error) {
         console.error('Error fetching explored phases:', error);
@@ -333,17 +357,34 @@ export class ContentCacheService {
   }
 
   // Utility to clear a user's cache (optionally by phase/interaction)
-  async clearUserCache(userId: string, opts?: { phaseId?: string; interactionType?: string }): Promise<void> {
+  async clearUserCache(userId: string, opts?: { phaseId?: string; interactionType?: string; subjectId?: string }): Promise<void> {
     try {
       let query = supabase.from('content_cache').delete().eq('user_id', userId);
       if (opts?.phaseId) query = query.eq('phase_id', opts.phaseId);
       if (opts?.interactionType) query = query.eq('interaction_type', opts.interactionType);
+      if (opts?.subjectId) query = query.eq('subject_id', opts.subjectId);
       const { error } = await query;
       if (error) {
         console.error('Error clearing user cache:', error);
       }
     } catch (err) {
       console.error('Error in clearUserCache:', err);
+    }
+  }
+
+  // Clear all cache for a specific subject
+  async clearSubjectCache(subjectId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('content_cache')
+        .delete()
+        .eq('subject_id', subjectId);
+      
+      if (error) {
+        console.error('Error clearing subject cache:', error);
+      }
+    } catch (err) {
+      console.error('Error in clearSubjectCache:', err);
     }
   }
 }
