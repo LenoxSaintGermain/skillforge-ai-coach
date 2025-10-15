@@ -249,6 +249,79 @@ export class SubjectAdminService {
       return [];
     }
   }
+
+  /**
+   * Enroll a specific user in a subject
+   */
+  async enrollUser(userId: string, subjectId: string, isPrimary: boolean = false): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('user_subject_enrollments')
+        .insert({
+          user_id: userId,
+          subject_id: subjectId,
+          is_primary: isPrimary
+        });
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error enrolling user:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Enroll all existing users in a subject
+   */
+  async enrollAllUsers(subjectId: string, isPrimary: boolean = false): Promise<number> {
+    try {
+      // Get all user IDs from profiles
+      const { data: users, error: fetchError } = await supabase
+        .from('profiles')
+        .select('user_id');
+      
+      if (fetchError || !users) return 0;
+      
+      // Create enrollment records
+      const enrollments = users.map(u => ({
+        user_id: u.user_id,
+        subject_id: subjectId,
+        is_primary: isPrimary
+      }));
+      
+      const { error: insertError } = await supabase
+        .from('user_subject_enrollments')
+        .insert(enrollments);
+      
+      if (insertError) throw insertError;
+      
+      return enrollments.length;
+    } catch (error) {
+      console.error('Error enrolling all users:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Migrate all enrollments from one subject to another
+   */
+  async migrateEnrollments(fromSubjectId: string, toSubjectId: string): Promise<number> {
+    try {
+      const { data, error } = await supabase
+        .from('user_subject_enrollments')
+        .update({ subject_id: toSubjectId })
+        .eq('subject_id', fromSubjectId)
+        .select();
+
+      if (error) throw error;
+
+      return data?.length || 0;
+    } catch (error) {
+      console.error('Error migrating enrollments:', error);
+      return 0;
+    }
+  }
 }
 
 export const subjectAdminService = SubjectAdminService.getInstance();

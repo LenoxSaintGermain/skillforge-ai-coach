@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Copy, Trash2, Star, Sparkles } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { ColorPicker } from './ColorPicker';
 import { JsonEditor } from './JsonEditor';
 import { SyllabusBuilder } from './SyllabusBuilder';
@@ -27,6 +28,8 @@ const SubjectManagement = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [subjectToDelete, setSubjectToDelete] = useState<string | null>(null);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [showEnrollmentDialog, setShowEnrollmentDialog] = useState(false);
+  const [newlyCreatedSubject, setNewlyCreatedSubject] = useState<SubjectConfig | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState<Partial<SubjectConfig>>({
@@ -102,6 +105,85 @@ const SubjectManagement = () => {
     });
   };
 
+  const handleMigrateEnrollments = async () => {
+    try {
+      const archivedSubject = subjects.find(s => s.status === 'archived');
+      const activeSubject = subjects.find(s => s.status === 'active' && s.is_default);
+
+      if (!archivedSubject || !activeSubject) {
+        toast({
+          title: 'Error',
+          description: 'Could not find subjects to migrate',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const count = await subjectAdminService.migrateEnrollments(archivedSubject.id, activeSubject.id);
+      
+      toast({
+        title: 'Success',
+        description: `Migrated ${count} enrollments to ${activeSubject.title}`,
+      });
+
+      loadSubjects();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to migrate enrollments',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleEnrollSelf = async () => {
+    if (!newlyCreatedSubject) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      await subjectAdminService.enrollUser(user.id, newlyCreatedSubject.id, false);
+      
+      toast({
+        title: 'Enrolled!',
+        description: 'You are now enrolled in this subject',
+      });
+
+      setShowEnrollmentDialog(false);
+      setNewlyCreatedSubject(null);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to enroll',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleEnrollAllUsers = async () => {
+    if (!newlyCreatedSubject) return;
+
+    try {
+      const count = await subjectAdminService.enrollAllUsers(newlyCreatedSubject.id, false);
+      
+      toast({
+        title: 'Success!',
+        description: `Enrolled ${count} users in ${newlyCreatedSubject.title}`,
+      });
+
+      setShowEnrollmentDialog(false);
+      setNewlyCreatedSubject(null);
+      loadSubjects();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to enroll users',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const openEditDialog = (subject: SubjectConfig) => {
     setEditingSubject(subject);
     setFormData(subject);
@@ -125,7 +207,11 @@ const SubjectManagement = () => {
           description: 'Subject updated successfully',
         });
       } else {
-        await subjectAdminService.createSubject(formData);
+        const created = await subjectAdminService.createSubject(formData);
+        if (created) {
+          setNewlyCreatedSubject(created);
+          setShowEnrollmentDialog(true);
+        }
         toast({
           title: 'Success',
           description: 'Subject created successfully',
@@ -234,6 +320,13 @@ const SubjectManagement = () => {
           <p className="text-muted-foreground">Create and manage learning subjects</p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            onClick={handleMigrateEnrollments} 
+            variant="secondary"
+            size="sm"
+          >
+            Migrate Old Enrollments
+          </Button>
           <Button onClick={() => setIsWizardOpen(true)} className="bg-gradient-to-r from-primary to-secondary">
             <Sparkles className="h-4 w-4 mr-2" />
             Create with AI Wizard
@@ -483,6 +576,36 @@ const SubjectManagement = () => {
         onOpenChange={setIsWizardOpen}
         onComplete={handleWizardComplete}
       />
+
+      {/* Post-Creation Enrollment Dialog */}
+      <Dialog open={showEnrollmentDialog} onOpenChange={setShowEnrollmentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Subject Created Successfully! 🎉</DialogTitle>
+            <DialogDescription>
+              Would you like to enroll users in "{newlyCreatedSubject?.title}"?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Button onClick={handleEnrollSelf} variant="outline" className="w-full">
+              Enroll Myself (Test)
+            </Button>
+            <Button onClick={handleEnrollAllUsers} className="w-full">
+              Enroll All Existing Users
+            </Button>
+            <Button 
+              onClick={() => {
+                setShowEnrollmentDialog(false);
+                setNewlyCreatedSubject(null);
+              }}
+              variant="ghost"
+              className="w-full"
+            >
+              Skip for Now
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
