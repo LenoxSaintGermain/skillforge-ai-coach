@@ -94,3 +94,6 @@ verify_jwt = true
 
 [functions.discover-resources]
 verify_jwt = true
+
+[functions.ai-subject-wizard]
+verify_jwt = true

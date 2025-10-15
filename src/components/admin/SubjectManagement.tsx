@@ -12,10 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Copy, Trash2, Star } from 'lucide-react';
+import { Plus, Edit, Copy, Trash2, Star, Sparkles } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import { JsonEditor } from './JsonEditor';
 import { SyllabusBuilder } from './SyllabusBuilder';
+import { SubjectWizard } from './SubjectWizard';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const SubjectManagement = () => {
@@ -25,6 +26,7 @@ const SubjectManagement = () => {
   const [editingSubject, setEditingSubject] = useState<SubjectConfig | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [subjectToDelete, setSubjectToDelete] = useState<string | null>(null);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState<Partial<SubjectConfig>>({
@@ -83,6 +85,21 @@ const SubjectManagement = () => {
       is_default: false,
     });
     setIsFormOpen(true);
+  };
+
+  const handleWizardComplete = (generatedData: any) => {
+    setFormData({
+      ...formData,
+      ...generatedData,
+      status: 'active',
+      is_default: false
+    });
+    setEditingSubject(null);
+    setIsFormOpen(true);
+    toast({
+      title: "Subject generated!",
+      description: "Review and save the AI-generated subject configuration"
+    });
   };
 
   const openEditDialog = (subject: SubjectConfig) => {
@@ -216,10 +233,16 @@ const SubjectManagement = () => {
           <h2 className="text-2xl font-bold">Subject Management</h2>
           <p className="text-muted-foreground">Create and manage learning subjects</p>
         </div>
-        <Button onClick={openCreateDialog}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Subject
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsWizardOpen(true)} className="bg-gradient-to-r from-primary to-secondary">
+            <Sparkles className="h-4 w-4 mr-2" />
+            Create with AI Wizard
+          </Button>
+          <Button onClick={openCreateDialog} variant="outline">
+            <Plus className="h-4 w-4 mr-2" />
+            Create Manually
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -453,6 +476,13 @@ const SubjectManagement = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* AI Wizard */}
+      <SubjectWizard
+        open={isWizardOpen}
+        onOpenChange={setIsWizardOpen}
+        onComplete={handleWizardComplete}
+      />
     </div>
   );
 };
