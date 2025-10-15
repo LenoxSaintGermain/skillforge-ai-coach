@@ -45,6 +45,7 @@ interface UserContextType {
   session: Session | null;
   activeSubject: SubjectConfig | null;
   setActiveSubject: (subject: SubjectConfig | null) => void;
+  switchSubject: (subjectId: string) => Promise<void>;
   login: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
   logout: () => Promise<void>;
@@ -243,6 +244,29 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Switch subject function
+  const switchSubject = async (subjectId: string): Promise<void> => {
+    if (!currentUser?.user_id) return;
+
+    try {
+      const success = await subjectConfigService.setPrimarySubject(
+        currentUser.user_id,
+        subjectId
+      );
+
+      if (!success) {
+        throw new Error('Failed to switch subject');
+      }
+
+      // Load the new subject
+      const newSubject = await subjectConfigService.getSubjectById(subjectId);
+      setActiveSubject(newSubject);
+    } catch (error) {
+      console.error('Switch subject error:', error);
+      throw error;
+    }
+  };
+
   // Update user function
   const updateUser = async (userData: Partial<User>): Promise<void> => {
     if (!currentUser) return;
@@ -275,6 +299,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       session,
       activeSubject,
       setActiveSubject,
+      switchSubject,
       login,
       signUp, 
       logout, 

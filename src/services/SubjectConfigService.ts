@@ -201,6 +201,42 @@ export class SubjectConfigService {
   }
 
   /**
+   * Get all subjects user is enrolled in
+   */
+  async getUserEnrollments(userId: string): Promise<SubjectConfig[]> {
+    try {
+      const { data, error } = await supabase
+        .from('user_subject_enrollments')
+        .select(`
+          subject_id,
+          is_primary,
+          enrolled_at,
+          learning_subjects (*)
+        `)
+        .eq('user_id', userId)
+        .order('is_primary', { ascending: false });
+
+      if (error) throw error;
+      if (!data || data.length === 0) return [];
+
+      // Extract subject configs and filter out inactive subjects
+      const subjects = data
+        .map((enrollment: any) => enrollment.learning_subjects)
+        .filter((subject: any) => subject && subject.status === 'active')
+        .map((subject: any) => {
+          const config = subject as SubjectConfig;
+          this.subjectCache.set(config.id, config);
+          return config;
+        });
+
+      return subjects;
+    } catch (error) {
+      console.error('Error loading user enrollments:', error);
+      return [];
+    }
+  }
+
+  /**
    * Set primary subject for user
    */
   async setPrimarySubject(userId: string, subjectId: string): Promise<boolean> {

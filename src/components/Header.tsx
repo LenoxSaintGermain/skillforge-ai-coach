@@ -15,6 +15,7 @@ import { Link } from "react-router-dom";
 import { Brain, LogOut, Settings, User, BookOpen, Trophy, MessageSquare, Shield } from "lucide-react";
 import { useState } from "react";
 import FeedbackModal from "./feedback/FeedbackModal";
+import SubjectSelector from "./SubjectSelector";
 
 const Header = () => {
   const { currentUser, logout } = useUser();
@@ -32,6 +33,8 @@ const Header = () => {
               <span className="text-skillforge-secondary">Forge</span>
             </span>
           </Link>
+          
+          <SubjectSelector className="mr-4 hidden md:flex" />
           
           <nav className="hidden md:flex space-x-1">
             <Button variant="ghost" asChild>
