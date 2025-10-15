@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, MessageSquare, BookOpen, Activity } from 'lucide-react';
+import { Users, MessageSquare, BookOpen, Activity, Layers } from 'lucide-react';
 import FeedbackManagement from '@/components/admin/FeedbackManagement';
 import UserManagement from '@/components/admin/UserManagement';
 import ContentOversight from '@/components/admin/ContentOversight';
 import PlatformAnalytics from '@/components/admin/PlatformAnalytics';
+import SubjectManagement from '@/components/admin/SubjectManagement';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -14,17 +15,21 @@ const AdminDashboard = () => {
     totalFeedback: 0,
     totalScenarios: 0,
     activeSessions: 0,
+    totalSubjects: 0,
+    activeSubjects: 0,
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [usersRes, feedbackRes, scenariosRes, sessionsRes] = await Promise.all([
+        const [usersRes, feedbackRes, scenariosRes, sessionsRes, subjectsRes, activeSubjectsRes] = await Promise.all([
           supabase.from('profiles').select('id', { count: 'exact', head: true }),
           supabase.from('beta_feedback').select('id', { count: 'exact', head: true }),
           supabase.from('scenarios').select('id', { count: 'exact', head: true }),
           supabase.from('ai_coaching_sessions').select('id', { count: 'exact', head: true }).is('ended_at', null),
+          supabase.from('learning_subjects').select('id', { count: 'exact', head: true }),
+          supabase.from('learning_subjects').select('id', { count: 'exact', head: true }).eq('status', 'active'),
         ]);
 
         setStats({
@@ -32,6 +37,8 @@ const AdminDashboard = () => {
           totalFeedback: feedbackRes.count || 0,
           totalScenarios: scenariosRes.count || 0,
           activeSessions: sessionsRes.count || 0,
+          totalSubjects: subjectsRes.count || 0,
+          activeSubjects: activeSubjectsRes.count || 0,
         });
       } catch (error) {
         console.error('Error fetching admin stats:', error);
@@ -102,19 +109,33 @@ const AdminDashboard = () => {
             <div className="text-2xl font-bold">{stats.activeSessions}</div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Learning Subjects</CardTitle>
+            <Layers className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.activeSubjects}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.totalSubjects} total
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="feedback" className="space-y-4">
+      <Tabs defaultValue="subjects" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="feedback">Feedback Management</TabsTrigger>
+          <TabsTrigger value="subjects">Subject Management</TabsTrigger>
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="content">Content Oversight</TabsTrigger>
-          <TabsTrigger value="analytics">Platform Analytics</TabsTrigger>
+          <TabsTrigger value="feedback">Feedback</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="feedback" className="space-y-4">
-          <FeedbackManagement />
+        <TabsContent value="subjects" className="space-y-4">
+          <SubjectManagement />
         </TabsContent>
 
         <TabsContent value="users" className="space-y-4">
@@ -123,6 +144,10 @@ const AdminDashboard = () => {
 
         <TabsContent value="content" className="space-y-4">
           <ContentOversight />
+        </TabsContent>
+
+        <TabsContent value="feedback" className="space-y-4">
+          <FeedbackManagement />
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">
