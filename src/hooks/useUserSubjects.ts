@@ -3,6 +3,7 @@ import { SubjectConfig, subjectConfigService } from '@/services/SubjectConfigSer
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import { contentCacheService } from '@/services/ContentCacheService';
+import { ENROLLMENTS_UPDATED } from '@/services/EnrollmentEvents';
 
 interface UseUserSubjectsReturn {
   enrolledSubjects: SubjectConfig[];
@@ -41,6 +42,27 @@ export const useUserSubjects = (): UseUserSubjectsReturn => {
 
   useEffect(() => {
     fetchEnrollments();
+
+    // Listen for enrollment update events
+    const handleEnrollmentsUpdate = () => {
+      fetchEnrollments();
+    };
+
+    window.addEventListener(ENROLLMENTS_UPDATED, handleEnrollmentsUpdate);
+
+    // Refetch when tab becomes visible (user returns to tab)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchEnrollments();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener(ENROLLMENTS_UPDATED, handleEnrollmentsUpdate);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [fetchEnrollments]);
 
   const switchSubject = useCallback(async (subjectId: string) => {

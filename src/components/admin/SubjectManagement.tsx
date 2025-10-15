@@ -19,6 +19,8 @@ import { JsonEditor } from './JsonEditor';
 import { SyllabusBuilder } from './SyllabusBuilder';
 import { SubjectWizard } from './SubjectWizard';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { broadcastEnrollmentsUpdated } from '@/services/EnrollmentEvents';
 
 const SubjectManagement = () => {
   const [subjects, setSubjects] = useState<SubjectConfig[]>([]);
@@ -30,6 +32,9 @@ const SubjectManagement = () => {
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [showEnrollmentDialog, setShowEnrollmentDialog] = useState(false);
   const [newlyCreatedSubject, setNewlyCreatedSubject] = useState<SubjectConfig | null>(null);
+  const [showMigrateDialog, setShowMigrateDialog] = useState(false);
+  const [migrateFromId, setMigrateFromId] = useState<string>('');
+  const [migrateToId, setMigrateToId] = useState<string>('');
   const { toast } = useToast();
 
   const [formData, setFormData] = useState<Partial<SubjectConfig>>({
@@ -106,31 +111,32 @@ const SubjectManagement = () => {
   };
 
   const handleMigrateEnrollments = async () => {
+    if (!migrateFromId || !migrateToId || migrateFromId === migrateToId) {
+      toast({
+        title: 'Error',
+        description: 'Please select different From and To subjects',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
-      const archivedSubject = subjects.find(s => s.status === 'archived');
-      const activeSubject = subjects.find(s => s.status === 'active' && s.is_default);
-
-      if (!archivedSubject || !activeSubject) {
-        toast({
-          title: 'Error',
-          description: 'Could not find subjects to migrate',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const count = await subjectAdminService.migrateEnrollments(archivedSubject.id, activeSubject.id);
+      const count = await subjectAdminService.migrateEnrollments(migrateFromId, migrateToId);
+      const toSubject = subjects.find(s => s.id === migrateToId);
       
       toast({
         title: 'Success',
-        description: `Migrated ${count} enrollments to ${activeSubject.title}`,
+        description: `Migrated ${count} enrollments to ${toSubject?.title}`,
       });
 
+      setShowMigrateDialog(false);
+      setMigrateFromId('');
+      setMigrateToId('');
       loadSubjects();
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to migrate enrollments',
+        description: 'Failed to migrate enrollments. Check permissions.',
         variant: 'destructive',
       });
     }
@@ -150,6 +156,7 @@ const SubjectManagement = () => {
         description: 'You are now enrolled in this subject',
       });
 
+      broadcastEnrollmentsUpdated();
       setShowEnrollmentDialog(false);
       setNewlyCreatedSubject(null);
     } catch (error) {
@@ -172,6 +179,7 @@ const SubjectManagement = () => {
         description: `Enrolled ${count} users in ${newlyCreatedSubject.title}`,
       });
 
+      broadcastEnrollmentsUpdated();
       setShowEnrollmentDialog(false);
       setNewlyCreatedSubject(null);
       loadSubjects();
@@ -321,11 +329,11 @@ const SubjectManagement = () => {
         </div>
         <div className="flex gap-2">
           <Button 
-            onClick={handleMigrateEnrollments} 
+            onClick={() => setShowMigrateDialog(true)} 
             variant="secondary"
             size="sm"
           >
-            Migrate Old Enrollments
+            Migrate Enrollments
           </Button>
           <Button onClick={() => setIsWizardOpen(true)} className="bg-gradient-to-r from-primary to-secondary">
             <Sparkles className="h-4 w-4 mr-2" />
@@ -604,6 +612,70 @@ const SubjectManagement = () => {
               Skip for Now
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Migration Dialog */}
+      <Dialog open={showMigrateDialog} onOpenChange={setShowMigrateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Migrate Enrollments</DialogTitle>
+            <DialogDescription>
+              Move all user enrollments from one subject to another. This is useful when consolidating subjects or fixing historical data.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>From Subject</Label>
+              <Select value={migrateFromId} onValueChange={setMigrateFromId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select source subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subjects.map((subject) => (
+                    <SelectItem key={subject.id} value={subject.id}>
+                      {subject.title} ({subject.status})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>To Subject (Active)</Label>
+              <Select value={migrateToId} onValueChange={setMigrateToId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select target subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subjects
+                    .filter((s) => s.status === 'active' && s.id !== migrateFromId)
+                    .map((subject) => (
+                      <SelectItem key={subject.id} value={subject.id}>
+                        {subject.title}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowMigrateDialog(false);
+                setMigrateFromId('');
+                setMigrateToId('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleMigrateEnrollments}
+              disabled={!migrateFromId || !migrateToId || migrateFromId === migrateToId}
+            >
+              Migrate Enrollments
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { SubjectConfig, subjectConfigService } from "./SubjectConfigService";
+import { broadcastEnrollmentsUpdated } from "./EnrollmentEvents";
 
 export class SubjectAdminService {
   private static instance: SubjectAdminService;
@@ -264,6 +265,8 @@ export class SubjectAdminService {
         });
 
       if (error) throw error;
+      
+      broadcastEnrollmentsUpdated();
       return true;
     } catch (error) {
       console.error('Error enrolling user:', error);
@@ -296,6 +299,7 @@ export class SubjectAdminService {
       
       if (insertError) throw insertError;
       
+      broadcastEnrollmentsUpdated();
       return enrollments.length;
     } catch (error) {
       console.error('Error enrolling all users:', error);
@@ -316,6 +320,7 @@ export class SubjectAdminService {
 
       if (error) throw error;
 
+      broadcastEnrollmentsUpdated();
       return data?.length || 0;
     } catch (error) {
       console.error('Error migrating enrollments:', error);

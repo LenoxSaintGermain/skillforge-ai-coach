@@ -1,4 +1,4 @@
-import { Check, ChevronDown, BookOpen } from "lucide-react";
+import { Check, ChevronDown, BookOpen, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,32 +16,14 @@ interface SubjectSelectorProps {
 
 const SubjectSelector = ({ className }: SubjectSelectorProps) => {
   const { activeSubject } = useUser();
-  const { enrolledSubjects, isLoading, switchSubject } = useUserSubjects();
+  const { enrolledSubjects, isLoading, switchSubject, refreshEnrollments } = useUserSubjects();
 
   // Don't render if no active subject or still loading
   if (isLoading || !activeSubject) {
     return null;
   }
 
-  // Single subject: show as static badge
-  if (enrolledSubjects.length <= 1) {
-    return (
-      <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50 border", className)}>
-        <div
-          className="h-3 w-3 rounded-full border"
-          style={{
-            backgroundColor: activeSubject.primary_color,
-            borderColor: activeSubject.primary_color,
-          }}
-        />
-        <span className="text-sm font-medium truncate max-w-[200px]">
-          {activeSubject.title}
-        </span>
-      </div>
-    );
-  }
-
-  // Multi-subject: show dropdown
+  // Always show dropdown for consistency
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -101,7 +83,19 @@ const SubjectSelector = ({ className }: SubjectSelectorProps) => {
             </DropdownMenuItem>
           );
         })}
-        <div className="border-t mt-1 pt-1 px-2 pb-1">
+        <div className="border-t mt-1 pt-1 px-2 pb-1 space-y-1">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="w-full justify-start text-xs" 
+            onClick={(e) => {
+              e.stopPropagation();
+              refreshEnrollments();
+            }}
+          >
+            <RefreshCw className="h-3 w-3 mr-2" />
+            Refresh Subjects
+          </Button>
           <Button variant="ghost" size="sm" className="w-full justify-start text-xs" disabled>
             <BookOpen className="h-3 w-3 mr-2" />
             Browse More Subjects (Coming Soon)
