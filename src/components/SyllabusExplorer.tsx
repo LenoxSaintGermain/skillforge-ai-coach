@@ -92,7 +92,10 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
       if (currentUser?.user_id) {
         setIsLoadingProgress(true);
         try {
-          const phases = await contentCacheService.getExploredPhases(currentUser.user_id);
+          const phases = await contentCacheService.getExploredPhases(
+            currentUser.user_id,
+            activeSubject?.id
+          );
           setExploredPhases(new Set(phases));
           
           // Also save to localStorage as backup

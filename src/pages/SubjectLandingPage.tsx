@@ -53,11 +53,15 @@ const SubjectLandingPage = () => {
         
         // Load user progress if authenticated
         if (currentUser?.user_id) {
-          const phases = await contentCacheService.getExploredPhases(currentUser.user_id);
+          const phases = await contentCacheService.getExploredPhases(
+            currentUser.user_id,
+            loadedSubject.id
+          );
           setExploredPhases(new Set(phases));
         }
       } catch (error) {
         console.error('Error loading subject:', error);
+        console.error('User ID:', currentUser?.user_id);
         toast({
           title: 'Error',
           description: 'Failed to load subject information.',
@@ -128,6 +132,16 @@ const SubjectLandingPage = () => {
   }
 
   const syllabus = subject.syllabus_data;
+  if (!syllabus || !Array.isArray(syllabus.phases)) {
+    console.error('Invalid syllabus data:', syllabus);
+    toast({
+      title: 'Error',
+      description: 'Subject syllabus data is invalid.',
+      variant: 'destructive',
+    });
+    navigate('/');
+    return null;
+  }
   const totalPhases = syllabus.phases.length;
   const completedPhases = exploredPhases.size;
   const progressPercentage = totalPhases > 0 ? (completedPhases / totalPhases) * 100 : 0;
