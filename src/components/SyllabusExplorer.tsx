@@ -31,10 +31,10 @@ const PhaseCard = ({
   const isCompleted = isExplored;
 
   const cardBorderClass = isActive
-    ? 'border-skillforge-primary shadow-md'
+    ? 'border-primary shadow-md'
     : isCompleted
       ? 'border-green-500 hover:border-green-600'
-      : 'hover:border-skillforge-primary/50';
+      : 'hover:border-primary/50';
 
   return (
     <Card className={`transition-all ${cardBorderClass}`}>
@@ -195,14 +195,22 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 mb-4">
-        <Brain className="h-6 w-6 text-skillforge-primary" />
-        <h2 className="text-2xl font-bold">Gemini Training Syllabus</h2>
+        {activeSubject?.logo_url ? (
+          <img 
+            src={activeSubject.logo_url} 
+            alt={activeSubject.title} 
+            className="h-8 w-8 object-contain"
+          />
+        ) : (
+          <Brain className="h-6 w-6" style={{ color: activeSubject?.primary_color || 'hsl(var(--skillforge-primary))' }} />
+        )}
+        <h2 className="text-2xl font-bold">{activeSubject?.title || 'Learning Syllabus'}</h2>
       </div>
       
       <Card>
         <CardHeader>
-          <CardTitle>{geminiSyllabus.title}</CardTitle>
-          <CardDescription>{geminiSyllabus.overallGoal}</CardDescription>
+          <CardTitle>{syllabus.title}</CardTitle>
+          <CardDescription>{syllabus.overallGoal}</CardDescription>
           
           {error && (
             <div className="mt-3 p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg border border-yellow-300 dark:border-yellow-700">
@@ -223,7 +231,7 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
       </Card>
       
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        {geminiSyllabus.phases.map((phase) => (
+        {syllabus.phases.map((phase) => (
           <PhaseCard
             key={phase.id}
             phase={phase}
@@ -306,10 +314,10 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {currentPhase.keyConceptsAndActivities.map((concept, index) => (
+                   {currentPhase.keyConceptsAndActivities.map((concept, index) => (
                     <div key={index} className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <BookOpen className="h-4 w-4 text-skillforge-secondary" />
+                        <BookOpen className="h-4 w-4 text-secondary" />
                         <h4 className="font-medium">{concept.title}</h4>
                       </div>
                       <p className="text-muted-foreground pl-6">{concept.description}</p>
