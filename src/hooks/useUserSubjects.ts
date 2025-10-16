@@ -7,22 +7,26 @@ import { ENROLLMENTS_UPDATED } from '@/services/EnrollmentEvents';
 
 interface UseUserSubjectsReturn {
   enrolledSubjects: SubjectConfig[];
+  allSubjects: SubjectConfig[];
   isLoading: boolean;
   error: Error | null;
   switchSubject: (subjectId: string) => Promise<void>;
   refreshEnrollments: () => Promise<void>;
+  isEnrolled: (subjectId: string) => boolean;
 }
 
 export const useUserSubjects = (): UseUserSubjectsReturn => {
   const { currentUser, setActiveSubject, activeSubject } = useUser();
   const { toast } = useToast();
   const [enrolledSubjects, setEnrolledSubjects] = useState<SubjectConfig[]>([]);
+  const [allSubjects, setAllSubjects] = useState<SubjectConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchEnrollments = useCallback(async () => {
     if (!currentUser?.user_id) {
       setEnrolledSubjects([]);
+      setAllSubjects([]);
       setIsLoading(false);
       return;
     }
@@ -30,11 +34,18 @@ export const useUserSubjects = (): UseUserSubjectsReturn => {
     try {
       setIsLoading(true);
       setError(null);
-      const subjects = await subjectConfigService.getUserEnrollments(currentUser.user_id);
-      setEnrolledSubjects(subjects);
+      
+      // Fetch both enrolled subjects and all active subjects in parallel
+      const [enrolled, all] = await Promise.all([
+        subjectConfigService.getUserEnrollments(currentUser.user_id),
+        subjectConfigService.getAllActiveSubjects()
+      ]);
+      
+      setEnrolledSubjects(enrolled);
+      setAllSubjects(all);
     } catch (err) {
-      console.error('Error fetching user enrollments:', err);
-      setError(err instanceof Error ? err : new Error('Failed to fetch enrollments'));
+      console.error('Error fetching subjects:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch subjects'));
     } finally {
       setIsLoading(false);
     }
@@ -69,20 +80,44 @@ export const useUserSubjects = (): UseUserSubjectsReturn => {
     if (!currentUser?.user_id) return;
 
     try {
-      // Find the subject being switched to
-      const newSubject = enrolledSubjects.find(s => s.id === subjectId);
+      // Find the subject being switched to (check both enrolled and all subjects)
+      let newSubject = enrolledSubjects.find(s => s.id === subjectId);
+      const isAlreadyEnrolled = !!newSubject;
+      
+      if (!newSubject) {
+        newSubject = allSubjects.find(s => s.id === subjectId);
+      }
+      
       if (!newSubject) {
         throw new Error('Subject not found');
       }
 
-      // Set as primary in database
-      const success = await subjectConfigService.setPrimarySubject(
-        currentUser.user_id,
-        subjectId
-      );
+      // If not enrolled, enroll first
+      if (!isAlreadyEnrolled) {
+        toast({
+          title: 'Enrolling...',
+          description: `Enrolling in ${newSubject.title}`,
+        });
 
-      if (!success) {
-        throw new Error('Failed to switch subject');
+        const enrolled = await subjectConfigService.enrollUser(
+          currentUser.user_id,
+          subjectId,
+          true // Set as primary during enrollment
+        );
+
+        if (!enrolled) {
+          throw new Error('Failed to enroll in subject');
+        }
+      } else {
+        // Set as primary in database if already enrolled
+        const success = await subjectConfigService.setPrimarySubject(
+          currentUser.user_id,
+          subjectId
+        );
+
+        if (!success) {
+          throw new Error('Failed to switch subject');
+        }
       }
 
       // Clear content cache for the old subject
@@ -94,7 +129,7 @@ export const useUserSubjects = (): UseUserSubjectsReturn => {
       setActiveSubject(newSubject);
 
       toast({
-        title: 'Subject switched',
+        title: isAlreadyEnrolled ? 'Subject switched' : 'Enrolled & switched',
         description: `Now learning: ${newSubject.title}`,
       });
 
@@ -108,17 +143,23 @@ export const useUserSubjects = (): UseUserSubjectsReturn => {
         variant: 'destructive',
       });
     }
-  }, [currentUser?.user_id, enrolledSubjects, activeSubject, setActiveSubject, toast]);
+  }, [currentUser?.user_id, enrolledSubjects, allSubjects, activeSubject, setActiveSubject, toast]);
 
   const refreshEnrollments = useCallback(async () => {
     await fetchEnrollments();
   }, [fetchEnrollments]);
 
+  const isEnrolled = useCallback((subjectId: string): boolean => {
+    return enrolledSubjects.some(s => s.id === subjectId);
+  }, [enrolledSubjects]);
+
   return {
     enrolledSubjects,
+    allSubjects,
     isLoading,
     error,
     switchSubject,
     refreshEnrollments,
+    isEnrolled,
   };
 };

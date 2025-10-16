@@ -201,6 +201,33 @@ export class SubjectConfigService {
   }
 
   /**
+   * Get all active subjects (regardless of enrollment)
+   */
+  async getAllActiveSubjects(): Promise<SubjectConfig[]> {
+    try {
+      const { data, error } = await supabase
+        .from('learning_subjects')
+        .select('*')
+        .eq('status', 'active')
+        .order('title');
+
+      if (error) throw error;
+      
+      const subjects = (data || []) as SubjectConfig[];
+      
+      // Cache the subjects
+      subjects.forEach(subject => {
+        this.subjectCache.set(subject.id, subject);
+      });
+      
+      return subjects;
+    } catch (error) {
+      console.error('Error loading all active subjects:', error);
+      return [];
+    }
+  }
+
+  /**
    * Get all subjects user is enrolled in
    */
   async getUserEnrollments(userId: string): Promise<SubjectConfig[]> {

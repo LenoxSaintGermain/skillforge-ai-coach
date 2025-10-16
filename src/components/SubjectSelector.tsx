@@ -16,14 +16,16 @@ interface SubjectSelectorProps {
 
 const SubjectSelector = ({ className }: SubjectSelectorProps) => {
   const { activeSubject } = useUser();
-  const { enrolledSubjects, isLoading, switchSubject, refreshEnrollments } = useUserSubjects();
+  const { enrolledSubjects, allSubjects, isLoading, switchSubject, refreshEnrollments, isEnrolled } = useUserSubjects();
 
   // Don't render if no active subject or still loading
   if (isLoading || !activeSubject) {
     return null;
   }
 
-  // Always show dropdown for consistency
+  // Separate subjects into enrolled and available
+  const availableSubjects = allSubjects.filter(s => !isEnrolled(s.id));
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -51,6 +53,8 @@ const SubjectSelector = ({ className }: SubjectSelectorProps) => {
         <div className="px-2 py-1.5">
           <p className="text-xs text-muted-foreground font-medium">Switch Learning Subject</p>
         </div>
+        
+        {/* Enrolled Subjects */}
         {enrolledSubjects.map((subject) => {
           const isActive = subject.id === activeSubject.id;
           return (
@@ -83,6 +87,41 @@ const SubjectSelector = ({ className }: SubjectSelectorProps) => {
             </DropdownMenuItem>
           );
         })}
+        
+        {/* Available Subjects (not enrolled) */}
+        {availableSubjects.length > 0 && (
+          <>
+            <div className="border-t my-1" />
+            <div className="px-2 py-1.5">
+              <p className="text-xs text-muted-foreground font-medium">Available Subjects</p>
+            </div>
+            {availableSubjects.map((subject) => (
+              <DropdownMenuItem
+                key={subject.id}
+                onClick={() => switchSubject(subject.id)}
+                className="flex items-start gap-3 px-4 py-3 cursor-pointer"
+              >
+                <div
+                  className="h-3 w-3 rounded-full border-2 mt-0.5 flex-shrink-0 bg-transparent"
+                  style={{
+                    borderColor: subject.primary_color,
+                  }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium truncate">{subject.title}</p>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">Click to enroll</span>
+                  </div>
+                  {subject.tagline && (
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                      {subject.tagline}
+                    </p>
+                  )}
+                </div>
+              </DropdownMenuItem>
+            ))}
+          </>
+        )}
         <div className="border-t mt-1 pt-1 px-2 pb-1 space-y-1">
           <Button 
             variant="ghost" 
