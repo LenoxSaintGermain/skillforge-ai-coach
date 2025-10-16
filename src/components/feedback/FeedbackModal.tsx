@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { z } from "zod";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Bug, Lightbulb, MessageCircle, Palette, Zap, Check } from "lucide-react";
+
+const feedbackSchema = z.object({
+  title: z.string().trim().min(5, 'Title must be at least 5 characters').max(200, 'Title must be less than 200 characters'),
+  description: z.string().trim().min(20, 'Description must be at least 20 characters').max(2000, 'Description must be less than 2000 characters'),
+  feedbackType: z.enum(['bug_report', 'feature_request', 'general', 'ui_ux', 'performance']),
+  priority: z.enum(['low', 'medium', 'high', 'critical'])
+});
 
 interface FeedbackModalProps {
   open: boolean;
@@ -71,6 +79,24 @@ const FeedbackModal = ({ open, onOpenChange, prefilledType }: FeedbackModalProps
       return;
     }
 
+    // Validate input using zod schema
+    const validationResult = feedbackSchema.safeParse({
+      title: title.trim(),
+      description: description.trim(),
+      feedbackType,
+      priority
+    });
+
+    if (!validationResult.success) {
+      const firstError = validationResult.error.errors[0];
+      toast({
+        title: "Validation Error",
+        description: firstError.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -78,10 +104,10 @@ const FeedbackModal = ({ open, onOpenChange, prefilledType }: FeedbackModalProps
         .from("beta_feedback")
         .insert({
           user_id: currentUser.user_id,
-          feedback_type: feedbackType,
-          title,
-          description,
-          priority,
+          feedback_type: validationResult.data.feedbackType,
+          title: validationResult.data.title,
+          description: validationResult.data.description,
+          priority: validationResult.data.priority,
           current_page: location.pathname,
           browser_info: getBrowserInfo(),
         })
@@ -209,9 +235,13 @@ const FeedbackModal = ({ open, onOpenChange, prefilledType }: FeedbackModalProps
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
+              maxLength={2000}
               rows={6}
               className="resize-none"
             />
+            <p className="text-xs text-muted-foreground">
+              {description.length}/2000 characters
+            </p>
           </div>
 
           <div className="space-y-2">
