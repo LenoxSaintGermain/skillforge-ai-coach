@@ -1,5 +1,186 @@
 # Release Notes
 
+## Version 1.2.0 - Multi-Subject Platform & Security Enhancements
+*Release Date: October 2025*
+
+### 🎯 Overview
+This major release introduces multi-subject learning capabilities, comprehensive security hardening, and enhanced administrative controls. Users can now enroll in multiple learning subjects, while administrators gain powerful tools for subject management and content oversight.
+
+---
+
+### ✨ New Features
+
+#### Multi-Subject Learning Platform
+- **Subject Discovery & Enrollment**
+  - New `SubjectSelector` component with dropdown interface for browsing available subjects
+  - One-click enrollment system with automatic progress tracking initialization
+  - Visual indicators for enrolled vs. available subjects
+  - Seamless subject switching without losing progress in other subjects
+
+- **Enhanced Subject Configuration System**
+  - `SubjectConfigService` expanded with multi-subject support
+  - User enrollment tracking with primary subject designation
+  - Subject-specific syllabus, prompts, and skill areas
+  - Automatic content cache management per subject
+
+#### Admin Subject Management
+- **Comprehensive Subject Administration** (`SubjectManagement` component)
+  - Create, edit, duplicate, and archive subjects via intuitive interface
+  - AI-powered Subject Wizard for automated subject generation
+  - Configurable branding (colors, logos, landing page URLs)
+  - Custom system prompts and phase context profiles
+  - Bulk user enrollment tools (enroll all users, migrate enrollments)
+  - Subject status management (active/archived)
+  - Default subject designation
+
+#### Enhanced Admin Access Control
+- **Improved Role-Based Access Security**
+  - Admin role verification now uses security definer function `has_role()`
+  - Prevents privilege escalation attacks via direct profile manipulation
+  - Proper RLS policies on `user_roles` table
+  - Admin-only access to Subject Management, User Management, and Analytics dashboards
+
+---
+
+### 🔒 Security Enhancements
+
+#### Input Validation on Feedback Form
+- **Comprehensive Zod Schema Validation**
+  - Title field: 5-200 characters (enforced)
+  - Description field: 20-2,000 characters with real-time counter
+  - Validation applied before database insertion
+  - User-friendly error messages for validation failures
+  - Protection against payload injection and database bloat
+
+#### Database Security Hardening
+- **Row-Level Security (RLS) Improvements**
+  - All user-specific tables properly secured with RLS policies
+  - `user_roles` table protected with security definer functions
+  - Subject enrollments isolated per user
+  - Admin profile queries use `has_role()` security definer function
+
+- **Edge Function Authentication**
+  - All Supabase Edge Functions require JWT authentication
+  - Authorization header validation on all requests
+  - No public endpoints exposing sensitive operations
+
+---
+
+### 🐛 Bug Fixes
+
+#### Subject Enrollment Synchronization
+- **Fixed subject dropdown refresh issue**
+  - Subject selector now properly updates when enrollments change
+  - `useUserSubjects` hook listens for enrollment events
+  - Tab visibility changes trigger enrollment refresh
+  - Prevents stale data in subject selection interface
+
+#### Edge Function Security
+- **Removed insecure admin bypass**
+  - Admin profile queries now use proper `has_role()` function
+  - Eliminates potential privilege escalation vulnerability
+  - Consistent security model across all admin features
+
+---
+
+### 🎨 UI/UX Improvements
+
+#### Subject Selector Enhancements
+- **Visual Enrollment Indicators**
+  - Clear distinction between enrolled and available subjects
+  - Primary subject highlighted with checkmark
+  - Organized sections: Enrolled Subjects / Browse Available
+  - Refresh button for manual enrollment sync
+
+#### Feedback Form Improvements
+- **Character Counter Display**
+  - Real-time character count for description field (0/2000)
+  - Visual feedback for input length limits
+  - Improved user guidance during feedback submission
+
+---
+
+### 🔧 Technical Improvements
+
+#### SubjectConfigService Expansion
+- **New Methods Added**
+  - `getAllActiveSubjects()`: Fetch all active subjects for discovery
+  - `getUserEnrollments(userId)`: Get all enrolled subjects for a user
+  - `setPrimarySubject(userId, subjectId)`: Change primary subject
+  - `enrollUser(userId, subjectId, isPrimary)`: Enroll user in subject
+  - Enhanced caching strategy for multi-subject support
+
+#### useUserSubjects Hook
+- **Comprehensive Subject Management**
+  - Manages both enrolled and available subjects state
+  - `switchSubject()` function with automatic cache clearing
+  - `refreshEnrollments()` for manual sync
+  - `isEnrolled()` helper for enrollment checks
+  - Event-driven updates via `EnrollmentEvents` service
+
+#### Database Schema Enhancements
+- **New Tables and Columns**
+  - `user_subject_enrollments`: Track user enrollments across subjects
+  - `subjects.is_default`: Designate default subject for new users
+  - Enhanced `subject_config` jsonb structure for extensibility
+
+---
+
+### 📊 Impact Summary
+
+- **5 major features added** (Multi-subject system, Subject Management, Admin controls, Subject discovery, Bulk enrollment)
+- **4 critical security fixes** (Input validation, RLS hardening, Admin role security, Edge function auth)
+- **2 bug fixes** (Subject sync, Admin bypass)
+- **3 UX improvements** (Subject selector, Character counters, Visual indicators)
+- **3 technical enhancements** (Service layer expansion, Hook refactor, Schema updates)
+
+---
+
+### 🚀 What's Next
+
+Upcoming features in development:
+- Cross-subject skill transfer and recognition
+- Subject recommendation engine based on user progress
+- Advanced subject templating for rapid content creation
+- Enhanced analytics per subject
+- Subject marketplace for community-created content
+
+---
+
+### 📝 Notes for Developers
+
+#### Breaking Changes
+- None - all changes are backward compatible
+
+#### API Changes
+- `useUserSubjects` hook now returns additional properties:
+  - `allSubjects`: Array of all active subjects
+  - `isEnrolled(subjectId)`: Helper function
+  - `refreshEnrollments()`: Manual refresh function
+
+#### New Services
+- `SubjectConfigService` expanded with new methods (see Technical Improvements)
+- `EnrollmentEvents` service for cross-component enrollment updates
+
+#### Database Migrations Required
+- If upgrading from v1.1.0, ensure `user_subject_enrollments` table exists
+- Run migration to add `is_default` column to `subjects` table
+- Verify RLS policies on `user_roles` and `user_subject_enrollments` tables
+
+#### Dependencies
+- No new npm dependencies added
+- Uses existing `zod` library for input validation
+
+#### Security Notes
+- **FIXED**: Feedback form input validation vulnerability
+- **FIXED**: Admin role bypass in profile queries
+- **REMAINING**: Three Supabase dashboard configuration warnings (require manual settings adjustment):
+  1. OTP expiry time reduction recommended
+  2. Leaked password protection should be enabled
+  3. PostgreSQL version upgrade available
+
+---
+
 ## Version 1.1.0 - Post-Launch Refinements
 *Release Date: January 2025*
 
