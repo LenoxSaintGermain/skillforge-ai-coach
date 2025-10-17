@@ -105,12 +105,14 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
           );
           setExploredPhases(new Set(phases));
           
-          // Also save to localStorage as backup
-          localStorage.setItem('exploredPhases', JSON.stringify(phases));
+          // Also save to localStorage as backup (subject-specific)
+          const storageKey = `exploredPhases_${activeSubject?.id || 'default'}`;
+          localStorage.setItem(storageKey, JSON.stringify(phases));
         } catch (error) {
           console.error('Error loading explored phases:', error);
           // Try to load from localStorage as fallback
-          const savedPhases = localStorage.getItem('exploredPhases');
+          const storageKey = `exploredPhases_${activeSubject?.id || 'default'}`;
+          const savedPhases = localStorage.getItem(storageKey);
           if (savedPhases) {
             setExploredPhases(new Set(JSON.parse(savedPhases)));
           }
@@ -119,7 +121,8 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
         }
       } else if (hasSession) {
         // If we have a session but no currentUser yet, try to load from localStorage
-        const savedPhases = localStorage.getItem('exploredPhases');
+        const storageKey = `exploredPhases_${activeSubject?.id || 'default'}`;
+        const savedPhases = localStorage.getItem(storageKey);
         if (savedPhases) {
           setExploredPhases(new Set(JSON.parse(savedPhases)));
         }
@@ -134,9 +137,13 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
     if (currentUser?.user_id) {
       setIsLoadingProgress(true);
       try {
-        const phases = await contentCacheService.getExploredPhases(currentUser.user_id);
+        const phases = await contentCacheService.getExploredPhases(
+          currentUser.user_id,
+          activeSubject?.id
+        );
         setExploredPhases(new Set(phases));
-        localStorage.setItem('exploredPhases', JSON.stringify(phases));
+        const storageKey = `exploredPhases_${activeSubject?.id || 'default'}`;
+        localStorage.setItem(storageKey, JSON.stringify(phases));
       } catch (error) {
         console.error('Error refreshing progress:', error);
       } finally {
@@ -153,13 +160,17 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
   };
 
   const handlePhaseChange = async (newPhaseId: number) => {
-    if (newPhaseId >= 1 && newPhaseId <= 5) {
+    const minPhaseId = Math.min(...syllabus.phases.map(p => p.id));
+    const maxPhaseId = Math.max(...syllabus.phases.map(p => p.id));
+    
+    if (newPhaseId >= minPhaseId && newPhaseId <= maxPhaseId) {
       setCurrentPhaseId(newPhaseId);
       // Mark previous phase as explored when navigating
       const updatedPhases = new Set([...exploredPhases, currentPhaseId]);
       setExploredPhases(updatedPhases);
-      // Save to localStorage as backup
-      localStorage.setItem('exploredPhases', JSON.stringify([...updatedPhases]));
+      // Save to localStorage as backup (subject-specific)
+      const storageKey = `exploredPhases_${activeSubject?.id || 'default'}`;
+      localStorage.setItem(storageKey, JSON.stringify([...updatedPhases]));
       
       // Sync progress with learning goals only when authenticated
       if (currentUser?.user_id && isAuthenticated) {
@@ -173,8 +184,9 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
     // Mark current phase as explored when entering learning mode
     const updatedPhases = new Set([...exploredPhases, currentPhaseId]);
     setExploredPhases(updatedPhases);
-    // Save to localStorage as backup
-    localStorage.setItem('exploredPhases', JSON.stringify([...updatedPhases]));
+    // Save to localStorage as backup (subject-specific)
+    const storageKey = `exploredPhases_${activeSubject?.id || 'default'}`;
+    localStorage.setItem(storageKey, JSON.stringify([...updatedPhases]));
     
     // Sync progress with learning goals only when authenticated
     if (currentUser?.user_id && isAuthenticated) {
@@ -187,16 +199,17 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
   if (isLearningMode && currentPhase) {
     return (
       <InteractiveCurriculumCanvas 
-        phase={currentPhase} 
-          onBackToSyllabus={async () => {
-            setIsLearningMode(false);
-            onLearningModeChange?.(false);
-            // Refresh progress and sync learning goal when returning to syllabus
-            await refreshProgress();
-            if (currentUser?.user_id && isAuthenticated) {
-              await geminiProgressService.syncProgress(currentUser.user_id);
-            }
-          }}
+        phase={currentPhase}
+        subjectId={activeSubject?.id}
+        onBackToSyllabus={async () => {
+          setIsLearningMode(false);
+          onLearningModeChange?.(false);
+          // Refresh progress and sync learning goal when returning to syllabus
+          await refreshProgress();
+          if (currentUser?.user_id && isAuthenticated) {
+            await geminiProgressService.syncProgress(currentUser.user_id);
+          }
+        }}
         onPhaseChange={handlePhaseChange}
       />
     );
