@@ -85,6 +85,13 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
   // Use active subject syllabus or fallback to Gemini
   const syllabus = activeSubject ? activeSubject.syllabus_data : geminiSyllabus;
   const currentPhase = syllabus.phases.find(p => p.id === currentPhaseId);
+  
+  // If no phase found, default to first phase
+  useEffect(() => {
+    if (!currentPhase && syllabus.phases.length > 0) {
+      setCurrentPhaseId(syllabus.phases[0].id);
+    }
+  }, [currentPhase, syllabus.phases]);
 
   // Load explored phases from database
   useEffect(() => {
@@ -245,6 +252,11 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
         ))}
       </div>
       
+      {!currentPhase ? (
+        <div className="mt-8 flex justify-center p-12">
+          <p className="text-muted-foreground">Loading phase data...</p>
+        </div>
+      ) : (
       <div className="mt-8">
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid grid-cols-3 mb-4">
@@ -332,6 +344,7 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
           </TabsContent>
         </Tabs>
       </div>
+      )}
     </div>
   );
 };
