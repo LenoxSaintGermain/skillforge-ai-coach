@@ -17,6 +17,10 @@ interface InteractiveCurriculumCanvasProps {
   onBackToSyllabus: () => void;
   onPhaseChange?: (phaseId: number) => void;
   subjectId?: string;
+  totalPhases: number;
+  currentIndex: number;
+  prevPhaseId?: number;
+  nextPhaseId?: number;
 }
 
 interface InteractionData {
@@ -42,7 +46,11 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
   phase, 
   onBackToSyllabus,
   onPhaseChange,
-  subjectId
+  subjectId,
+  totalPhases,
+  currentIndex,
+  prevPhaseId,
+  nextPhaseId
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const isInitializing = useRef(false);
@@ -392,11 +400,11 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
                 <h2 className="text-xl font-semibold">{phase.title}</h2>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Phase {phase.id} of 5</span>
+                <span>Phase {currentIndex + 1} of {totalPhases}</span>
                 <div className="w-16 h-1 bg-muted rounded-full">
                   <div 
                     className="h-full bg-primary rounded-full transition-all duration-300"
-                    style={{ width: `${(phase.id / 5) * 100}%` }}
+                    style={{ width: `${((currentIndex + 1) / totalPhases) * 100}%` }}
                   />
                 </div>
               </div>
@@ -408,8 +416,8 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onPhaseChange(phase.id - 1)}
-                    disabled={phase.id <= 1 || isLoading}
+                    onClick={() => prevPhaseId && onPhaseChange(prevPhaseId)}
+                    disabled={!prevPhaseId || isLoading}
                     className="bg-card hover:bg-muted flex items-center gap-1"
                     title="Previous Phase"
                   >
@@ -419,8 +427,8 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onPhaseChange(phase.id + 1)}
-                    disabled={phase.id >= 5 || isLoading}
+                    onClick={() => nextPhaseId && onPhaseChange(nextPhaseId)}
+                    disabled={!nextPhaseId || isLoading}
                     className="bg-card hover:bg-muted flex items-center gap-1"
                     title="Next Phase"
                   >

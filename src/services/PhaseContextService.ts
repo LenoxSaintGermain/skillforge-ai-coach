@@ -91,7 +91,11 @@ export class PhaseContextService {
       return 'Generate a helpful beginner-level article about the fundamentals of AI.';
     }
 
-    const keyConceptsList = keyConcepts.map(c => `- **${c.title}:** ${c.description}`).join('\n');
+    // Safe fallback for keyConcepts
+    const safeKeyConcepts = Array.isArray(keyConcepts) ? keyConcepts : [];
+    const keyConceptsList = safeKeyConcepts.length
+      ? safeKeyConcepts.map(c => `- **${c.title}:** ${c.description}`).join('\n')
+      : '- Provide an accessible overview of this phase, covering at least three essential concepts with practical examples.';
 
     const contentGuidance = profile.contentType === 'conceptual'
       ? 'Focus on clear explanations, real-world analogies, and conceptual understanding. Avoid overly technical jargon.'

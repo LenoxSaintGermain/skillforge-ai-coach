@@ -197,10 +197,20 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
   };
   
   if (isLearningMode && currentPhase) {
+    // Compute phase navigation metadata
+    const phaseIds = [...syllabus.phases.map(p => p.id)].sort((a, b) => a - b);
+    const currentIndex = Math.max(0, phaseIds.indexOf(currentPhaseId));
+    const prevPhaseId = currentIndex > 0 ? phaseIds[currentIndex - 1] : undefined;
+    const nextPhaseId = currentIndex < phaseIds.length - 1 ? phaseIds[currentIndex + 1] : undefined;
+
     return (
       <InteractiveCurriculumCanvas 
         phase={currentPhase}
         subjectId={activeSubject?.id}
+        totalPhases={phaseIds.length}
+        currentIndex={currentIndex}
+        prevPhaseId={prevPhaseId}
+        nextPhaseId={nextPhaseId}
         onBackToSyllabus={async () => {
           setIsLearningMode(false);
           onLearningModeChange?.(false);
