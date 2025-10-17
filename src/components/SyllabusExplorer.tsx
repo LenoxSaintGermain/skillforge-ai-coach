@@ -302,8 +302,8 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <p className="font-medium">{currentPhase.corePracticalTask.description}</p>
-                  <p className="text-muted-foreground">{currentPhase.corePracticalTask.taskDetails}</p>
+                  <p className="font-medium">{currentPhase.corePracticalTask?.description || 'No task description available'}</p>
+                  <p className="text-muted-foreground">{currentPhase.corePracticalTask?.taskDetails || 'Task details will be provided when you start learning.'}</p>
                 </div>
               </CardContent>
               <CardFooter>
@@ -313,7 +313,7 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
                   onClick={() => {
                     console.log('🎯 Getting task guidance...');
                   }}
-                  disabled={!isServiceReady}
+                  disabled={!isServiceReady || !currentPhase.corePracticalTask}
                 >
                   <span>{isServiceReady ? 'Get Task Guidance' : 'Initializing...'}</span>
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -329,15 +329,19 @@ const SyllabusExplorer = ({ onLearningModeChange }: { onLearningModeChange?: (is
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                   {currentPhase.keyConceptsAndActivities.map((concept, index) => (
-                    <div key={index} className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="h-4 w-4 text-secondary" />
-                        <h4 className="font-medium">{concept.title}</h4>
+                  {currentPhase.keyConceptsAndActivities?.length > 0 ? (
+                    currentPhase.keyConceptsAndActivities.map((concept, index) => (
+                      <div key={index} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="h-4 w-4 text-secondary" />
+                          <h4 className="font-medium">{concept.title}</h4>
+                        </div>
+                        <p className="text-muted-foreground pl-6">{concept.description}</p>
                       </div>
-                      <p className="text-muted-foreground pl-6">{concept.description}</p>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground">Key concepts will be available when you start learning.</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
