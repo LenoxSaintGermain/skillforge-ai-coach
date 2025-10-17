@@ -90,13 +90,6 @@ serve(async (req) => {
       ]
     };
 
-    // Disable extended thinking mode to save tokens
-    if (!responseSchema) {
-      requestBody.thoughtConfig = {
-        mode: "DISABLED"
-      };
-    }
-
     console.log('Calling Gemini API with prompt:', prompt.substring(0, 100) + '...');
 
     const response = await fetch(
