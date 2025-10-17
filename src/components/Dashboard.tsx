@@ -58,7 +58,7 @@ const RecommendationCard = ({ title, description, icon, onClick }: {
 };
 
 const Dashboard = () => {
-  const { currentUser, isAuthenticated, hasSession } = useUser();
+  const { currentUser, isAuthenticated, hasSession, activeSubject } = useUser();
   const navigate = useNavigate();
   const [geminiProgress, setGeminiProgress] = useState<{
     progress: number;
@@ -153,6 +153,33 @@ const Dashboard = () => {
           <span className="font-medium ml-1">{currentUser.ai_knowledge_level}</span>
         </div>
       </div>
+      
+      {/* Active Subject Card */}
+      {activeSubject && (
+        <Card className="border-t-4 border-primary bg-gradient-to-br from-primary/5 to-secondary/5">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <CardTitle className="text-2xl flex items-center gap-2">
+                  <BookOpen className="h-6 w-6 text-primary" />
+                  {activeSubject.title}
+                </CardTitle>
+                <CardDescription className="text-base">
+                  {activeSubject.tagline || activeSubject.overall_goal}
+                </CardDescription>
+              </div>
+              <Button 
+                size="lg"
+                onClick={() => navigate(`/subject/${activeSubject.subject_key}`)}
+                className="gap-2"
+              >
+                Continue Learning
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+      )}
       
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
