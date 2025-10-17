@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SubjectConfig, subjectConfigService } from '@/services/SubjectConfigService';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -18,6 +19,7 @@ interface UseUserSubjectsReturn {
 export const useUserSubjects = (): UseUserSubjectsReturn => {
   const { currentUser, setActiveSubject, activeSubject } = useUser();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [enrolledSubjects, setEnrolledSubjects] = useState<SubjectConfig[]>([]);
   const [allSubjects, setAllSubjects] = useState<SubjectConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -133,8 +135,8 @@ export const useUserSubjects = (): UseUserSubjectsReturn => {
         description: `Now learning: ${newSubject.title}`,
       });
 
-      // Refresh the page to reload subject-specific content
-      window.location.reload();
+      // Navigate to subject landing page
+      navigate(`/subject/${newSubject.subject_key}`);
     } catch (err) {
       console.error('Error switching subject:', err);
       toast({
