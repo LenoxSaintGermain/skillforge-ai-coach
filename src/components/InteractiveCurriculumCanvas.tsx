@@ -87,7 +87,7 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
 
   // Generates the initial, pre-interaction view.
   const generateFallbackContent = useCallback((): string => {
-    return `
+    const fallbackHtml = `
         <div class="llm-container">
           <h1 class="llm-title">${phase.title}</h1>
           <div class="llm-highlight">
@@ -103,6 +103,8 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
           </div>
         </div>
     `;
+    console.log('🎨 DIAGNOSTIC: Generated fallback content with button ID:', `phase-${phase.id}-start`);
+    return fallbackHtml;
   }, [phase]);
 
   // Video loading state
@@ -223,6 +225,8 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
   const handleContentClick = useCallback(async (event: MouseEvent) => {
     let targetElement = event.target as HTMLElement;
 
+    console.log('🖱️ DIAGNOSTIC: Click detected on element:', targetElement.tagName, targetElement.className);
+
     while (
       targetElement &&
       targetElement !== contentRef.current &&
@@ -231,34 +235,53 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
       targetElement = targetElement.parentElement as HTMLElement;
     }
 
-    if (!targetElement || !targetElement.dataset.interactionId) return;
+    if (!targetElement || !targetElement.dataset.interactionId) {
+      console.log('⚠️ DIAGNOSTIC: No interaction ID found in click target or parents');
+      return;
+    }
 
     event.preventDefault();
     
     const interactionId = targetElement.dataset.interactionId;
-    console.log('DEBUG: handleContentClick - interactionId:', interactionId);
+    console.log('✅ DIAGNOSTIC: handleContentClick - interactionId:', interactionId);
+    console.log('📍 DIAGNOSTIC: Button text content:', targetElement.textContent?.trim());
     
     if (interactionId.includes('start') || interactionId.includes('continue')) {
-      console.log('DEBUG: Starting content generation...');
+      console.log('🚀 DIAGNOSTIC: Starting content generation...');
+      console.log('📊 DIAGNOSTIC: Current state - isLoading:', isLoading, 'contentState:', contentState);
+      
       setIsLoading(true);
       setLoadingMessage("Generating your comprehensive learning guide... this may take a moment.");
       toast.info("Generating comprehensive content...");
       
       try {
-        console.log('DEBUG: Calling callGeminiForGeneration with generate_full_content');
+        console.log('🔄 DIAGNOSTIC: Calling callGeminiForGeneration with generate_full_content');
         const fullContent = await callGeminiForGeneration('generate_full_content');
-        console.log('DEBUG: Generated content length:', fullContent?.length, 'Preview:', fullContent?.substring(0, 100));
-        setLlmContent(fullContent);
-        setContentState('concept-detail'); // We are now in the detailed view
-        console.log('DEBUG: Content state updated to concept-detail');
+        console.log('📝 DIAGNOSTIC: Generated content received');
+        console.log('📏 DIAGNOSTIC: Content length:', fullContent?.length);
+        console.log('👀 DIAGNOSTIC: Content preview (first 200 chars):', fullContent?.substring(0, 200));
+        console.log('🏷️ DIAGNOSTIC: Content has llm-container class:', fullContent?.includes('llm-container'));
+        
+        if (!fullContent || fullContent.length < 100) {
+          console.error('❌ DIAGNOSTIC: Content too short or empty!');
+          toast.error('Generated content appears to be empty');
+          setLlmContent(generateFallbackContent());
+        } else {
+          console.log('💾 DIAGNOSTIC: Setting llmContent state with generated content');
+          setLlmContent(fullContent);
+          setContentState('concept-detail');
+          console.log('✅ DIAGNOSTIC: Content state updated to concept-detail');
+          console.log('🎯 DIAGNOSTIC: llmContent state should now be updated');
+        }
       } catch (error) {
-        console.error('DEBUG: Failed to generate full content:', error);
+        console.error('❌ DIAGNOSTIC: Failed to generate full content:', error);
+        console.error('📋 DIAGNOSTIC: Error details:', error instanceof Error ? error.message : String(error));
         toast.error('Failed to generate content. Please try again.');
-        setLlmContent(generateFallbackContent()); // Revert to initial state on failure
+        setLlmContent(generateFallbackContent());
       } finally {
         setIsLoading(false);
         setLoadingMessage('');
-        console.log('DEBUG: Loading completed');
+        console.log('🏁 DIAGNOSTIC: Loading completed, isLoading set to false');
       }
     } else if (interactionId.includes('coach')) {
       setIsCoachOpen(true);
@@ -305,28 +328,52 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
     if (isInitializing.current) return;
     isInitializing.current = true;
 
+    console.log('🎬 DIAGNOSTIC: Initializing InteractiveCurriculumCanvas');
+    console.log('📌 DIAGNOSTIC: Phase ID:', phase.id, 'Phase Title:', phase.title);
+
     const initializeContent = () => {
-      // Set the initial state to the overview, which prompts the user to start
-      setLlmContent(generateFallbackContent());
+      const fallback = generateFallbackContent();
+      console.log('🔄 DIAGNOSTIC: Setting initial fallback content');
+      console.log('📄 DIAGNOSTIC: Fallback content length:', fallback.length);
+      console.log('👁️ DIAGNOSTIC: Fallback preview:', fallback.substring(0, 200));
+      
+      setLlmContent(fallback);
       setContentState('overview');
       setError(null);
       isInitializing.current = false;
+      
+      console.log('✅ DIAGNOSTIC: Initialization complete, contentState set to overview');
     };
 
     initializeContent();
-  }, [generateFallbackContent]);
+  }, [generateFallbackContent, phase.id, phase.title]);
 
   // Set up click event listener for the content area
   useEffect(() => {
     const contentElement = contentRef.current;
-    if (!contentElement) return;
+    if (!contentElement) {
+      console.log('⚠️ DIAGNOSTIC: contentRef.current is null, cannot attach click listener');
+      return;
+    }
 
+    console.log('🔗 DIAGNOSTIC: Attaching click event listener to content element');
     contentElement.addEventListener('click', handleContentClick);
     
     return () => {
+      console.log('🔌 DIAGNOSTIC: Removing click event listener');
       contentElement.removeEventListener('click', handleContentClick);
     };
   }, [handleContentClick]);
+
+  // Diagnostic: Log whenever llmContent changes
+  useEffect(() => {
+    console.log('🔄 DIAGNOSTIC: llmContent state changed');
+    console.log('📏 DIAGNOSTIC: New content length:', llmContent?.length);
+    console.log('🏷️ DIAGNOSTIC: Has llm-container:', llmContent?.includes('llm-container'));
+    console.log('🔘 DIAGNOSTIC: Has Begin Learning button:', llmContent?.includes('Begin Learning'));
+    console.log('📊 DIAGNOSTIC: Current contentState:', contentState);
+    console.log('👁️ DIAGNOSTIC: Content preview:', llmContent?.substring(0, 150));
+  }, [llmContent, contentState]);
 
   // Enhanced coach interaction with better timeout handling
   const handleCoachInteraction = useCallback(async () => {
@@ -370,9 +417,13 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
   }, [userInput, coachService, phase.title, curriculumContext.interactionHistory]);
 
   const handleRefresh = useCallback(() => {
-    // Simple refresh without API calls
+    console.log('🔄 DIAGNOSTIC: Refresh button clicked');
     const fallbackContent = generateFallbackContent();
+    console.log('📄 DIAGNOSTIC: Resetting to fallback content');
     setLlmContent(fallbackContent);
+    setContentState('overview');
+    setIsLoading(false);
+    setError(null);
     toast.success('Content refreshed!');
   }, [generateFallbackContent]);
 
@@ -464,21 +515,51 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
         <div 
           ref={contentRef}
           className="llm-container min-h-screen"
-          dangerouslySetInnerHTML={{ __html: llmContent }}
+          dangerouslySetInnerHTML={{ 
+            __html: llmContent || '<div class="llm-container"><p class="llm-text">⏳ Initializing content...</p></div>' 
+          }}
         />
 
         {/* Loading overlay with progressive messages */}
         {isLoading && (
-          <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
-            <div className="text-center max-w-md px-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground mb-2">
-                {loadingMessage || 'Generating interactive content...'}
-              </p>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div className="bg-primary h-2 rounded-full animate-pulse" style={{width: '60%'}}></div>
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-20">
+            <Card className="p-8 max-w-lg">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary border-t-transparent"></div>
+                <div className="text-center space-y-2">
+                  <p className="font-semibold text-lg">
+                    {loadingMessage || "Generating comprehensive content..."}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Creating your personalized learning guide
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    This typically takes 10-30 seconds
+                  </p>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
+                  <div className="h-full bg-primary rounded-full animate-pulse"></div>
+                </div>
               </div>
-            </div>
+            </Card>
+          </div>
+        )}
+        
+        {/* Error Display */}
+        {error && !isLoading && (
+          <div className="absolute inset-0 bg-background/90 flex items-center justify-center z-20">
+            <Card className="p-8 max-w-md border-destructive">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="text-5xl">⚠️</div>
+                <p className="text-center text-lg font-medium text-destructive">
+                  {error}
+                </p>
+                <Button onClick={handleRefresh} variant="outline" size="lg">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Try Again
+                </Button>
+              </div>
+            </Card>
           </div>
         )}
 
