@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,7 +6,7 @@ import { Download, FileText, Code, Database, Cloud, Shield, DollarSign } from 'l
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import rehypeMermaid from 'rehype-mermaid';
+import mermaid from 'mermaid';
 
 // Import markdown files as raw text
 const PRODUCTION_ARCHITECTURE = `${window.location.origin}/docs/PRODUCTION_ARCHITECTURE.md`;
@@ -57,6 +57,40 @@ const ProductionDocumentation = () => {
   const [activeDoc, setActiveDoc] = useState('architecture');
   const [markdownContent, setMarkdownContent] = useState<string>('');
   const [loading, setLoading] = useState(false);
+
+  // Initialize Mermaid
+  useEffect(() => {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'default',
+      securityLevel: 'loose',
+    });
+  }, []);
+
+  // Custom Mermaid component
+  const MermaidCode = ({ children }: { children: string }) => {
+    const ref = useRef<HTMLDivElement>(null);
+    const id = useRef(`mermaid-${Math.random().toString(36).substr(2, 9)}`);
+
+    useEffect(() => {
+      if (ref.current && children) {
+        mermaid.render(id.current, children)
+          .then(({ svg }) => {
+            if (ref.current) {
+              ref.current.innerHTML = svg;
+            }
+          })
+          .catch((error) => {
+            console.error('Mermaid rendering error:', error);
+            if (ref.current) {
+              ref.current.innerHTML = `<pre class="bg-muted p-4 rounded text-xs overflow-auto">${children}</pre>`;
+            }
+          });
+      }
+    }, [children]);
+
+    return <div ref={ref} className="flex justify-center my-4 overflow-x-auto" />;
+  };
 
   const downloadDocument = async (doc: typeof documents[0]) => {
     try {
@@ -173,18 +207,28 @@ const ProductionDocumentation = () => {
             <div className="prose prose-sm max-w-none dark:prose-invert overflow-auto max-h-[600px] p-4">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
-                rehypePlugins={[[rehypeMermaid, { strategy: 'inline-svg' }]]}
                 components={{
                   pre: ({ node, ...props }) => (
                     <pre className="overflow-auto bg-muted p-4 rounded-lg" {...props} />
                   ),
                   code: ({ node, className, children, ...props }) => {
-                    const isInline = !className?.includes('language-');
+                    const match = /language-(\w+)/.exec(className || '');
+                    const code = String(children).replace(/\n$/, '');
+                    const isInline = !className;
+                    
+                    // Render Mermaid diagrams
+                    if (!isInline && match && match[1] === 'mermaid') {
+                      return <MermaidCode>{code}</MermaidCode>;
+                    }
+                    
+                    // Regular inline code
+                    if (isInline) {
+                      return <code className="bg-muted px-1 py-0.5 rounded text-sm" {...props}>{children}</code>;
+                    }
+                    
+                    // Regular code blocks
                     return (
-                      <code
-                        className={isInline ? 'bg-muted px-1 py-0.5 rounded text-sm' : 'text-sm'}
-                        {...props}
-                      >
+                      <code className={className} {...props}>
                         {children}
                       </code>
                     );
