@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, FileText, Code, Database, Cloud, Shield, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeMermaid from 'rehype-mermaid';
 
 // Import markdown files as raw text
 const PRODUCTION_ARCHITECTURE = `${window.location.origin}/docs/PRODUCTION_ARCHITECTURE.md`;
@@ -167,10 +170,29 @@ const ProductionDocumentation = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : markdownContent ? (
-            <div className="prose prose-sm max-w-none dark:prose-invert">
-              <pre className="whitespace-pre-wrap bg-muted p-4 rounded-lg overflow-auto max-h-[600px] text-xs">
+            <div className="prose prose-sm max-w-none dark:prose-invert overflow-auto max-h-[600px] p-4">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[[rehypeMermaid, { strategy: 'inline-svg' }]]}
+                components={{
+                  pre: ({ node, ...props }) => (
+                    <pre className="overflow-auto bg-muted p-4 rounded-lg" {...props} />
+                  ),
+                  code: ({ node, className, children, ...props }) => {
+                    const isInline = !className?.includes('language-');
+                    return (
+                      <code
+                        className={isInline ? 'bg-muted px-1 py-0.5 rounded text-sm' : 'text-sm'}
+                        {...props}
+                      >
+                        {children}
+                      </code>
+                    );
+                  },
+                }}
+              >
                 {markdownContent}
-              </pre>
+              </ReactMarkdown>
             </div>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
