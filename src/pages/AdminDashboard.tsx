@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, MessageSquare, BookOpen, Activity, Layers } from 'lucide-react';
+import { Users, MessageSquare, BookOpen, Activity, Layers, Cloud } from 'lucide-react';
 import FeedbackManagement from '@/components/admin/FeedbackManagement';
 import UserManagement from '@/components/admin/UserManagement';
 import ContentOversight from '@/components/admin/ContentOversight';
 import PlatformAnalytics from '@/components/admin/PlatformAnalytics';
 import SubjectManagement from '@/components/admin/SubjectManagement';
+import ProductionDocumentation from '@/components/admin/ProductionDocumentation';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -132,6 +133,10 @@ const AdminDashboard = () => {
           <TabsTrigger value="content">Content Oversight</TabsTrigger>
           <TabsTrigger value="feedback">Feedback</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="production">
+            <Cloud className="mr-2 h-4 w-4" />
+            Production Deploy
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="subjects" className="space-y-4">
@@ -152,6 +157,10 @@ const AdminDashboard = () => {
 
         <TabsContent value="analytics" className="space-y-4">
           <PlatformAnalytics />
+        </TabsContent>
+
+        <TabsContent value="production" className="space-y-4">
+          <ProductionDocumentation />
         </TabsContent>
       </Tabs>
     </div>
