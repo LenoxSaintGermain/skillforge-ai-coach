@@ -1,53 +1,43 @@
 
 import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { ArrowRight, Brain, Sparkles, Target, Trophy, Users } from "lucide-react";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { ArrowRight, Wrench, Lightbulb, Users, Rocket, BookOpen, Code, Sparkles, Eye, Heart, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import FeatureShowcase from "./FeatureShowcase";
-import TestimonialCarousel from "./TestimonialCarousel";
-import HeroAnimation from "./HeroAnimation";
 
 interface LandingPageProps {
   onEnterApp: () => void;
 }
 
 const LandingPage = ({ onEnterApp }: LandingPageProps) => {
-  const [scrollY, setScrollY] = useState(0);
+  const { scrollYProgress } = useScroll();
+  const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
+  const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-    
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const features = [
+  const personas = [
     {
-      title: "AI-Powered Scenarios",
-      description: "Practice real-world AI implementation with dynamic scenarios tailored to your skill level.",
-      icon: <Brain className="w-8 h-8 text-skillforge-primary" />,
-      color: "bg-gradient-to-br from-skillforge-primary to-skillforge-light"
+      title: "The Curious Experimenter",
+      description: "You don't want to read the manual—you want to open the hood and see how it works. You learn best by playing, breaking things, and discovering what happens.",
+      icon: Wrench,
+      gradient: "from-purple-500 to-pink-500"
     },
     {
-      title: "Personalized Learning",
-      description: "Custom AI coach that adapts to your progress and provides focused guidance.",
-      icon: <Target className="w-8 h-8 text-skillforge-secondary" />,
-      color: "bg-gradient-to-br from-skillforge-secondary to-skillforge-light"
+      title: "The Practical Professional",
+      description: "You need to use AI at work, not write papers about it. You need hands-on skills that solve real problems, not theoretical knowledge.",
+      icon: Lightbulb,
+      gradient: "from-blue-500 to-cyan-500"
     },
     {
-      title: "Industry Relevant",
-      description: "Scenarios based on real-world industry challenges and use cases.",
-      icon: <Users className="w-8 h-8 text-skillforge-dark" />,
-      color: "bg-gradient-to-br from-skillforge-dark to-skillforge-light"
+      title: "The Thoughtful Educator",
+      description: "You're trying to understand what AI-native learning looks like—not to replace teaching, but to understand where education is going.",
+      icon: BookOpen,
+      gradient: "from-orange-500 to-red-500"
     },
     {
-      title: "Skill Growth Tracking",
-      description: "Visualize your progress and master AI implementation skills over time.",
-      icon: <Trophy className="w-8 h-8 text-coach-DEFAULT" />,
-      color: "bg-gradient-to-br from-coach-DEFAULT to-coach-light"
+      title: "The Builder",
+      description: "You're a developer, designer, or product person who learns by seeing working examples. The meta-experience matters to you.",
+      icon: Code,
+      gradient: "from-green-500 to-emerald-500"
     }
   ];
 
