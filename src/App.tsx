@@ -36,12 +36,12 @@ const App = () => (
               <Sonner />
               <ErrorBoundary>
                 <Routes>
-                  {/* Auth page without layout */}
+                  {/* Public routes without layout */}
                   <Route path="/auth" element={<AuthPage />} />
+                  <Route path="/" element={<Index />} />
 
-                  {/* App pages with layout */}
+                  {/* Protected app pages with layout */}
                   <Route element={<AppLayout />}>
-                    <Route path="/" element={<Index />} />
                     <Route path="/scenarios" element={<ScenariosPage />} />
                     <Route path="/scenario/:id" element={<ScenarioDetailPage />} />
                     <Route path="/scenario/generate" element={<ScenarioGeneratorPage />} />
