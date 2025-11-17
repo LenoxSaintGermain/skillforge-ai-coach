@@ -1,9 +1,11 @@
-
 import React, { useEffect, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight, Wrench, Lightbulb, Users, Rocket, BookOpen, Code, Sparkles, Eye, Heart, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import FeatureShowcase from "./FeatureShowcase";
+import TestimonialCarousel from "./TestimonialCarousel";
+import HeroAnimation from "./HeroAnimation";
 
 interface LandingPageProps {
   onEnterApp: () => void;
@@ -38,6 +40,33 @@ const LandingPage = ({ onEnterApp }: LandingPageProps) => {
       description: "You're a developer, designer, or product person who learns by seeing working examples. The meta-experience matters to you.",
       icon: Code,
       gradient: "from-green-500 to-emerald-500"
+    }
+  ];
+
+  const features = [
+    {
+      title: "Dynamic Scenarios",
+      description: "Real-world challenges that adapt to your learning journey, not templated lessons.",
+      icon: <Zap className="w-8 h-8 text-skillforge-primary" />,
+      color: "bg-gradient-to-br from-skillforge-primary/10 to-skillforge-primary/5"
+    },
+    {
+      title: "AI Co-Developer",
+      description: "Work alongside AI that generates, adapts, and evolves with you—not just answers questions.",
+      icon: <Rocket className="w-8 h-8 text-skillforge-secondary" />,
+      color: "bg-gradient-to-br from-skillforge-secondary/10 to-skillforge-secondary/5"
+    },
+    {
+      title: "Learn by Building",
+      description: "Practice implementing AI solutions in contexts that matter to your work.",
+      icon: <Wrench className="w-8 h-8 text-skillforge-accent" />,
+      color: "bg-gradient-to-br from-skillforge-accent/10 to-skillforge-accent/5"
+    },
+    {
+      title: "Progressive Mastery",
+      description: "From curious beginner to confident implementer through deliberate practice.",
+      icon: <Eye className="w-8 h-8 text-skillforge-dark" />,
+      color: "bg-gradient-to-br from-skillforge-dark/10 to-skillforge-dark/5"
     }
   ];
 
