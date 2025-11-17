@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import Dashboard from "@/components/Dashboard";
 import LandingPage from "@/components/marketing/LandingPage";
+import Header from "@/components/Header";
+import FeedbackWidget from "@/components/feedback/FeedbackWidget";
 
 const Index = () => {
   const { isAuthenticated, isLoading } = useUser();
@@ -37,11 +39,19 @@ const Index = () => {
   }
   
   // Show dashboard if authenticated, otherwise show landing page
-  return (
-    <>
-      {isAuthenticated ? <Dashboard /> : <LandingPage onEnterApp={handleEnterApp} />}
-    </>
-  );
+  if (isAuthenticated) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <main className="flex-1">
+          <Dashboard />
+        </main>
+        <FeedbackWidget />
+      </div>
+    );
+  }
+  
+  return <LandingPage onEnterApp={handleEnterApp} />;
 };
 
 export default Index;
