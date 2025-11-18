@@ -6,6 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import FeatureShowcase from "./FeatureShowcase";
 import TestimonialCarousel from "./TestimonialCarousel";
 import HeroAnimation from "./HeroAnimation";
+import UseCaseExplorer from "./UseCaseExplorer";
+import ScrollReveal from "./ScrollReveal";
 
 interface LandingPageProps {
   onEnterApp: () => void;
@@ -224,31 +226,101 @@ const LandingPage = ({ onEnterApp }: LandingPageProps) => {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-24 bg-muted/30">
-        <div className="container">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <motion.h2 
-              className="text-3xl md:text-4xl font-bold mb-4"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
-              Success Stories
-            </motion.h2>
-            <motion.p 
-              className="text-lg text-muted-foreground"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-            >
-              See what our users are saying about their experience
-            </motion.p>
-          </div>
-          
-          <TestimonialCarousel />
+      {/* Use Case Explorer Section */}
+      <section className="py-24 bg-gradient-to-b from-muted/30 to-background relative overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute inset-0 bg-grid-white/5 bg-[size:32px_32px]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+        
+        <div className="container mx-auto px-6 relative z-10">
+          <ScrollReveal>
+            <div className="text-center mb-16">
+              <motion.div
+                initial={{ scale: 0 }}
+                whileInView={{ scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, type: "spring" }}
+                className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-6"
+              >
+                <Lightbulb className="w-8 h-8 text-primary" />
+              </motion.div>
+              
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">
+                Discover What's <span className="text-primary">Possible</span>
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                Explore 20+ real-world AI applications from leading organizations. Find inspiration, 
+                understand the impact, and start building your own solutions today.
+              </p>
+              
+              {/* Stats */}
+              <div className="flex flex-wrap justify-center gap-8 mt-12">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.2 }}
+                  className="text-center"
+                >
+                  <div className="text-4xl font-bold text-primary mb-1">20+</div>
+                  <div className="text-sm text-muted-foreground">Use Cases</div>
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.3 }}
+                  className="text-center"
+                >
+                  <div className="text-4xl font-bold text-primary mb-1">5</div>
+                  <div className="text-sm text-muted-foreground">Categories</div>
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.4 }}
+                  className="text-center"
+                >
+                  <div className="text-4xl font-bold text-primary mb-1">100%</div>
+                  <div className="text-sm text-muted-foreground">Real-World</div>
+                </motion.div>
+              </div>
+            </div>
+          </ScrollReveal>
+
+          <ScrollReveal delay={0.3}>
+            <UseCaseExplorer />
+          </ScrollReveal>
+
+          {/* CTA */}
+          <ScrollReveal delay={0.5}>
+            <div className="mt-16 text-center">
+              <div className="inline-flex flex-col items-center gap-4 p-8 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
+                <p className="text-lg font-medium">
+                  Ready to bring these ideas to life?
+                </p>
+                <Button 
+                  size="lg" 
+                  onClick={onEnterApp}
+                  className="group"
+                >
+                  Start Building with AI
+                  <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+                <p className="text-sm text-muted-foreground">
+                  Explore <a 
+                    href="https://cloud.google.com/blog/products/ai-machine-learning/real-world-gen-ai-use-cases-with-technical-blueprints" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    1,001+ more use cases
+                  </a> from Google Cloud
+                </p>
+              </div>
+            </div>
+          </ScrollReveal>
         </div>
       </section>
 
