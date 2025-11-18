@@ -13,6 +13,64 @@ export class SubjectAdminService {
   }
 
   /**
+   * Create a draft subject (no validation, temporary subject_key)
+   */
+  async createDraft(subjectData: Partial<SubjectConfig>): Promise<SubjectConfig | null> {
+    try {
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2, 8);
+      const draftKey = `draft_${timestamp}_${randomId}`;
+
+      const { data, error } = await supabase
+        .from('learning_subjects')
+        .insert({
+          subject_key: draftKey,
+          title: subjectData.title || 'Untitled Draft',
+          overall_goal: subjectData.overall_goal || 'Draft in progress',
+          system_prompt_template: subjectData.system_prompt_template || 'Draft - to be generated',
+          tagline: subjectData.tagline,
+          hero_description: subjectData.hero_description,
+          primary_color: subjectData.primary_color || '#8B5CF6',
+          secondary_color: subjectData.secondary_color || '#EC4899',
+          logo_url: subjectData.logo_url,
+          syllabus_data: subjectData.syllabus_data || { phases: [] },
+          skill_areas: subjectData.skill_areas || [],
+          phase_context_profiles: subjectData.phase_context_profiles || {},
+          status: 'draft' as any,
+          is_default: false,
+        } as any)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return data as SubjectConfig;
+    } catch (error) {
+      console.error('Error creating draft:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update a draft subject (no validation for drafts)
+   */
+  async updateDraft(draftId: string, updates: Partial<SubjectConfig>): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('learning_subjects')
+        .update(updates as any)
+        .eq('id', draftId)
+        .eq('status', 'draft');
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error updating draft:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Create a new subject
    */
   async createSubject(subjectData: Partial<SubjectConfig>): Promise<SubjectConfig | null> {
