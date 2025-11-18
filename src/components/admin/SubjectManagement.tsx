@@ -35,6 +35,7 @@ const SubjectManagement = () => {
   const [showMigrateDialog, setShowMigrateDialog] = useState(false);
   const [migrateFromId, setMigrateFromId] = useState<string>('');
   const [migrateToId, setMigrateToId] = useState<string>('');
+  const [showDraftsOnly, setShowDraftsOnly] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState<Partial<SubjectConfig>>({
@@ -348,8 +349,20 @@ const SubjectManagement = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Subjects</CardTitle>
-          <CardDescription>Manage subjects, their content, and configurations</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>All Subjects</CardTitle>
+              <CardDescription>Manage subjects, their content, and configurations</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="show-drafts" className="text-sm">Show Drafts Only</Label>
+              <Switch
+                id="show-drafts"
+                checked={showDraftsOnly}
+                onCheckedChange={setShowDraftsOnly}
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -363,14 +376,23 @@ const SubjectManagement = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {subjects.map((subject) => (
+              {subjects
+                .filter(s => showDraftsOnly ? s.status === 'draft' : true)
+                .map((subject) => (
                 <TableRow key={subject.id}>
-                  <TableCell className="font-medium">{subject.title}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {subject.title}
+                      {subject.status === 'draft' && (
+                        <Badge variant="outline" className="text-xs">Draft</Badge>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <code className="text-sm">{subject.subject_key}</code>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={subject.status === 'active' ? 'default' : 'secondary'}>
+                    <Badge variant={subject.status === 'active' ? 'default' : subject.status === 'draft' ? 'outline' : 'secondary'}>
                       {subject.status}
                     </Badge>
                   </TableCell>
@@ -379,34 +401,74 @@ const SubjectManagement = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(subject)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDuplicate(subject)}>
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSubjectToDelete(subject.id);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                      <Switch
-                        checked={subject.status === 'active'}
-                        onCheckedChange={() => handleToggleStatus(subject)}
-                      />
-                      {!subject.is_default && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleSetDefault(subject.id)}
-                        >
-                          Set Default
-                        </Button>
+                      {subject.status === 'draft' ? (
+                        <>
+                          <Button 
+                            variant="default" 
+                            size="sm" 
+                            onClick={async () => {
+                              // Publish draft directly
+                              try {
+                                await subjectAdminService.updateSubject(subject.id, { status: 'active' } as any);
+                                toast({
+                                  title: '🎉 Course published!',
+                                  description: 'Your course is now live.',
+                                });
+                                loadSubjects();
+                              } catch (error) {
+                                toast({
+                                  title: 'Publish Failed',
+                                  description: 'Could not publish the course.',
+                                  variant: 'destructive',
+                                });
+                              }
+                            }}
+                          >
+                            Publish
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSubjectToDelete(subject.id);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button variant="ghost" size="sm" onClick={() => openEditDialog(subject)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDuplicate(subject)}>
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSubjectToDelete(subject.id);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <Switch
+                            checked={subject.status === 'active'}
+                            onCheckedChange={() => handleToggleStatus(subject)}
+                          />
+                          {!subject.is_default && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleSetDefault(subject.id)}
+                            >
+                              Set Default
+                            </Button>
+                          )}
+                        </>
                       )}
                     </div>
                   </TableCell>
