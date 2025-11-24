@@ -50,14 +50,17 @@ export class SubjectConfigService {
     }
 
     try {
-      const { data: enrollment, error: enrollmentError } = await supabase
+      const { data: enrollments, error: enrollmentError } = await supabase
         .from('user_subject_enrollments')
         .select('subject_id')
         .eq('user_id', userId)
         .eq('is_primary', true)
-        .maybeSingle();
+        .order('enrolled_at', { ascending: false })
+        .limit(1);
 
       if (enrollmentError) throw enrollmentError;
+      
+      const enrollment = enrollments?.[0] || null;
       if (!enrollment) {
         this.enrollmentCache.set(userId, null);
         return null;
