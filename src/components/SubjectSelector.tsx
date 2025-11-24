@@ -18,9 +18,36 @@ const SubjectSelector = ({ className }: SubjectSelectorProps) => {
   const { activeSubject } = useUser();
   const { enrolledSubjects, allSubjects, isLoading, switchSubject, refreshEnrollments, isEnrolled } = useUserSubjects();
 
-  // Don't render if no active subject or still loading
-  if (isLoading || !activeSubject) {
-    return null;
+  if (isLoading) {
+    return (
+      <Button
+        variant="ghost"
+        disabled
+        className={cn(
+          "flex items-center gap-2 px-3 py-1.5 h-auto rounded-md bg-muted/50",
+          className
+        )}
+      >
+        <div className="h-3 w-3 rounded-full border animate-pulse bg-muted" />
+        <span className="text-sm">Loading courses...</span>
+      </Button>
+    );
+  }
+
+  if (!activeSubject) {
+    return (
+      <Button
+        variant="outline"
+        onClick={() => refreshEnrollments()}
+        className={cn(
+          "flex items-center gap-2 px-3 py-1.5 h-auto rounded-md",
+          className
+        )}
+      >
+        <BookOpen className="h-4 w-4" />
+        <span className="text-sm">Select a Course</span>
+      </Button>
+    );
   }
 
   // Separate subjects into enrolled and available

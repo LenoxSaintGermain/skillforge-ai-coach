@@ -4,7 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import ScenarioGenerator from "./ScenarioGenerator";
 import UserAnalytics from "./analytics/UserAnalytics";
 import { useUser } from "@/contexts/UserContext";
-import { Brain, Target, BookOpen, Trophy, ArrowRight, Award, Sparkles, BarChart3 } from "lucide-react";
+import { Brain, Target, BookOpen, Trophy, ArrowRight, Award, Sparkles, BarChart3, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,6 +12,8 @@ import { geminiProgressService } from "@/services/GeminiProgressService";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { SKILL_AREAS } from "@/constants/skillAreas";
+import { useUserSubjects } from "@/hooks/useUserSubjects";
+import { Badge } from "@/components/ui/badge";
 
 const SkillCard = ({ skill, progress }: { skill: string; progress: number }) => {
   return (
@@ -59,6 +61,7 @@ const RecommendationCard = ({ title, description, icon, onClick }: {
 
 const Dashboard = () => {
   const { currentUser, isAuthenticated, hasSession, activeSubject } = useUser();
+  const { enrolledSubjects, allSubjects, switchSubject, isEnrolled } = useUserSubjects();
   const navigate = useNavigate();
   const [geminiProgress, setGeminiProgress] = useState<{
     progress: number;
@@ -182,11 +185,12 @@ const Dashboard = () => {
       )}
       
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="generator">Scenario Generator</TabsTrigger>
-        </TabsList>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="courses">My Courses</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="generator">Scenario Generator</TabsTrigger>
+          </TabsList>
         
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -285,6 +289,126 @@ const Dashboard = () => {
                   icon={<Target className="h-4 w-4 text-skillforge-secondary" />}
                   onClick={() => navigate('/resources')}
                 />
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="courses" className="space-y-6">
+          <div className="grid gap-6">
+            {/* Enrolled Courses */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <GraduationCap className="h-5 w-5" />
+                      My Enrolled Courses
+                    </CardTitle>
+                    <CardDescription>
+                      Courses you're currently learning
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {enrolledSubjects.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No enrolled courses yet</p>
+                    <p className="text-sm">Browse available courses below to get started</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {enrolledSubjects.map((subject) => (
+                      <Card key={subject.id} className="overflow-hidden">
+                        <div 
+                          className="h-2 w-full" 
+                          style={{ backgroundColor: subject.primary_color }}
+                        />
+                        <CardHeader>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <CardTitle className="text-base truncate">{subject.title}</CardTitle>
+                              <CardDescription className="text-xs truncate">
+                                {subject.tagline || subject.overall_goal}
+                              </CardDescription>
+                            </div>
+                            {activeSubject?.id === subject.id && (
+                              <Badge variant="secondary" className="shrink-0">Active</Badge>
+                            )}
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <Button
+                            size="sm"
+                            className="w-full"
+                            variant={activeSubject?.id === subject.id ? "secondary" : "default"}
+                            onClick={() => {
+                              if (activeSubject?.id !== subject.id) {
+                                switchSubject(subject.id);
+                              }
+                            }}
+                          >
+                            {activeSubject?.id === subject.id ? "Current Course" : "Switch to Course"}
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Available Courses */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5" />
+                  Available Courses
+                </CardTitle>
+                <CardDescription>
+                  Explore new courses and expand your skills
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {allSubjects.filter(s => !isEnrolled(s.id)).length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Award className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>You're enrolled in all available courses!</p>
+                    <p className="text-sm">Check back later for new courses</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {allSubjects
+                      .filter(s => !isEnrolled(s.id))
+                      .map((subject) => (
+                        <Card key={subject.id} className="overflow-hidden">
+                          <div 
+                            className="h-2 w-full" 
+                            style={{ backgroundColor: subject.primary_color }}
+                          />
+                          <CardHeader>
+                            <CardTitle className="text-base truncate">{subject.title}</CardTitle>
+                            <CardDescription className="text-xs line-clamp-2">
+                              {subject.tagline || subject.overall_goal}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full"
+                              onClick={() => switchSubject(subject.id)}
+                            >
+                              <BookOpen className="h-4 w-4 mr-2" />
+                              Enroll Now
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
