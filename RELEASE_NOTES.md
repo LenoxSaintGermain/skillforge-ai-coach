@@ -1,5 +1,142 @@
 # Release Notes
 
+## Version 1.3.0 - AI Learning Path Generator & Saved Paths
+*Release Date: December 2025*
+
+### 🎯 Overview
+This release introduces an AI-powered Learning Path Generator that creates personalized 3-step learning journeys, links use cases directly to learning paths, and enables users to save paths to their profiles with an auth-aware flow for unauthenticated users.
+
+---
+
+### ✨ New Features
+
+#### AI Learning Path Generator
+- **Gemini-Powered Path Creation**
+  - Integrated on landing page with persona and goal inputs
+  - Generates personalized 3-step pathways (Hook → Action → Deep Dive)
+  - AI rationale explaining why each course was selected
+  - Direct links to Google Cloud Skills Boost catalog
+
+- **Google Cloud Course Integration**
+  - 3,472 courses from Google Cloud Skills Boost catalog
+  - Course recommendations with proper catalog search URLs
+  - "Practice in SkillForge" CTA for internal skill application
+
+#### Use Case → Learning Path Linking
+- **Seamless Discovery-to-Learning Flow**
+  - Added `suggestedPersona` and `suggestedGoal` fields to use cases
+  - "Learn Skills for This Use Case" button in use case modals
+  - Pre-fills Learning Path Generator with use case context
+  - 16 use cases now linked to suggested learning paths
+
+#### Save Learning Paths to Profile
+- **Persistent Learning Paths**
+  - New `saved_learning_paths` database table with RLS policies
+  - Save button appears after path generation
+  - Dashboard integration with "My Learning Paths" tab
+  - View, expand details, and delete saved paths
+  - Track which use case inspired each path
+
+#### Auth-Aware Save Flow
+- **Friction-Free Engagement**
+  - Unauthenticated users see AuthPromptModal when saving
+  - Pending path stored in sessionStorage during auth flow
+  - Auto-save after successful authentication
+  - Seamless "try before login" experience
+  - Clear messaging: "Save Your Learning Path"
+
+---
+
+### 🔧 Technical Improvements
+
+#### New Edge Function
+- **`learning-path-ai`**
+  - Accepts persona and goal inputs
+  - Injects simplified Google Cloud catalog into system prompt
+  - Structured JSON output with rationale and pathway array
+  - `maxOutputTokens` set to 4096 for complete responses
+
+#### Database Schema
+- **New `saved_learning_paths` Table**
+  - `id`, `user_id`, `title`, `persona`, `goal`, `rationale`
+  - `pathway` (JSONB array of course recommendations)
+  - `use_case_id` (optional link to originating use case)
+  - `created_at`, `updated_at` timestamps
+  - RLS policies for user-specific access
+
+#### Architecture Pattern
+- **External-Internal Learning Bridge**
+  - Google Cloud Skills Boost for course discovery
+  - SkillForge for hands-on practice and application
+  - Dual-platform approach positions SkillForge as practice layer
+
+---
+
+### 📦 New Files
+
+- `src/data/googleCloudCatalog.ts` - 3,472 course catalog
+- `src/components/marketing/LearningPathGenerator.tsx` - AI path generator
+- `src/components/marketing/AuthPromptModal.tsx` - Auth prompt for saves
+- `src/components/SavedLearningPaths.tsx` - Dashboard saved paths display
+- `supabase/functions/learning-path-ai/index.ts` - Gemini integration
+
+---
+
+### 🎨 UI/UX Improvements
+
+#### Landing Page Enhancement
+- **"Build Your Learning Path" Section**
+  - Positioned before "Discover What's Possible" use cases
+  - Clean form with persona dropdown and goal textarea
+  - Animated path reveal with course cards
+  - Save and Start Learning CTAs
+
+#### Dashboard Integration
+- **New "Learning Paths" Tab**
+  - Card grid of saved paths with metadata
+  - Expandable path details with course links
+  - Delete functionality with confirmation
+  - "Generate New Path" quick action
+
+---
+
+### 📊 Impact Summary
+
+- **4 major features added** (Path Generator, Use Case Linking, Save Paths, Auth Flow)
+- **1 new edge function** (`learning-path-ai`)
+- **1 new database table** (`saved_learning_paths`)
+- **16 use cases enhanced** with learning path suggestions
+- **5 new components** created
+
+---
+
+### 🚀 What's Next
+
+Upcoming enhancements:
+- Learning path progress tracking
+- Collaborative path sharing
+- AI-generated practice exercises for each path step
+- Path completion certificates
+- Cross-path skill recognition
+
+---
+
+### 📝 Notes for Developers
+
+#### New Services & Patterns
+- `sessionStorage` pattern for pending auth actions
+- `forwardRef` pattern for component scroll/prefill methods
+- Event-driven auth completion handling
+
+#### Database Migrations Required
+- Run migration to create `saved_learning_paths` table
+- Verify RLS policies are active
+
+#### Breaking Changes
+- None - all changes are additive
+
+---
+
 ## Version 1.2.1 - Production Documentation Suite
 *Release Date: November 2025*
 

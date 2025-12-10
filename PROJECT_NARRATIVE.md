@@ -146,4 +146,85 @@ This new architecture is made possible by two "contracts" and a "constitution" t
 *   **Challenge:** Slow API response times.
 *   **Lesson:** Production-grade AI applications must be resilient. We implemented timeouts, loading state feedback, and retry mechanisms to create a better user experience.
 
+---
+
+## 5. Phase 4: External-Internal Learning Bridge
+
+The latest architectural evolution introduces a powerful pattern for connecting external learning resources with internal practice environments.
+
+### The Bridge Concept
+
+Rather than recreating all educational content internally, we leverage existing high-quality resources (Google Cloud Skills Boost) while providing unique value through hands-on practice in SkillForge.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    User Learning Journey                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   ┌──────────────────┐         ┌──────────────────┐            │
+│   │   DISCOVERY      │         │   APPLICATION    │            │
+│   │                  │         │                  │            │
+│   │  Learning Path   │  ────►  │   SkillForge     │            │
+│   │  Generator       │         │   Practice       │            │
+│   │                  │         │                  │            │
+│   │  • AI recommends │         │  • Hands-on      │            │
+│   │    courses       │         │    scenarios     │            │
+│   │  • Links to      │         │  • AI coaching   │            │
+│   │    Skills Boost  │         │  • Real feedback │            │
+│   └──────────────────┘         └──────────────────┘            │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Catalog Context Injection
+
+The AI Learning Path Generator uses a technique we call "catalog context injection":
+
+1. **Curated Catalog**: A simplified catalog of 3,472 Google Cloud courses is maintained in `src/data/googleCloudCatalog.ts`
+2. **System Prompt Injection**: The catalog is injected into the Gemini system prompt, giving the AI knowledge of available courses
+3. **Structured Output**: The AI returns a structured JSON pathway with course IDs that map to real catalog entries
+4. **URL Generation**: Course recommendations link directly to Google Cloud Skills Boost search
+
+### Auth-Aware Pending Action Pattern
+
+A key UX innovation is the "pending action" pattern for unauthenticated users:
+
+```typescript
+// 1. User attempts to save (not logged in)
+const pendingPath = { persona, goal, rationale, pathway, useCaseId };
+sessionStorage.setItem('pendingLearningPath', JSON.stringify(pendingPath));
+
+// 2. Redirect to auth with return context
+sessionStorage.setItem('returnPath', window.location.pathname);
+
+// 3. After successful auth, check for pending action
+useEffect(() => {
+  const pending = sessionStorage.getItem('pendingLearningPath');
+  if (user && pending) {
+    savePath(JSON.parse(pending));
+    sessionStorage.removeItem('pendingLearningPath');
+  }
+}, [user]);
+```
+
+This pattern enables "try before you buy" engagement, allowing users to explore and attempt actions without upfront login friction.
+
+### Use Case → Learning Path Linking
+
+Use cases now carry learning context that flows into the path generator:
+
+```typescript
+interface UseCase {
+  id: string;
+  title: string;
+  // ... existing fields
+  suggestedPersona?: string;  // e.g., "Customer Service Manager"
+  suggestedGoal?: string;     // e.g., "Build an AI chatbot for support"
+}
+```
+
+When a user clicks "Learn Skills for This Use Case," the persona and goal are pre-filled, creating a seamless discovery-to-learning flow.
+
+---
+
 This document should provide your co-authoring agent with all the necessary context, narrative structure, and technical evidence to draft a compelling report.
