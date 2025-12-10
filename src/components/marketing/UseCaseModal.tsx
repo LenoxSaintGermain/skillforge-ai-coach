@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Users, Building2, Target, TrendingUp } from 'lucide-react';
+import { ExternalLink, Users, Building2, Target, TrendingUp, GraduationCap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface UseCaseModalProps {
@@ -16,6 +16,7 @@ interface UseCaseModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectRelated: (id: string) => void;
+  onGeneratePath?: (persona: string, goal: string, useCaseId: string) => void;
 }
 
 const difficultyColors = {
@@ -24,10 +25,17 @@ const difficultyColors = {
   advanced: 'bg-rose-500/10 text-rose-600 border-rose-500/20'
 };
 
-const UseCaseModal = ({ useCase, isOpen, onClose, onSelectRelated }: UseCaseModalProps) => {
+const UseCaseModal = ({ useCase, isOpen, onClose, onSelectRelated, onGeneratePath }: UseCaseModalProps) => {
   if (!useCase) return null;
 
   const relatedUseCases = useCases.filter(uc => useCase.relatedCases.includes(uc.id));
+
+  const handleGeneratePath = () => {
+    if (useCase.suggestedPersona && useCase.suggestedGoal && onGeneratePath) {
+      onGeneratePath(useCase.suggestedPersona, useCase.suggestedGoal, useCase.id);
+      onClose();
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -124,23 +132,31 @@ const UseCaseModal = ({ useCase, isOpen, onClose, onSelectRelated }: UseCaseModa
           )}
 
           {/* CTA */}
-          <div className="flex gap-3 pt-4 border-t">
-            <Button asChild className="flex-1">
-              <a href="/auth" onClick={(e) => { e.preventDefault(); window.location.href = '/auth'; }}>
-                Start Building
-              </a>
-            </Button>
-            <Button asChild variant="outline" className="flex-1">
-              <a 
-                href={useCase.technicalBlueprintUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2"
-              >
-                Technical Details
-                <ExternalLink className="w-4 h-4" />
-              </a>
-            </Button>
+          <div className="flex flex-col gap-3 pt-4 border-t">
+            {useCase.suggestedPersona && useCase.suggestedGoal && onGeneratePath && (
+              <Button onClick={handleGeneratePath} className="w-full gap-2">
+                <GraduationCap className="w-4 h-4" />
+                Learn Skills for This Use Case
+              </Button>
+            )}
+            <div className="flex gap-3">
+              <Button asChild variant="outline" className="flex-1">
+                <a href="/auth" onClick={(e) => { e.preventDefault(); window.location.href = '/auth'; }}>
+                  Start Building
+                </a>
+              </Button>
+              <Button asChild variant="outline" className="flex-1">
+                <a 
+                  href={useCase.technicalBlueprintUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2"
+                >
+                  Technical Details
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

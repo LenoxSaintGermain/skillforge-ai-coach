@@ -10,6 +10,9 @@ export interface UseCase {
   impact: string;
   technicalBlueprintUrl?: string;
   relatedCases: string[];
+  // For linking to learning path generator
+  suggestedPersona?: string;
+  suggestedGoal?: string;
 }
 
 export const useCases: UseCase[] = [
@@ -24,7 +27,9 @@ export const useCases: UseCase[] = [
     valueProposition: 'Reduce support costs by 60% while improving response time to under 30 seconds',
     impact: '60% cost reduction, 24/7 availability, <30s response time',
     technicalBlueprintUrl: 'https://cloud.google.com/blog/products/ai-machine-learning/real-world-gen-ai-use-cases-with-technical-blueprints',
-    relatedCases: ['voice-assistant', 'personalized-recommendations']
+    relatedCases: ['voice-assistant', 'personalized-recommendations'],
+    suggestedPersona: 'Customer Service Manager',
+    suggestedGoal: 'Build an AI chatbot that handles customer support tickets automatically'
   },
   {
     id: 'meeting-summarization',
@@ -37,7 +42,9 @@ export const useCases: UseCase[] = [
     valueProposition: 'Save 2+ hours per week per employee on meeting documentation',
     impact: '2+ hours saved weekly per employee',
     technicalBlueprintUrl: 'https://cloud.google.com/blog/products/ai-machine-learning/real-world-gen-ai-use-cases-with-technical-blueprints',
-    relatedCases: ['document-analysis', 'email-drafting']
+    relatedCases: ['document-analysis', 'email-drafting'],
+    suggestedPersona: 'Project Manager',
+    suggestedGoal: 'Build an AI tool that generates meeting summaries and action items from recordings'
   },
   {
     id: 'content-generation',
@@ -50,7 +57,9 @@ export const useCases: UseCase[] = [
     valueProposition: 'Produce 10x more content while maintaining quality and consistency',
     impact: '10x content production increase',
     technicalBlueprintUrl: 'https://cloud.google.com/blog/products/ai-machine-learning/real-world-gen-ai-use-cases-with-technical-blueprints',
-    relatedCases: ['image-generation', 'video-editing']
+    relatedCases: ['image-generation', 'video-editing'],
+    suggestedPersona: 'Marketing Manager',
+    suggestedGoal: 'Build an AI content generator for blog posts and social media'
   },
   {
     id: 'code-review-assistant',
@@ -63,7 +72,9 @@ export const useCases: UseCase[] = [
     valueProposition: 'Catch 85% of bugs before production and reduce review time by 50%',
     impact: '85% bug detection, 50% faster reviews',
     technicalBlueprintUrl: 'https://cloud.google.com/blog/products/ai-machine-learning/real-world-gen-ai-use-cases-with-technical-blueprints',
-    relatedCases: ['documentation-generation', 'debugging-assistant']
+    relatedCases: ['documentation-generation', 'debugging-assistant'],
+    suggestedPersona: 'Software Engineer',
+    suggestedGoal: 'Build an AI code review assistant that catches bugs and security issues'
   },
   {
     id: 'predictive-analytics',
@@ -76,7 +87,9 @@ export const useCases: UseCase[] = [
     valueProposition: 'Improve forecast accuracy by 40% and reduce planning time by 70%',
     impact: '40% better forecasts, 70% faster planning',
     technicalBlueprintUrl: 'https://cloud.google.com/blog/products/ai-machine-learning/real-world-gen-ai-use-cases-with-technical-blueprints',
-    relatedCases: ['report-generation', 'data-visualization']
+    relatedCases: ['report-generation', 'data-visualization'],
+    suggestedPersona: 'Data Analyst',
+    suggestedGoal: 'Build predictive models for sales forecasting using BigQuery ML'
   },
   {
     id: 'personalized-recommendations',

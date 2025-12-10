@@ -3,8 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import ScenarioGenerator from "./ScenarioGenerator";
 import UserAnalytics from "./analytics/UserAnalytics";
+import SavedLearningPaths from "./SavedLearningPaths";
 import { useUser } from "@/contexts/UserContext";
-import { Brain, Target, BookOpen, Trophy, ArrowRight, Award, Sparkles, BarChart3, GraduationCap } from "lucide-react";
+import { Brain, Target, BookOpen, Trophy, ArrowRight, Award, Sparkles, BarChart3, GraduationCap, Route } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -185,8 +186,9 @@ const Dashboard = () => {
       )}
       
       <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="paths">Learning Paths</TabsTrigger>
             <TabsTrigger value="courses">My Courses</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="generator">Scenario Generator</TabsTrigger>
@@ -292,6 +294,30 @@ const Dashboard = () => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="paths" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Route className="h-5 w-5" />
+                    My Learning Paths
+                  </CardTitle>
+                  <CardDescription>
+                    Personalized learning paths you've saved from the AI generator
+                  </CardDescription>
+                </div>
+                <Button variant="outline" onClick={() => navigate('/')}>
+                  Generate New Path
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <SavedLearningPaths />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="courses" className="space-y-6">

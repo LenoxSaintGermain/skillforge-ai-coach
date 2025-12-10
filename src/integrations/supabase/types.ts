@@ -597,6 +597,45 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_learning_paths: {
+        Row: {
+          created_at: string | null
+          goal: string
+          id: string
+          pathway: Json
+          persona: string
+          rationale: string | null
+          title: string
+          updated_at: string | null
+          use_case_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          goal: string
+          id?: string
+          pathway: Json
+          persona: string
+          rationale?: string | null
+          title: string
+          updated_at?: string | null
+          use_case_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          goal?: string
+          id?: string
+          pathway?: Json
+          persona?: string
+          rationale?: string | null
+          title?: string
+          updated_at?: string | null
+          use_case_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       scenarios: {
         Row: {
           created_at: string | null
