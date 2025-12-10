@@ -181,7 +181,7 @@ Generate a personalized 3-step learning path for this user. Remember: only use I
           ],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 4096,
             responseMimeType: 'application/json'
           }
         })
