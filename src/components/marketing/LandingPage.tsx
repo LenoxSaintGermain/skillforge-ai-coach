@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { ArrowRight, Wrench, Lightbulb, Users, Rocket, BookOpen, Code, Sparkles, Eye, Heart, Zap } from "lucide-react";
+import { ArrowRight, Wrench, Lightbulb, Users, Rocket, BookOpen, Code, Sparkles, Eye, Heart, Zap, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import FeatureShowcase from "./FeatureShowcase";
@@ -8,6 +8,7 @@ import TestimonialCarousel from "./TestimonialCarousel";
 import HeroAnimation from "./HeroAnimation";
 import UseCaseExplorer from "./UseCaseExplorer";
 import ScrollReveal from "./ScrollReveal";
+import LearningPathGenerator from "./LearningPathGenerator";
 
 interface LandingPageProps {
   onEnterApp: () => void;
@@ -320,6 +321,40 @@ const LandingPage = ({ onEnterApp }: LandingPageProps) => {
                 </p>
               </div>
             </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* Learning Path Generator Section */}
+      <section className="py-24 bg-muted/20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid-white/5 bg-[size:32px_32px]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+        
+        <div className="container mx-auto px-6 relative z-10">
+          <ScrollReveal>
+            <div className="text-center mb-12">
+              <motion.div
+                initial={{ scale: 0 }}
+                whileInView={{ scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, type: "spring" }}
+                className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-secondary/10 mb-6"
+              >
+                <GraduationCap className="w-8 h-8 text-secondary" />
+              </motion.div>
+              
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">
+                Build Your <span className="text-secondary">Learning Path</span>
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                Access Google Cloud's extensive catalog of courses and labs. Let AI curate a personalized 
+                curriculum, then practice your new skills in SkillForge.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          <ScrollReveal delay={0.2}>
+            <LearningPathGenerator onEnterApp={onEnterApp} />
           </ScrollReveal>
         </div>
       </section>
