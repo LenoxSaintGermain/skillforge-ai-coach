@@ -97,3 +97,6 @@ verify_jwt = true
 
 [functions.ai-subject-wizard]
 verify_jwt = true
+
+[functions.learning-path-ai]
+verify_jwt = false
