@@ -139,6 +139,13 @@ npm run dev
 
 ## Key Features
 
+🛤️ **AI Learning Path Generator**
+- Tell us who you are and what you want to achieve
+- Gemini AI analyzes 3,472 Google Cloud courses
+- Generates a personalized 3-step learning pathway
+- Direct links to Google Cloud Skills Boost
+- Save paths to your profile and track your journey
+
 🎯 **AI-Native Learning Paths**
 - Personalized learning journeys for Google AI Studio, Prompt Engineering, and more
 - Dynamic scenario generation based on your role and industry
@@ -221,7 +228,7 @@ src/
 
 Every great tool is unfinished. Every breakthrough started as an experiment.
 
-**This is version 1.2.1** of something that could transform how we learn complex skills in an AI-native world. We're exploring questions like:
+**This is version 1.3.0** of something that could transform how we learn complex skills in an AI-native world. We're exploring questions like:
 
 - How far can we push dynamic, AI-generated learning experiences?
 - What becomes possible when the learning platform itself is intelligent?
