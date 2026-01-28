@@ -164,12 +164,14 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    // Log full error server-side for debugging
     console.error('Error in vertex-ai function:', error);
+    
+    // Return safe error message without exposing internals
+    const safeMessage = getSafeErrorMessage(error);
+    
     return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-        details: 'Check function logs for more information'
-      }),
+      JSON.stringify({ error: safeMessage }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -177,6 +179,27 @@ serve(async (req) => {
     );
   }
 });
+
+/**
+ * Maps internal error messages to safe client-facing messages
+ */
+function getSafeErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
+  
+  if (message.includes('authentication') || message.includes('unauthorized')) {
+    return 'Authentication failed. Please sign in and try again.';
+  }
+  
+  if (message.includes('credentials') || message.includes('not configured')) {
+    return 'Service temporarily unavailable. Please try again later.';
+  }
+  
+  if (message.includes('access token')) {
+    return 'Service authentication failed. Please try again later.';
+  }
+  
+  return 'An error occurred processing your request. Please try again.';
+}
 
 // Helper function to generate JWT for Google Cloud
 async function generateJWT(credentials: any): Promise<string> {

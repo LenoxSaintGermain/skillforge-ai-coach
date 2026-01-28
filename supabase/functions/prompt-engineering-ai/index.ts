@@ -82,13 +82,39 @@ serve(async (req) => {
     }
 
   } catch (error) {
+    // Log full error server-side for debugging
     console.error('Error in prompt-engineering-ai function:', error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error occurred' }), {
+    
+    // Return safe error message without exposing internals
+    const safeMessage = getSafeErrorMessage(error);
+    
+    return new Response(JSON.stringify({ error: safeMessage }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
+
+/**
+ * Maps internal error messages to safe client-facing messages
+ */
+function getSafeErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
+  
+  if (message.includes('no authorization') || message.includes('invalid user token')) {
+    return 'Authentication failed. Please sign in and try again.';
+  }
+  
+  if (message.includes('api key') || message.includes('not configured')) {
+    return 'Service temporarily unavailable. Please try again later.';
+  }
+  
+  if (message.includes('unknown action')) {
+    return 'Invalid request. Please try again.';
+  }
+  
+  return 'An error occurred processing your request. Please try again.';
+}
 
 async function analyzePrompt(prompt: string, userLevel: string) {
   const analysisPrompt = `

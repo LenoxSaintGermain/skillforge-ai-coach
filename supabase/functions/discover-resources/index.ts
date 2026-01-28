@@ -203,12 +203,14 @@ Do not include any markdown formatting, code blocks, or explanatory text - only 
     );
 
   } catch (error) {
+    // Log full error server-side for debugging
     console.error('Error in discover-resources:', error);
+    
+    // Return safe error message - NEVER expose stack traces
+    const safeMessage = getSafeErrorMessage(error);
+    
     return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-        details: error instanceof Error ? error.stack : undefined
-      }),
+      JSON.stringify({ error: safeMessage }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -216,3 +218,24 @@ Do not include any markdown formatting, code blocks, or explanatory text - only 
     );
   }
 });
+
+/**
+ * Maps internal error messages to safe client-facing messages
+ */
+function getSafeErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
+  
+  if (message.includes('authentication') || message.includes('unauthorized')) {
+    return 'Authentication failed. Please sign in and try again.';
+  }
+  
+  if (message.includes('api key') || message.includes('not configured')) {
+    return 'Service temporarily unavailable. Please try again later.';
+  }
+  
+  if (message.includes('invalid json')) {
+    return 'Failed to process resources. Please try a different search.';
+  }
+  
+  return 'An error occurred discovering resources. Please try again.';
+}

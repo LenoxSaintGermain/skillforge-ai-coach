@@ -1,4 +1,4 @@
-import DOMPurify from 'dompurify';
+import { sanitizeHtmlWithLogging } from '@/lib/sanitizeHtml';
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -517,7 +517,7 @@ const InteractiveCurriculumCanvas: React.FC<InteractiveCurriculumCanvasProps> = 
           ref={contentRef}
           className="llm-container min-h-screen"
           dangerouslySetInnerHTML={{ 
-            __html: DOMPurify.sanitize(llmContent || '<div class="llm-container"><p class="llm-text">⏳ Initializing content...</p></div>') 
+            __html: sanitizeHtmlWithLogging(llmContent || '<div class="llm-container"><p class="llm-text">⏳ Initializing content...</p></div>', 'InteractiveCurriculumCanvas') 
           }}
         />
 
