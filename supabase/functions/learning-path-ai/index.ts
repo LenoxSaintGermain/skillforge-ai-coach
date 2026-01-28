@@ -246,10 +246,32 @@ Generate a personalized 3-step learning path for this user. Remember: only use I
     );
 
   } catch (error) {
+    // Log full error server-side for debugging
     console.error('Learning path generation error:', error);
+    
+    // Return safe error message without exposing internals
+    const safeMessage = getSafeErrorMessage(error);
+    
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: safeMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
+
+/**
+ * Maps internal error messages to safe client-facing messages
+ */
+function getSafeErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
+  
+  if (message.includes('api key') || message.includes('not configured')) {
+    return 'Service temporarily unavailable. Please try again later.';
+  }
+  
+  if (message.includes('persona') || message.includes('goal')) {
+    return 'Please provide both your role and learning goal.';
+  }
+  
+  return 'An error occurred generating your learning path. Please try again.';
+}
