@@ -7,7 +7,7 @@ import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import "@/styles/llm-curriculum.css";
-
+import DOMPurify from 'dompurify';
 
 interface InteractionData {
   id: string;
@@ -625,7 +625,7 @@ Generate the updated assessment interface:`;
         <div 
           ref={contentRef}
           className="p-8 min-h-full"
-          dangerouslySetInnerHTML={{ __html: llmContent }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(llmContent) }}
         />
 
         {/* Loading Overlay */}
