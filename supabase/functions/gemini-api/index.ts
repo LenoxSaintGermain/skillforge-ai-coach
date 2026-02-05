@@ -51,7 +51,8 @@ serve(async (req) => {
       throw new Error('GEMINI_API_KEY not configured');
     }
 
-    // Prepare the request body for Gemini API with safety settings
+    // Prepare the request body for Gemini 3 Flash API with enhanced capabilities
+    // Gemini 3 Flash: Pro-level intelligence at Flash speed with native UI generation
     const requestBody: any = {
       contents: [
         {
@@ -63,12 +64,18 @@ serve(async (req) => {
         }
       ],
       generationConfig: {
-        temperature: temperature,
+        // Gemini 3 recommends temperature 1.0 for optimal reasoning
+        temperature: temperature === 0.7 ? 1.0 : temperature,
         maxOutputTokens: maxTokens,
-        topP: 0.8,
-        topK: 40,
+        topP: 0.95,
+        topK: 64,
         responseMimeType: responseSchema ? "application/json" : undefined,
-        responseSchema: responseSchema || undefined
+        responseSchema: responseSchema || undefined,
+        // Gemini 3 thinking level: controls reasoning depth
+        // 'high' for complex UI generation, 'medium' for balanced, 'low' for simple tasks
+        thinkingConfig: {
+          thinkingLevel: maxTokens > 4000 ? "high" : "medium"
+        }
       },
       safetySettings: [
         {
@@ -92,8 +99,9 @@ serve(async (req) => {
 
     console.log('Calling Gemini API with prompt:', prompt.substring(0, 100) + '...');
 
+    // Use Gemini 3 Flash for enhanced UI generation and reasoning capabilities
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${geminiApiKey}`,
       {
         method: 'POST',
         headers: {
@@ -161,7 +169,7 @@ serve(async (req) => {
       JSON.stringify({ 
         generatedText,
         usage: data.usageMetadata || {},
-        model: 'gemini-2.5-flash'
+        model: 'gemini-3-flash-preview'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

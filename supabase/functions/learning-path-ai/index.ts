@@ -165,26 +165,31 @@ Generate a personalized 3-step learning path for this user. Remember: only use I
     console.log('Persona:', persona);
     console.log('Goal:', goal);
 
+    // Use Gemini 3 Flash for enhanced reasoning in learning path generation
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: systemPrompt + '\n\n' + userPrompt }]
-            }
-          ],
+          contents: [{
+            parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }]
+          }],
           generationConfig: {
-            temperature: 0.7,
+            // Gemini 3 recommends temperature 1.0 for optimal reasoning
+            temperature: 1.0,
+            topP: 0.95,
+            topK: 64,
             maxOutputTokens: 4096,
-            responseMimeType: 'application/json'
+            responseMimeType: "application/json",
+            // Use high thinking for complex learning path reasoning
+            thinkingConfig: {
+              thinkingLevel: "high"
+            }
           }
-        })
+        }),
       }
     );
 
