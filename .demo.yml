@@ -1,0 +1,17 @@
+# Demo Catalog metadata — parsed by sync agent
+
+title: AI SkillForge
+
+pitch: An AI-native learning platform where Gemini AI generates personalized, interactive learning experiences for mastering prompt engineering and Google AI tools.
+
+status: live
+
+category: education
+
+platform: lovable
+
+featured: false
+
+demo_video:
+
+cover_prompt: A sleek learning dashboard with glowing AI neural network connections, interactive curriculum cards, and a friendly AI coach avatar guiding a learner through personalized skill paths.
