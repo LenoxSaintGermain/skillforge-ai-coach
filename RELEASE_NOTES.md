@@ -1,5 +1,47 @@
 # Release Notes
 
+## Version 1.4.0 - Gemini 3 Flash Upgrade
+*Release Date: February 2026*
+
+### 🎯 Overview
+This release upgrades all AI services to Google's Gemini 3 Flash, bringing Pro-level intelligence at Flash speed with native UI generation capabilities and enhanced reasoning.
+
+---
+
+### ✨ Key Upgrades
+
+#### Gemini 3 Flash Integration
+- **Model Upgrade**
+  - All edge functions now use `gemini-3-flash-preview`
+  - Pro-grade reasoning with Flash-class speed and cost
+  - Native UI generation and code generation capabilities
+  - Enhanced multimodal understanding
+
+- **Thinking Level Control**
+  - New `thinkingConfig` parameter for reasoning depth control
+  - `high`: Complex UI generation and learning path reasoning
+  - `medium`: Balanced prompt analysis and coaching
+  - `low`: Fast resource discovery and simple tasks
+
+- **Optimized Parameters**
+  - Temperature set to 1.0 (Gemini 3 optimal)
+  - Enhanced topP (0.95) and topK (64) for quality
+  - Structured output with `responseMimeType: "application/json"`
+
+#### Enhanced Edge Functions
+- **gemini-api**: Primary content generation with dynamic thinking levels
+- **learning-path-ai**: High-thinking for complex path reasoning
+- **prompt-engineering-ai**: Medium-thinking for balanced analysis
+- **discover-resources**: Low-thinking for fast curation with JSON output
+- **vertex-ai**: Updated to gemini-3-flash for Vertex AI calls
+
+#### Improved Content Generation
+- Updated PhaseContextService prompts to leverage Gemini 3 UI abilities
+- Better code example formatting with syntax highlighting hints
+- Enhanced educational content with advanced reasoning
+
+---
+
 ## Version 1.3.0 - AI Learning Path Generator & Saved Paths
 *Release Date: December 2025*
 

@@ -106,9 +106,11 @@ export class PhaseContextService {
     const prompt = `
       **Objective:** Generate a comprehensive, blog-style article for the learning phase: "${profile.titleShort}".
 
+      **Model Capabilities:** You are Gemini 3 Flash with native generative UI abilities. Leverage your enhanced code generation and creative UI skills to produce engaging, interactive-style educational content.
+
       **Target Audience:** ${profile.difficulty} learners with a focus on ${profile.focus}.
 
-      **Core Task:** Write a detailed and engaging article that covers all the key concepts for this phase. The article should be a single, cohesive piece of content that does not require any further clicks to reveal information.
+      **Core Task:** Write a detailed and engaging article that covers all the key concepts for this phase. The article should be a single, cohesive piece of content that does not require any further clicks to reveal information. Use your advanced reasoning to create deeply educational content.
 
       **Phase Learning Objective:** ${phaseObjective}
 
@@ -127,6 +129,8 @@ export class PhaseContextService {
       **CRITICAL HTML Formatting Rules:**
       - Your entire response MUST be ONLY HTML content.
       - Use classes: llm-container, llm-title, llm-subtitle, llm-text, llm-code, llm-highlight, llm-task.
+      - For code examples, use <pre><code class="llm-code">...</code></pre> with proper syntax highlighting hints.
+      - Create visually appealing layouts using the llm-highlight class for important callouts.
       - Do NOT include any interactive elements like buttons or elements with 'data-interaction-id' attributes, except for a single "Back to Syllabus" button if you want to provide one at the end.
       - End your article with a "Further Exploration" section that includes a placeholder: [VIDEO_RECOMMENDATIONS_PLACEHOLDER] - this will be replaced with relevant video content.
     `;

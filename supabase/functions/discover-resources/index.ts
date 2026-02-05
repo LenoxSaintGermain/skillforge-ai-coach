@@ -67,9 +67,9 @@ serve(async (req) => {
       throw new Error('GEMINI_API_KEY not configured');
     }
 
-    // Call Gemini API
+    // Use Gemini 3 Flash for enhanced resource discovery and curation
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -109,8 +109,16 @@ Do not include any markdown formatting, code blocks, or explanatory text - only 
             }]
           }],
           generationConfig: {
-            temperature: 0.4,
-            maxOutputTokens: 4000
+            // Gemini 3 recommends temperature 1.0, use lower for structured output
+            temperature: 0.7,
+            maxOutputTokens: 4000,
+            topP: 0.95,
+            topK: 64,
+            responseMimeType: "application/json",
+            // Use low thinking for faster resource discovery
+            thinkingConfig: {
+              thinkingLevel: "low"
+            }
           }
         })
       }

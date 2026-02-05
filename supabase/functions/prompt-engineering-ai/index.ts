@@ -240,8 +240,9 @@ async function callGeminiAPI(prompt: string): Promise<string> {
     throw new Error('Gemini API key not configured');
   }
 
+  // Use Gemini 3 Flash for enhanced reasoning and structured output
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${geminiApiKey}`,
     {
       method: 'POST',
       headers: {
@@ -254,10 +255,15 @@ async function callGeminiAPI(prompt: string): Promise<string> {
           }]
         }],
         generationConfig: {
-          temperature: 0.7,
-          topK: 40,
+          // Gemini 3 recommends temperature 1.0 for optimal reasoning
+          temperature: 1.0,
+          topK: 64,
           topP: 0.95,
           maxOutputTokens: 2048,
+          // Use medium thinking for balanced prompt analysis
+          thinkingConfig: {
+            thinkingLevel: "medium"
+          }
         }
       }),
     }

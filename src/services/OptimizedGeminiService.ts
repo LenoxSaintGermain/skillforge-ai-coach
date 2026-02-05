@@ -135,19 +135,20 @@ export class OptimizedGeminiService {
 
     console.log('DEBUG: Generated prompt length:', optimizedPrompt?.length, 'Preview:', optimizedPrompt?.substring(0, 200));
 
-    // Call edge function with a larger token limit for comprehensive content
-    console.log('DEBUG: Calling supabase.functions.invoke with gemini-api...');
+    // Call edge function with Gemini 3 Flash optimized settings
+    console.log('DEBUG: Calling supabase.functions.invoke with gemini-api (Gemini 3 Flash)...');
     const { data, error } = await Promise.race([
       supabase.functions.invoke('gemini-api', {
         body: {
           prompt: optimizedPrompt,
           type: 'curriculum_generation',
           maxTokens: 4000, // Increased for blog-style content
-          temperature: 0.75,
+          // Gemini 3 recommends temperature 1.0 for optimal reasoning
+          temperature: 1.0,
         }
       }),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 45000) // Increased timeout
+        setTimeout(() => reject(new Error('Request timeout')), 60000) // Increased timeout for deeper thinking
       )
     ]) as { data: any; error: any };
 

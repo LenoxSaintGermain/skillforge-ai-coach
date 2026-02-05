@@ -85,8 +85,8 @@ serve(async (req) => {
         ]
       };
     } else {
-      // Default to Gemini via Vertex AI
-      endpoint = `https://us-central1-aiplatform.googleapis.com/v1/projects/${projectId}/locations/us-central1/publishers/google/models/gemini-2.0-flash-exp:predict`;
+      // Default to Gemini 3 Flash via Vertex AI for enhanced UI generation
+      endpoint = `https://us-central1-aiplatform.googleapis.com/v1/projects/${projectId}/locations/us-central1/publishers/google/models/gemini-3-flash:predict`;
       
       requestBody = {
         instances: [
@@ -103,10 +103,15 @@ serve(async (req) => {
           }
         ],
         parameters: {
-          temperature: temperature,
+          // Gemini 3 recommends temperature 1.0 for optimal reasoning
+          temperature: 1.0,
           maxOutputTokens: maxTokens,
-          topP: 0.8,
-          topK: 40
+          topP: 0.95,
+          topK: 64,
+          // Enhanced thinking for complex UI generation
+          thinkingConfig: {
+            thinkingLevel: maxTokens > 2000 ? "high" : "medium"
+          }
         }
       };
     }

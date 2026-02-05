@@ -166,7 +166,7 @@ Always maintain your sophisticated, supportive coaching style while providing sp
   }
 
   /**
-   * Calls the Gemini API via edge function
+   * Calls the Gemini API via edge function (now using Gemini 3 Flash)
    */
   private async callGeminiAPI(prompt: string, systemPrompt?: string): Promise<string> {
     const { supabase } = await import('@/integrations/supabase/client');
@@ -175,7 +175,8 @@ Always maintain your sophisticated, supportive coaching style while providing sp
       body: {
         prompt,
         systemPrompt,
-        temperature: 0.8,
+        // Gemini 3 recommends temperature 1.0 for optimal reasoning
+        temperature: 1.0,
         maxTokens: 1500
       }
     });
