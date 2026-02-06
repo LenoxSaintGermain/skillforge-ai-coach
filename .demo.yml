@@ -16,4 +16,6 @@ featured: false
 
 demo_video:
 
+cover_image: src/assets/hero-banner.jpg
+
 cover_prompt: A sleek learning dashboard with glowing AI neural network connections, interactive curriculum cards, and a friendly AI coach avatar guiding a learner through personalized skill paths.
