@@ -68,7 +68,7 @@ Description: ${description || 'Not provided'}
 Target Audience: ${audience || 'General learners'}
 
 Return your analysis with recommendations for scope and structure.`;
-        
+
         responseSchema = {
           type: "object",
           properties: {
@@ -160,7 +160,7 @@ Make it professional, engaging, and learner-focused.`;
         break;
 
       case 'generate_prompt':
-        const syllabusText = syllabus?.phases?.map((p: any, i: number) => 
+        const syllabusText = syllabus?.phases?.map((p: any, i: number) =>
           `Phase ${i + 1}: ${p.title}\n${p.description}`
         ).join('\n\n') || 'Syllabus not provided';
 
@@ -221,7 +221,7 @@ Make it comprehensive (300-500 words) but clear and actionable. Write in second 
     }
 
     const geminiData = await geminiResponse.json();
-    
+
     if (!geminiData.candidates?.[0]?.content?.parts?.[0]?.text) {
       console.error('[AI Wizard] Invalid Gemini response:', JSON.stringify(geminiData));
       throw new Error('Invalid response from Gemini API');
@@ -239,14 +239,27 @@ Make it comprehensive (300-500 words) but clear and actionable. Write in second 
 
   } catch (error) {
     console.error('[AI Wizard] Error:', error);
+
+    // Return safe error message — never expose internals
+    const message = error instanceof Error ? error.message.toLowerCase() : '';
+    let safeMessage = 'An error occurred processing your request. Please try again.';
+
+    if (message.includes('authentication') || message.includes('invalid')) {
+      safeMessage = 'Authentication failed. Please sign in and try again.';
+    } else if (message.includes('api key') || message.includes('not configured')) {
+      safeMessage = 'Service temporarily unavailable. Please try again later.';
+    } else if (message.includes('unknown action')) {
+      safeMessage = 'Invalid request. Please try again.';
+    }
+
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      JSON.stringify({
+        success: false,
+        error: safeMessage
       }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }

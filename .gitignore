@@ -12,6 +12,26 @@ dist
 dist-ssr
 *.local
 
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+
+# GCP credentials
+*.json.key
+gcp-*.json
+service-account*.json
+*-credentials.json
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.tfplan
+terraform/.terraform.lock.hcl
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

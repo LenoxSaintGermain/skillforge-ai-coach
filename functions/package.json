@@ -1,0 +1,21 @@
+{
+    "name": "skillforge-cloud-functions",
+    "version": "1.0.0",
+    "description": "SkillForge AI Coach — GCP Cloud Run Functions",
+    "type": "module",
+    "engines": {
+        "node": ">=20"
+    },
+    "dependencies": {
+        "@google-cloud/vertexai": "^1.9.0",
+        "cors": "^2.8.5",
+        "express": "^4.21.0",
+        "firebase-admin": "^12.7.0",
+        "pg": "^8.13.0"
+    },
+    "devDependencies": {
+        "@types/cors": "^2.8.17",
+        "@types/express": "^5.0.0",
+        "@types/pg": "^8.11.10"
+    }
+}
