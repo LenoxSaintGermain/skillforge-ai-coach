@@ -81,8 +81,38 @@ async function callGeminiAPI(prompt) {
 }
 
 async function analyzePrompt(prompt, userLevel) {
+    const isSuperpowerRequest = prompt.toLowerCase().includes('superpower') || 
+                               prompt.toLowerCase().includes('tdd') || 
+                               prompt.toLowerCase().includes('test-driven') || 
+                               prompt.toLowerCase().includes('debug');
+                               
+    let superpowerContext = '';
+    
+    if (isSuperpowerRequest) {
+        try {
+            const dbResult = await query(
+                `SELECT lr.title, lr.raw_content
+                 FROM learning_resources lr
+                 JOIN learning_subjects ls ON lr.learning_subject_id = ls.id
+                 WHERE ls.title = 'AI-Assisted Software Engineering'
+                 LIMIT 3`
+            );
+            
+            if (dbResult.rows && dbResult.rows.length > 0) {
+                superpowerContext = "\n\nCRITICAL INSTRUCTION: You must strictly enforce the following AI Engineering ('Superpower') rules:\n";
+                dbResult.rows.forEach(row => {
+                    const contentSnippet = row.raw_content.substring(0, 1500) + '...';
+                    superpowerContext += `\n--- ${row.title} ---\n${contentSnippet}\n`;
+                });
+            }
+        } catch (err) {
+            console.error('Failed to fetch superpower context:', err);
+        }
+    }
+
     const analysisPrompt = `
     As an expert prompt engineering teacher, analyze this prompt and provide structured feedback:
+    ${superpowerContext}
     
     Prompt to analyze: "${prompt}"
     User skill level: ${userLevel}
@@ -105,7 +135,8 @@ async function analyzePrompt(prompt, userLevel) {
     Be specific and actionable in your feedback.
   `;
     const response = await callGeminiAPI(analysisPrompt);
-    return JSON.parse(response);
+    const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(cleanedResponse);
 }
 
 async function generatePersonalizedExercise(userLevel, context) {
