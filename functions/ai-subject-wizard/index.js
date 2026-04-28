@@ -148,7 +148,7 @@ Make it comprehensive (300-500 words) but clear and actionable.`;
 
         // Use Vertex AI SDK with grounding (Google Search)
         const model = vertexAI.getGenerativeModel({
-            model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+            model: process.env.GEMINI_MODEL || 'gemini-3.1-flash',
             generationConfig: {
                 temperature: 0.7,
                 maxOutputTokens: 8000,

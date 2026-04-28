@@ -17,7 +17,7 @@ app.post('/', async (req, res) => {
         const user = await verifyAuth(req);
         console.log('Authenticated request from user:', user.uid);
 
-        const { prompt, model: requestedModel = 'gemini-2.5-flash', temperature = 0.7, maxTokens = 1000, systemPrompt } = req.body;
+        const { prompt, model: requestedModel = 'gemini-3.1-flash', temperature = 0.7, maxTokens = 1000, systemPrompt } = req.body;
 
         if (!prompt) {
             return res.status(400).json({ error: 'Prompt is required' });

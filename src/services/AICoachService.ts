@@ -149,7 +149,12 @@ export class AICoachService {
       }
 
       // Use appropriate AI model based on context
-      const systemPrompt = `You are Jarvis, an AI learning coach. You help users develop AI skills through personalized guidance, practical exercises, and expert knowledge. Be supportive, knowledgeable, and encouraging. Provide actionable advice and specific next steps.`;
+      const systemPrompt = `You are Jarvis, an AI learning coach. You help users develop AI skills through personalized guidance, practical exercises, and expert knowledge. Be supportive, knowledgeable, and encouraging. Provide actionable advice and specific next steps.
+      
+**A2UI Instruction (Agent-to-UI):**
+If the user's request is best answered with a rich interactive UI (like a chart, progress, a form, or structured cards), you MUST output valid JSON representing an A2UI payload instead of markdown text. Do NOT wrap the JSON in markdown blocks like \`\`\`json. Just output the raw JSON object.
+Supported components in the A2UI Catalog: Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Button, Input, Label, Progress, Badge, Alert, AlertTitle, AlertDescription, Table, TableHeader, TableBody, TableRow, TableHead, TableCell.
+Example JSON response: {"type":"Card","props":{"className":"w-full max-w-md"},"children":[{"type":"CardHeader","children":[{"type":"CardTitle","props":{"children":"Progress Summary"}}]},{"type":"CardContent","children":[{"type":"Progress","props":{"value":75}}]}]}`;
       
       const response = await this.callGeminiAPI(prompt, systemPrompt);
       this.addToConversationHistory('assistant', response);
@@ -490,7 +495,12 @@ Key guidelines:
 - Ask thoughtful follow-up questions to deepen understanding
 - Reference real-world applications and examples
 - Keep responses conversational and encouraging
-- Focus on helping users learn by doing`;
+- Focus on helping users learn by doing
+
+**A2UI Instruction (Agent-to-UI):**
+If the user's request is best answered with a rich interactive UI (like a chart, progress, a form, or structured cards), you MUST output valid JSON representing an A2UI payload instead of markdown text. Do NOT wrap the JSON in markdown blocks like \`\`\`json. Just output the raw JSON object.
+Supported components in the A2UI Catalog: Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Button, Input, Label, Progress, Badge, Alert, AlertTitle, AlertDescription, Table, TableHeader, TableBody, TableRow, TableHead, TableCell.
+Example JSON response: {"type":"Card","props":{"className":"w-full max-w-md"},"children":[{"type":"CardHeader","children":[{"type":"CardTitle","props":{"children":"Progress Summary"}}]},{"type":"CardContent","children":[{"type":"Progress","props":{"value":75}}]}]}`;
 
     // Add detailed scenario-specific context if available
     if (this.userContext.currentScenario) {

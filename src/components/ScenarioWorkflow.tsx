@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { Textarea } from "@/components/ui/textarea";
 import { useUser } from '@/contexts/UserContext';
 import CoachChatPanel from '@/components/CoachChatPanel';
+import DynamicLessonViewer from '@/components/DynamicLessonViewer';
 
 interface ScenarioWorkflowProps {
   scenario: Scenario;
@@ -564,7 +565,36 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
   
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {updatedScenario.a2uiPayload ? (
+        <>
+          <div className="flex justify-between items-center bg-muted/50 p-4 rounded-lg border">
+            <div>
+              <h2 className="text-xl font-bold">{updatedScenario.title}</h2>
+              <p className="text-sm text-muted-foreground mt-1">Interactive A2UI Curriculum</p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleOpenCoachChat}>
+                <BookOpen className="mr-2 h-4 w-4" /> Need Help? Open Coach
+              </Button>
+              <Button onClick={handleSubmitSolution}>
+                <CheckCircle className="mr-2 h-4 w-4" /> Complete Lesson
+              </Button>
+            </div>
+          </div>
+          
+          <DynamicLessonViewer scenario={updatedScenario} />
+          
+          <FeedbackDialog />
+          
+          <CoachChatPanel 
+            isExpanded={showCoachChat}
+            scenario={updatedScenario}
+            userProgress={userProgress}
+          />
+        </>
+      ) : (
+        <>
+          <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">{updatedScenario.title}</h2>
           <div className="flex items-center text-sm text-muted-foreground mt-1">
@@ -653,6 +683,8 @@ const ScenarioWorkflow: React.FC<ScenarioWorkflowProps> = ({ scenario, onComplet
         scenario={updatedScenario}
         userProgress={userProgress}
       />
+        </>
+      )}
     </div>
   );
 };

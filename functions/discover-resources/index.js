@@ -28,7 +28,7 @@ app.post('/', async (req, res) => {
         console.log(`Discovering resources for query: "${searchQuery}"`);
 
         const model = vertexAI.getGenerativeModel({
-            model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+            model: process.env.GEMINI_MODEL || 'gemini-3.1-flash',
             generationConfig: {
                 temperature: 0.7,
                 maxOutputTokens: 4000,

@@ -79,7 +79,7 @@ Generate a personalized 3-step learning path for this user. Remember: only use I
         console.log('Generating learning path for persona:', persona);
 
         const model = vertexAI.getGenerativeModel({
-            model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+            model: process.env.GEMINI_MODEL || 'gemini-3.1-flash',
             generationConfig: {
                 temperature: 1.0,
                 topP: 0.95,

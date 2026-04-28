@@ -51,16 +51,30 @@ interface ChatMessageProps {
   message: ConversationItem;
 }
 
+import { A2UIRenderer } from './a2ui/A2UIRenderer';
+
 const ChatMessage = ({ message }: ChatMessageProps) => {
   const isUser = message.role === 'user';
   
   // Ensure message content is always a string
   const safeContent = typeof message.content === 'string' ? message.content : 'Message received';
   
+  const renderContent = (content: string) => {
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed && typeof parsed === 'object' && parsed.type) {
+        return <A2UIRenderer payload={parsed} />;
+      }
+    } catch (e) {
+      // Not valid JSON or not an A2UI payload, fallback to standard text
+    }
+    return <p className="text-sm">{content}</p>;
+  };
+  
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
-      <div className={`max-w-[80%] ${isUser ? 'bg-skillforge-primary text-white' : 'bg-gray-100 dark:bg-gray-800'} rounded-lg px-4 py-2`}>
-        <p className="text-sm">{safeContent}</p>
+      <div className={`max-w-[80%] ${isUser ? 'bg-skillforge-primary text-white' : 'bg-gray-100 dark:bg-gray-800'} rounded-lg px-4 py-2 overflow-hidden`}>
+        {renderContent(safeContent)}
         <p className="text-xs text-gray-400 mt-1">
           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </p>

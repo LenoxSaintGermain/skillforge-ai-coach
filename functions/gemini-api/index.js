@@ -27,7 +27,7 @@ app.post('/', async (req, res) => {
 
         // Use Vertex AI SDK instead of direct API key calls
         const model = vertexAI.getGenerativeModel({
-            model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+            model: process.env.GEMINI_MODEL || 'gemini-3.1-live',
             generationConfig: {
                 temperature: temperature === 0.7 ? 1.0 : temperature,
                 maxOutputTokens: maxTokens,
@@ -74,7 +74,7 @@ app.post('/', async (req, res) => {
         return res.json({
             generatedText,
             usage: response.usageMetadata || {},
-            model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+            model: process.env.GEMINI_MODEL || 'gemini-3.1-live',
         });
     } catch (error) {
         console.error('Error in gemini-api function:', error);
