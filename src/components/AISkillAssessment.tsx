@@ -33,7 +33,7 @@ const AISkillAssessment: React.FC = () => {
   const contentRef = useRef<HTMLDivElement>(null);
   const isInitializing = useRef(false);
   const lastInteractionId = useRef<string | null>(null);
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { coachService } = useAI();
   const { currentUser } = useUser();
   const navigate = useNavigate();
