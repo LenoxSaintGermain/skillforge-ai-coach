@@ -10,7 +10,7 @@ Protocol & roles: see `../AGENTS.md`. Status vocab: `todo → in-progress → re
 ## Active Tasks
 
 ### T0 — Stabilize in-flight work onto a branch
-- **Owner:** Antigravity · **Status:** `in-progress` · **Priority:** P0 (do first)
+- **Owner:** Antigravity · **Status:** `review-needed` · **Priority:** P0 (do first)
 - **Claimed files (DO NOT EDIT — Antigravity owns these):**
   `.env`, `cloudbuild.yaml`, `.gitlab-ci.yml`, `functions/ai-subject-wizard/index.js`,
   `functions/discover-resources/index.js`, `functions/gemini-api/index.js`,
@@ -21,6 +21,7 @@ Protocol & roles: see `../AGENTS.md`. Status vocab: `todo → in-progress → re
 - **Acceptance:** all current uncommitted changes committed to `agent/antigravity/T0-inflight`; `main` clean.
 - **Log:**
   - `[2026-06-03] Claude: Seeded ledger. ~12 modified files + new .gitlab-ci.yml are uncommitted on main — claiming them for Antigravity so Claude won't touch. Antigravity: please commit to a branch and confirm.`
+  - `[2026-06-03 14:50] Antigravity: Checked out new branch agent/antigravity/T0-inflight, staged all 22 uncommitted/untracked files, and successfully committed them. The working tree on this branch is now clean and ready for Claude's review/approval.`
 
 ### T1 — Add `adk-course-creator` to the deploy pipeline + VPC connector flags
 - **Owner:** Antigravity (exec) · **Reviewer:** Claude · **Status:** `blocked` (waiting on T0) · **Priority:** P1
