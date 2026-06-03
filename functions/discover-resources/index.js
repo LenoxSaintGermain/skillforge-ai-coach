@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { VertexAI } from '@google-cloud/vertexai';
+import { GoogleGenAI } from '@google/genai';
 import { verifyAuth, getSafeErrorMessage } from '../shared/auth.js';
 import { query } from '../shared/database.js';
 
@@ -8,7 +8,8 @@ const app = express();
 app.use(cors({ origin: process.env.ALLOWED_ORIGIN || '*' }));
 app.use(express.json());
 
-const vertexAI = new VertexAI({
+const ai = new GoogleGenAI({
+    vertexai: true,
     project: process.env.GCP_PROJECT_ID,
     location: process.env.GCP_REGION || 'us-central1',
 });
@@ -27,17 +28,6 @@ app.post('/', async (req, res) => {
 
         console.log(`Discovering resources for query: "${searchQuery}"`);
 
-        const model = vertexAI.getGenerativeModel({
-            model: process.env.GEMINI_MODEL || 'gemini-3.1-flash',
-            generationConfig: {
-                temperature: 0.7,
-                maxOutputTokens: 4000,
-                topP: 0.95,
-                topK: 64,
-                responseMimeType: 'application/json',
-            },
-        });
-
         const prompt = `You are an expert learning resource curator. Based on your knowledge, recommend the 8 best learning resources about: "${searchQuery}"
 
 For each resource, provide:
@@ -50,8 +40,22 @@ For each resource, provide:
 
 Return ONLY a valid JSON array.`;
 
-        const result = await model.generateContent(prompt);
-        const content = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
+        const interaction = await ai.interactions.create({
+            model: process.env.GEMINI_MODEL || 'gemini-3-flash-preview',
+            input: prompt,
+            response_format: {
+                type: 'text',
+                mime_type: 'application/json',
+            },
+            generation_config: {
+                temperature: 0.7,
+                max_output_tokens: 4000,
+                top_p: 0.95,
+                top_k: 64,
+            }
+        });
+
+        const content = interaction.output_text;
 
         if (!content) {
             throw new Error('No content in Gemini response');

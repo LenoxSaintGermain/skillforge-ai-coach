@@ -1,14 +1,15 @@
 import express from 'express';
 import cors from 'cors';
-import { VertexAI } from '@google-cloud/vertexai';
-import { verifyAuth, getSafeErrorMessage, corsHeaders } from '../shared/auth.js';
+import { GoogleGenAI } from '@google/genai';
+import { verifyAuth, getSafeErrorMessage } from '../shared/auth.js';
 
 const app = express();
 app.use(cors({ origin: process.env.ALLOWED_ORIGIN || '*' }));
 app.use(express.json());
 
-// Initialize Vertex AI (uses Application Default Credentials — no API key needed in GCP)
-const vertexAI = new VertexAI({
+// Initialize GoogleGenAI client (uses Application Default Credentials — no API key needed in GCP)
+const ai = new GoogleGenAI({
+    vertexai: true,
     project: process.env.GCP_PROJECT_ID,
     location: process.env.GCP_REGION || 'us-central1',
 });
@@ -25,46 +26,32 @@ app.post('/', async (req, res) => {
             return res.status(400).json({ error: 'Prompt is required' });
         }
 
-        // Use Vertex AI SDK instead of direct API key calls
-        const model = vertexAI.getGenerativeModel({
-            model: process.env.GEMINI_MODEL || 'gemini-3.1-live',
-            generationConfig: {
+        const requestedModel = process.env.GEMINI_MODEL || 'gemini-3-flash-preview';
+
+        console.log('Calling Gemini via Interactions API with prompt:', prompt.substring(0, 100) + '...');
+
+        const interaction = await ai.interactions.create({
+            model: requestedModel,
+            input: prompt,
+            system_instruction: systemPrompt || undefined,
+            response_format: responseSchema ? {
+                type: 'text',
+                mime_type: 'application/json',
+                schema: responseSchema,
+            } : undefined,
+            generation_config: {
                 temperature: temperature === 0.7 ? 1.0 : temperature,
-                maxOutputTokens: maxTokens,
-                topP: 0.95,
-                topK: 64,
-                responseMimeType: responseSchema ? 'application/json' : undefined,
-                responseSchema: responseSchema || undefined,
-            },
-            safetySettings: [
-                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-            ],
+                max_output_tokens: maxTokens,
+                top_p: 0.95,
+                top_k: 64,
+            }
         });
 
-        console.log('Calling Gemini via Vertex AI with prompt:', prompt.substring(0, 100) + '...');
-
-        const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
-        const result = await model.generateContent(fullPrompt);
-        const response = result.response;
-
-        if (!response.candidates || response.candidates.length === 0) {
-            throw new Error('Gemini API returned no response candidates.');
+        if (interaction.status === 'failed') {
+            throw new Error('Interaction failed to generate content');
         }
 
-        const candidate = response.candidates[0];
-
-        if (candidate.finishReason === 'SAFETY') {
-            throw new Error('Content was blocked by Gemini safety filters.');
-        }
-
-        if (candidate.finishReason === 'MAX_TOKENS') {
-            throw new Error('MAX_TOKENS: Response was truncated.');
-        }
-
-        const generatedText = candidate.content?.parts?.[0]?.text;
+        const generatedText = interaction.output_text;
         if (!generatedText) {
             throw new Error('Gemini API returned empty response text');
         }
@@ -73,8 +60,8 @@ app.post('/', async (req, res) => {
 
         return res.json({
             generatedText,
-            usage: response.usageMetadata || {},
-            model: process.env.GEMINI_MODEL || 'gemini-3.1-live',
+            usage: interaction.usage || {},
+            model: requestedModel,
         });
     } catch (error) {
         console.error('Error in gemini-api function:', error);

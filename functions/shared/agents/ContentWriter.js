@@ -1,6 +1,7 @@
-import { VertexAI } from '@google-cloud/vertexai';
+import { GoogleGenAI } from '@google/genai';
 
-const vertexAI = new VertexAI({
+const ai = new GoogleGenAI({
+    vertexai: true,
     project: process.env.GCP_PROJECT_ID,
     location: process.env.GCP_REGION || 'us-central1',
 });
@@ -30,19 +31,6 @@ const contentSchema = {
 export const runContentWriter = async (syllabus) => {
     console.log(`[Content Writer Agent] Drafting detailed content for: ${syllabus.title}...`);
 
-    const model = vertexAI.getGenerativeModel({
-        model: process.env.GEMINI_MODEL || 'gemini-3.1-flash',
-        generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 8192,
-            responseMimeType: 'application/json',
-            responseSchema: contentSchema,
-        },
-        tools: [
-            { googleSearchRetrieval: {} } // Use Google Search grounding to pull latest info
-        ]
-    });
-
     const prompt = `You are an expert Content Writer and Subject Matter Expert.
 Given the following syllabus outline, write the full, comprehensive training material for each section.
 Use your web search tool to ensure your real-world examples and facts are up-to-date and accurate.
@@ -52,8 +40,22 @@ ${JSON.stringify(syllabus, null, 2)}
 
 Return the output in the strictly requested JSON structure.`;
 
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.candidates[0].content.parts[0].text;
-    
-    return JSON.parse(responseText);
+    const interaction = await ai.interactions.create({
+        model: process.env.GEMINI_MODEL || 'gemini-3-flash-preview',
+        input: prompt,
+        response_format: {
+            type: 'text',
+            mime_type: 'application/json',
+            schema: contentSchema,
+        },
+        tools: [
+            { type: 'google_search' } // Use Google Search grounding to pull latest info
+        ],
+        generation_config: {
+            temperature: 0.7,
+            max_output_tokens: 8192,
+        }
+    });
+
+    return JSON.parse(interaction.output_text);
 };

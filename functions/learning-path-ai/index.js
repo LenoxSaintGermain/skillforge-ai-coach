@@ -1,13 +1,14 @@
 import express from 'express';
 import cors from 'cors';
-import { VertexAI } from '@google-cloud/vertexai';
+import { GoogleGenAI } from '@google/genai';
 import { getSafeErrorMessage } from '../shared/auth.js';
 
 const app = express();
 app.use(cors({ origin: process.env.ALLOWED_ORIGIN || '*' }));
 app.use(express.json());
 
-const vertexAI = new VertexAI({
+const ai = new GoogleGenAI({
+    vertexai: true,
     project: process.env.GCP_PROJECT_ID,
     location: process.env.GCP_REGION || 'us-central1',
 });
@@ -78,19 +79,23 @@ Generate a personalized 3-step learning path for this user. Remember: only use I
 
         console.log('Generating learning path for persona:', persona);
 
-        const model = vertexAI.getGenerativeModel({
-            model: process.env.GEMINI_MODEL || 'gemini-3.1-flash',
-            generationConfig: {
-                temperature: 1.0,
-                topP: 0.95,
-                topK: 64,
-                maxOutputTokens: 4096,
-                responseMimeType: 'application/json',
+        const interaction = await ai.interactions.create({
+            model: process.env.GEMINI_MODEL || 'gemini-3-flash-preview',
+            input: userPrompt,
+            system_instruction: systemPrompt,
+            response_format: {
+                type: 'text',
+                mime_type: 'application/json',
             },
+            generation_config: {
+                temperature: 1.0,
+                top_p: 0.95,
+                top_k: 64,
+                max_output_tokens: 4096,
+            }
         });
 
-        const result = await model.generateContent(`${systemPrompt}\n\n${userPrompt}`);
-        const textContent = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
+        const textContent = interaction.output_text;
 
         if (!textContent) {
             throw new Error('Invalid AI response format');

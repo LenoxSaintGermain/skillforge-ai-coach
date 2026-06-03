@@ -1,16 +1,37 @@
 import express from 'express';
 import cors from 'cors';
-import { VertexAI } from '@google-cloud/vertexai';
+import { GoogleGenAI } from '@google/genai';
 import { verifyAuth, getSafeErrorMessage } from '../shared/auth.js';
 
 const app = express();
 app.use(cors({ origin: process.env.ALLOWED_ORIGIN || '*' }));
 app.use(express.json());
 
-const vertexAI = new VertexAI({
+const ai = new GoogleGenAI({
+    vertexai: true,
     project: process.env.GCP_PROJECT_ID,
     location: process.env.GCP_REGION || 'us-central1',
 });
+
+const isNewModel = (modelName) => {
+    const newModels = [
+        'gemini-3-flash-preview',
+        'gemini-3-pro-preview',
+        'gemini-3.1-pro-preview',
+        'gemini-3.1-flash-lite',
+        'gemini-3.1-flash-lite-preview',
+        'gemini-3.5-flash',
+        'gemini-2.5-flash',
+        'gemini-2.5-pro'
+    ];
+    return newModels.includes(modelName);
+};
+
+const getModernModel = (requestedModel) => {
+    if (!requestedModel) return 'gemini-3-flash-preview';
+    if (isNewModel(requestedModel)) return requestedModel;
+    return 'gemini-3-flash-preview';
+};
 
 app.post('/', async (req, res) => {
     try {
@@ -62,24 +83,22 @@ app.post('/', async (req, res) => {
             const claudeData = await anthropicResponse.json();
             generatedText = claudeData.content?.[0]?.text || '';
         } else {
-            // Gemini via Vertex AI SDK (no API key needed — uses ADC)
-            const model = vertexAI.getGenerativeModel({
-                model: requestedModel,
-                generationConfig: {
-                    temperature: 1.0,
-                    maxOutputTokens: maxTokens,
-                    topP: 0.95,
-                    topK: 64,
-                },
+            const mappedModel = getModernModel(requestedModel);
+            console.log(`[Vertex AI Endpoint] Mapping model ${requestedModel} to ${mappedModel}`);
+
+            const interaction = await ai.interactions.create({
+                model: mappedModel,
+                input: prompt,
+                system_instruction: systemPrompt || undefined,
+                generation_config: {
+                    temperature: temperature,
+                    max_output_tokens: maxTokens,
+                    top_p: 0.95,
+                    top_k: 64,
+                }
             });
 
-            const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
-            const result = await model.generateContent(fullPrompt);
-            const response = result.response;
-
-            if (response.candidates?.[0]?.content?.parts?.[0]?.text) {
-                generatedText = response.candidates[0].content.parts[0].text;
-            }
+            generatedText = interaction.output_text;
         }
 
         if (!generatedText) {

@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { VertexAI } from '@google-cloud/vertexai';
+import { GoogleGenAI } from '@google/genai';
 import { verifyAuth, getSafeErrorMessage } from '../shared/auth.js';
 import { query } from '../shared/database.js';
 
@@ -8,7 +8,8 @@ const app = express();
 app.use(cors({ origin: process.env.ALLOWED_ORIGIN || '*' }));
 app.use(express.json());
 
-const vertexAI = new VertexAI({
+const ai = new GoogleGenAI({
+    vertexai: true,
     project: process.env.GCP_PROJECT_ID,
     location: process.env.GCP_REGION || 'us-central1',
 });
@@ -66,18 +67,30 @@ app.post('/', async (req, res) => {
 });
 
 async function callGeminiAPI(prompt) {
-    const model = vertexAI.getGenerativeModel({
-        model: process.env.GEMINI_MODEL || 'gemini-3.1-flash',
-        generationConfig: {
-            temperature: 1.0,
-            topK: 64,
-            topP: 0.95,
-            maxOutputTokens: 2048,
+    const interaction = await ai.interactions.create({
+        model: process.env.GEMINI_MODEL || 'gemini-3-flash-preview',
+        input: prompt,
+        response_format: {
+            type: 'text',
+            mime_type: 'application/json',
         },
+        generation_config: {
+            temperature: 1.0,
+            top_k: 64,
+            top_p: 0.95,
+            max_output_tokens: 2048,
+        }
     });
 
-    const result = await model.generateContent(prompt);
-    return result.response.candidates[0].content.parts[0].text;
+    let responseText = interaction.output_text;
+    if (responseText.startsWith('```')) {
+        const firstNewline = responseText.indexOf('\n');
+        const lastBacktick = responseText.lastIndexOf('```');
+        if (firstNewline !== -1 && lastBacktick !== -1) {
+            responseText = responseText.substring(firstNewline + 1, lastBacktick).trim();
+        }
+    }
+    return responseText;
 }
 
 async function analyzePrompt(prompt, userLevel) {

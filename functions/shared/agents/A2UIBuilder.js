@@ -1,21 +1,13 @@
-import { VertexAI } from '@google-cloud/vertexai';
+import { GoogleGenAI } from '@google/genai';
 
-const vertexAI = new VertexAI({
+const ai = new GoogleGenAI({
+    vertexai: true,
     project: process.env.GCP_PROJECT_ID,
     location: process.env.GCP_REGION || 'us-central1',
 });
 
 export const runA2UIBuilder = async (courseContent) => {
     console.log(`[A2UI Builder Agent] Translating content to A2UI payload...`);
-
-    const model = vertexAI.getGenerativeModel({
-        model: process.env.GEMINI_MODEL || 'gemini-3.1-flash',
-        generationConfig: {
-            temperature: 0.4,
-            maxOutputTokens: 8192,
-            responseMimeType: 'application/json',
-        }
-    });
 
     const prompt = `You are an expert Frontend AI generating A2UI JSON components.
 Your goal is to take raw course content and map it into a beautiful, interactive learning interface using our A2UI component system.
@@ -38,8 +30,20 @@ ${JSON.stringify(courseContent, null, 2)}
 
 Output raw JSON only. Do not wrap in backticks or markdown blocks.`;
 
-    const result = await model.generateContent(prompt);
-    let responseText = result.response.candidates[0].content.parts[0].text;
+    const interaction = await ai.interactions.create({
+        model: process.env.GEMINI_MODEL || 'gemini-3-flash-preview',
+        input: prompt,
+        response_format: {
+            type: 'text',
+            mime_type: 'application/json',
+        },
+        generation_config: {
+            temperature: 0.4,
+            max_output_tokens: 8192,
+        }
+    });
+
+    let responseText = interaction.output_text;
     
     // Clean up if the model includes markdown backticks by accident
     if (responseText.startsWith('\`\`\`')) {

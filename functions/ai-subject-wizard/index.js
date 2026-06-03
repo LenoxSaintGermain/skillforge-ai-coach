@@ -1,13 +1,14 @@
 import express from 'express';
 import cors from 'cors';
-import { VertexAI } from '@google-cloud/vertexai';
+import { GoogleGenAI } from '@google/genai';
 import { verifyAuth, getSafeErrorMessage } from '../shared/auth.js';
 
 const app = express();
 app.use(cors({ origin: process.env.ALLOWED_ORIGIN || '*' }));
 app.use(express.json());
 
-const vertexAI = new VertexAI({
+const ai = new GoogleGenAI({
+    vertexai: true,
     project: process.env.GCP_PROJECT_ID,
     location: process.env.GCP_REGION || 'us-central1',
 });
@@ -146,20 +147,23 @@ Make it comprehensive (300-500 words) but clear and actionable.`;
                 return res.status(400).json({ success: false, error: 'Invalid action' });
         }
 
-        // Use Vertex AI SDK with grounding (Google Search)
-        const model = vertexAI.getGenerativeModel({
-            model: process.env.GEMINI_MODEL || 'gemini-3.1-flash',
-            generationConfig: {
-                temperature: 0.7,
-                maxOutputTokens: 8000,
-                responseMimeType: 'application/json',
-                responseSchema: responseSchema,
+        // Use Google GenAI SDK with grounding (Google Search)
+        const interaction = await ai.interactions.create({
+            model: process.env.GEMINI_MODEL || 'gemini-3-flash-preview',
+            input: prompt,
+            response_format: {
+                type: 'text',
+                mime_type: 'application/json',
+                schema: responseSchema,
             },
-            tools: [{ googleSearch: {} }],
+            tools: [{ type: 'google_search' }],
+            generation_config: {
+                temperature: 0.7,
+                max_output_tokens: 8000,
+            }
         });
 
-        const result = await model.generateContent(prompt);
-        const generatedText = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
+        const generatedText = interaction.output_text;
 
         if (!generatedText) {
             throw new Error('Invalid response from Gemini API');

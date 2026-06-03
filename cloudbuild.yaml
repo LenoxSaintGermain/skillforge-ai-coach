@@ -6,6 +6,7 @@ substitutions:
   _REGION: us-central1
   _FRONTEND_SERVICE: skillforge-frontend
   _REPO_NAME: skillforge
+  _VPC_CONNECTOR: ''
 
 steps:
   # Step 1: Build the frontend Docker image
@@ -64,7 +65,12 @@ steps:
     args:
       - '-c'
       - |
-        for func in gemini-api vertex-ai prompt-engineering-ai discover-resources ai-subject-wizard learning-path-ai; do
+        VPC_FLAG=""
+        if [ ! -z "${_VPC_CONNECTOR}" ]; then
+          VPC_FLAG="--vpc-connector=${_VPC_CONNECTOR}"
+          echo "Using VPC Connector: ${_VPC_CONNECTOR}"
+        fi
+        for func in adk-course-creator gemini-api vertex-ai prompt-engineering-ai discover-resources ai-subject-wizard learning-path-ai; do
           echo "Deploying $$func..."
           gcloud functions deploy $$func \
             --gen2 \
@@ -76,6 +82,7 @@ steps:
             --allow-unauthenticated \
             --memory=512MB \
             --timeout=60s \
+            $$VPC_FLAG \
             --set-env-vars=GCP_PROJECT_ID=${PROJECT_ID},GCP_REGION=${_REGION}
           echo "✅ $$func deployed"
         done

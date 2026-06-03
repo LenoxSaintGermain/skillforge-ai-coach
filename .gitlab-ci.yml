@@ -1,0 +1,65 @@
+# SkillForge AI Coach — GitLab CI/CD Pipeline
+# Deploys the application by submitting the build to GCP Cloud Build.
+
+stages:
+  - deploy
+
+variables:
+  GCP_PROJECT_ID: "gcp-gfs-skill-forge-sit"
+  GCP_REGION: "us-central1"
+  # Set this variable in your GitLab Project Settings (CI/CD > Variables) if using VPC:
+  # GCP_VPC_CONNECTOR: "projects/gcp-gfs-skill-forge-sit/locations/us-central1/connectors/your-connector-name"
+
+deploy-to-sit:
+  stage: deploy
+  image: google/cloud-sdk:alpine
+  before_script:
+    - echo "🔐 Setting up Google Cloud credentials..."
+    
+    # Check which authentication method is configured in GitLab CI/CD variables
+    if [ -n "$GCP_SERVICE_KEY" ]; then
+      echo "Using Service Account Key JSON..."
+      echo "$GCP_SERVICE_KEY" > /tmp/gcp_key.json
+      gcloud auth activate-service-account --key-file=/tmp/gcp_key.json
+    elif [ -n "$CI_JOB_JWT_V2" ]; then
+      echo "Using Workload Identity Federation (OIDC)..."
+      # Required GitLab OIDC Setup config:
+      # You must set: GCP_WIF_PROVIDER="projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID"
+      # and GCP_WIF_SA="skillforge-build@gcp-gfs-skill-forge-sit.iam.gserviceaccount.com"
+      if [ -z "$GCP_WIF_PROVIDER" ] || [ -z "$GCP_WIF_SA" ]; then
+        echo "❌ Error: WIF configuration variables (GCP_WIF_PROVIDER, GCP_WIF_SA) are missing."
+        exit 1
+      fi
+      echo "${CI_JOB_JWT_V2}" > /tmp/gcp_jwt.txt
+      gcloud iam workload-identity-pools create-cred-config "$GCP_WIF_PROVIDER" \
+        --service-account="$GCP_WIF_SA" \
+        --output-file=/tmp/gcp_creds.json \
+        --credential-source-file=/tmp/gcp_jwt.txt
+      export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp_creds.json
+      gcloud auth login --cred-file=/tmp/gcp_creds.json
+    else
+      echo "❌ Error: No authentication credentials found. Please set GCP_SERVICE_KEY (SA JSON Key) or configure GitLab OIDC."
+      exit 1
+    fi
+    
+    # Configure target project
+    gcloud config set project "$GCP_PROJECT_ID"
+    gcloud config set accessibility/screen_reader false
+    
+  script:
+    - echo "🚀 Triggering Google Cloud Build..."
+    
+    # Prepare substitution arguments
+    SUBSTITUTIONS="_REGION=${GCP_REGION}"
+    if [ -n "$GCP_VPC_CONNECTOR" ]; then
+      SUBSTITUTIONS="${SUBSTITUTIONS},_VPC_CONNECTOR=${GCP_VPC_CONNECTOR}"
+    fi
+    
+    # Submit the build configuration to GCP
+    gcloud builds submit --config cloudbuild.yaml --substitutions="$SUBSTITUTIONS"
+    
+    echo "✅ Cloud Build deployment completed successfully!"
+    
+  only:
+    - main
+    - sit
