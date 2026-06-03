@@ -46,11 +46,9 @@ The lead currently has enough to create SQL, secrets, Artifact Registry, Cloud R
           - roles/firebase.admin                  # Enable Email/Password sign-in (or roles/identityplatform.admin)
 ```
 
-### 🔑 Decision for the human/cloud team (security trade-off)
-The three `compute.*` roles above can be collapsed into a single **`roles/compute.admin`** (simpler, broader). 
-- **Recommended: keep the granular three** (`networkAdmin` + `loadBalancerAdmin` + `securityAdmin`) — least-privilege, matches GFS enterprise security posture.
-- **Alternative: `roles/compute.admin`** — fewer lines, but grants far more than needed.
-Pick one before opening the MR.
+### 🔑 Decision — RESOLVED (2026-06-03, by owner)
+**Chosen: granular `compute.*` roles** (`networkAdmin` + `loadBalancerAdmin` + `securityAdmin`) — least-privilege, matches GFS enterprise security posture. NOT the broad `roles/compute.admin`.
+> ⚠️ Cloud team should still sanity-check that all 8 added roles are grantable to a team-group at the **product-folder** level under GFS org policy before merge.
 
 ---
 
