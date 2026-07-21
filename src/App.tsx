@@ -9,6 +9,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AppLayout from "./components/AppLayout";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
+import LivingForgePage from "./pages/LivingForgePage";
 import ScenariosPage from "./pages/ScenariosPage";
 import ScenarioDetailPage from "./pages/ScenarioDetailPage";
 import ScenarioGeneratorPage from "./pages/ScenarioGeneratorPage";
@@ -39,6 +40,8 @@ const App = () => (
                   {/* Public routes without layout */}
                   <Route path="/auth" element={<AuthPage />} />
                   <Route path="/" element={<Index />} />
+                  {/* The Living Forge — A2UI agentic experience demo (dark, self-contained surface) */}
+                  <Route path="/living-forge" element={<LivingForgePage />} />
 
                   {/* Protected app pages with layout */}
                   <Route element={<AppLayout />}>

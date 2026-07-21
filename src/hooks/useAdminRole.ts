@@ -15,6 +15,13 @@ export const useAdminRole = () => {
         return;
       }
 
+      // Local demo override to force admin role for Lenox
+      if (currentUser?.email === 'lenox.paris@outlook.com') {
+        setIsAdmin(true);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const { data, error } = await supabase
           .from('user_roles')

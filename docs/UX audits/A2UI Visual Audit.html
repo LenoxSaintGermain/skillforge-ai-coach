@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visual &amp; Interaction Audit — The Living Forge</title>
+<link rel="stylesheet" href="colors_and_type.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--canvas); color: var(--ink-muted); font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased; line-height: var(--lh-body); }
+  body::before { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: url("assets/grain.svg"); background-size: 220px; opacity: 0.022; mix-blend-mode: screen; }
+  .wrap { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; padding: 0 32px; }
+  .layout { display: grid; grid-template-columns: 224px 1fr; gap: 56px; align-items: start; }
+
+  header.masthead { padding: 64px 0 38px; border-bottom: 1px solid var(--hairline); }
+  .kicker { font-size: 11px; font-weight: 600; letter-spacing: var(--track-caps); text-transform: uppercase; color: var(--ink-subtle); }
+  .kicker .dot { display: inline-block; width: 7px; height: 7px; background: var(--ember); border-radius: 2px;
+    transform: rotate(45deg); margin-right: 9px; vertical-align: middle; box-shadow: 0 0 12px -1px var(--ember-glow); }
+  h1.title { font-family: var(--font-display); font-weight: 600; font-size: clamp(36px, 5.6vw, 60px);
+    letter-spacing: var(--track-display); line-height: 1.02; color: var(--ink); margin: 18px 0 0; max-width: 16ch; }
+  .standfirst { font-size: 18px; line-height: 1.55; color: var(--ink-muted); max-width: 64ch; margin: 20px 0 0; }
+  .standfirst b { color: var(--ink); font-weight: 600; }
+
+  /* gating banner */
+  .gate { margin-top: 30px; border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--hairline));
+    border-radius: var(--r-lg); overflow: hidden; background: color-mix(in srgb, var(--surface-1), var(--danger) 7%); }
+  .gate-top { display: flex; align-items: center; gap: 14px; padding: 16px 20px; border-bottom: 1px solid var(--hairline); }
+  .gate-flag { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: #f2a3a6; background: color-mix(in srgb, var(--surface-3), var(--danger) 24%);
+    padding: 5px 11px; border-radius: var(--r-xs); }
+  .gate-verdict { font-family: var(--font-display); font-weight: 600; font-size: 20px; color: var(--ink); letter-spacing: var(--track-tight); }
+  .gate-body { padding: 16px 20px; font-size: 14.5px; color: var(--ink-muted); line-height: 1.55; }
+  .gate-body b { color: var(--ink); }
+  .gate-checks { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 14px; }
+  .gate-check { display: flex; align-items: center; gap: 9px; font-family: var(--font-mono); font-size: 12.5px; }
+  .gate-check .vchip { font-weight: 600; font-size: 10px; padding: 3px 8px; border-radius: var(--r-xs); }
+  .vchip.p { background: color-mix(in srgb, var(--surface-3), var(--success) 22%); color: #8fe6ab; }
+  .vchip.f { background: color-mix(in srgb, var(--surface-3), var(--danger) 24%); color: #f2a3a6; }
+
+  nav.toc { position: sticky; top: 28px; padding-top: 48px; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; }
+  nav.toc a { display: block; text-decoration: none; color: var(--ink-subtle); font-size: 13.5px; line-height: 1.35;
+    padding: 8px 0 8px 30px; position: relative; border-left: 1px solid var(--hairline); transition: color .15s, border-color .15s; }
+  nav.toc a::before { counter-increment: toc; content: counter(toc, decimal-leading-zero); position: absolute; left: 0; top: 8px;
+    font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); }
+  nav.toc a:hover { color: var(--ink); border-left-color: var(--ink-subtle); }
+  nav.toc a.lede { color: var(--ink-muted); }
+
+  main { padding: 48px 0 120px; min-width: 0; }
+  section { padding: 40px 0; border-top: 1px solid var(--hairline); scroll-margin-top: 24px; }
+  section:first-child { border-top: none; padding-top: 8px; }
+  .sec-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: var(--track-caps); text-transform: uppercase;
+    color: var(--ember); display: flex; align-items: center; gap: 10px; }
+  .sec-eyebrow .num { font-family: var(--font-mono); color: var(--ink-faint); }
+  h2.sec { font-family: var(--font-display); font-weight: 600; font-size: 30px; letter-spacing: var(--track-tight);
+    line-height: 1.15; color: var(--ink); margin: 14px 0 0; max-width: 26ch; }
+  .sec-intro { font-size: 16.5px; color: var(--ink-muted); margin: 16px 0 28px; max-width: 72ch; }
+  .sec-intro b { color: var(--ink); font-weight: 600; }
+  p { max-width: 74ch; } p strong { color: var(--ink); font-weight: 600; }
+  code.inline { font-family: var(--font-mono); font-size: 0.84em; background: var(--surface-3); color: var(--ink);
+    padding: 1.5px 6px; border-radius: var(--r-xs); }
+  .tok { font-family: var(--font-mono); font-size: 0.84em; color: var(--ember); }
+  .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: 0; margin: 0 4px 0 1px; border: 1px solid var(--hairline); }
+
+  /* checks table */
+  .tscroll { border: 1px solid var(--hairline); border-radius: var(--r-lg); overflow: hidden; background: var(--surface-1); }
+  table.ck { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.ck thead th { text-align: left; font-size: 10.5px; letter-spacing: var(--track-caps); text-transform: uppercase;
+    color: var(--ink-subtle); font-weight: 600; padding: 13px 16px; background: var(--surface-2); border-bottom: 1px solid var(--hairline); }
+  table.ck td { padding: 14px 16px; border-bottom: 1px solid var(--hairline); vertical-align: top; color: var(--ink-muted); line-height: 1.5; }
+  table.ck tr:last-child td { border-bottom: none; }
+  table.ck .qn { font-family: var(--font-mono); color: var(--ink-faint); font-size: 12px; width: 22px; }
+  table.ck .ck-name { color: var(--ink); font-weight: 500; max-width: 16ch; }
+  table.ck .ev b { color: var(--ink); font-weight: 600; }
+  table.ck .fx { color: var(--ink-muted); } table.ck .fx b { color: var(--ember); font-weight: 600; }
+  tr.failrow td { background: color-mix(in srgb, var(--surface-1), var(--danger) 5%); }
+  .v { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; padding: 3px 8px; border-radius: var(--r-xs); font-weight: 600; white-space: nowrap; }
+  .v.pass { background: color-mix(in srgb, var(--surface-3), var(--success) 22%); color: #8fe6ab; }
+  .v.fail { background: color-mix(in srgb, var(--surface-3), var(--danger) 24%); color: #f2a3a6; }
+  .v.passr { background: color-mix(in srgb, var(--surface-3), var(--warn) 20%); color: var(--warn); }
+
+  /* fix cards */
+  .fix { border: 1px solid var(--hairline); border-radius: var(--r-lg); background: var(--surface-1); margin: 18px 0; overflow: hidden; }
+  .fix-head { display: flex; align-items: center; gap: 14px; padding: 16px 20px; border-bottom: 1px solid var(--hairline); }
+  .fix-rank { font-family: var(--font-mono); font-size: 14px; color: var(--ember-ink); background: var(--ember);
+    width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; flex: none; font-weight: 600; }
+  .fix-title { font-family: var(--font-display); font-weight: 600; font-size: 18px; color: var(--ink); letter-spacing: var(--track-tight); margin: 0; }
+  .fix-tag { margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-subtle); }
+  .fix-body { padding: 16px 20px; font-size: 14.5px; color: var(--ink-muted); line-height: 1.6; }
+  .fix-body b { color: var(--ink); }
+  .fix-body .diffrow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .fix-body .cell { border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 11px 13px; font-family: var(--font-mono); font-size: 12px; line-height: 1.6; }
+  .fix-body .cell.was { color: var(--ink-subtle); } .fix-body .cell.was .h { color: var(--danger); }
+  .fix-body .cell.now { color: var(--ink-muted); } .fix-body .cell.now .h { color: var(--success); }
+  .fix-body .cell .h { display: block; font-size: 9.5px; letter-spacing: var(--track-caps); text-transform: uppercase; margin-bottom: 6px; }
+  .fix-body .cell .e { color: var(--ember); }
+
+  .callout { border: 1px solid var(--hairline); border-left: 2px solid var(--ember); background: color-mix(in srgb, var(--surface-1), var(--ember) 3%);
+    border-radius: 0 var(--r-md) var(--r-md) 0; padding: 18px 22px; margin: 22px 0; }
+  .callout h3 { font-family: var(--font-display); font-weight: 600; font-size: 17px; color: var(--ink); margin: 0 0 8px; letter-spacing: var(--track-tight); }
+  .callout p { font-size: 14.5px; color: var(--ink-muted); margin: 0 0 10px; } .callout p:last-child { margin-bottom: 0; } .callout b { color: var(--ink); }
+
+  ul.leak { list-style: none; padding: 0; margin: 16px 0; }
+  ul.leak > li { position: relative; padding: 9px 0 9px 24px; font-size: 14px; color: var(--ink-muted); line-height: 1.5; border-bottom: 1px solid var(--hairline); max-width: 80ch; }
+  ul.leak > li:last-child { border-bottom: none; }
+  ul.leak > li::before { content: ""; position: absolute; left: 2px; top: 15px; width: 8px; height: 8px; border-radius: 2px; transform: rotate(45deg); background: var(--ember); box-shadow: 0 0 8px -1px var(--ember-glow); }
+  ul.leak > li.ok::before { background: var(--success); box-shadow: none; }
+  ul.leak b { color: var(--ink); } ul.leak .where { font-family: var(--font-mono); font-size: 12px; color: var(--ink-subtle); }
+
+  footer { border-top: 1px solid var(--hairline); padding: 30px 0 80px; color: var(--ink-faint); font-size: 12.5px; font-family: var(--font-mono); }
+  @media (max-width: 960px) { .layout { grid-template-columns: 1fr; gap: 0; } nav.toc { display: none; } table.ck .ev { display: none; } .fix-body .diffrow { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div class="kicker"><span class="dot"></span>The Living Forge · principal visual &amp; interaction audit · §5 + §6</div>
+    <h1 class="title">The weld is real. The ember is leaking.</h1>
+    <p class="standfirst">Visual + interaction lens only — type, color, motion, atmosphere, composition. Held mercilessly
+      to the two rules that make or break this brand: the <b>Weld</b> as the one defining gesture, and
+      <b>ember as never-decorative</b>. The motion language is genuinely distinctive and mostly correct. But the
+      accent that's supposed to mean "I just made this" is baked into the logo, the wordmark, and three labels —
+      so it means nothing. That fails the gate.</p>
+
+    <div class="gate">
+      <div class="gate-top"><span class="gate-flag">Gating verdict</span><span class="gate-verdict">OFF-BRAND — ships only after fix #1</span></div>
+      <div class="gate-body">
+        The gate is checks <b>1 (ember)</b>, <b>5 (Weld)</b>, <b>15 (anti-slop)</b>. Two of three pass; the one that
+        defines the brand does not.
+        <div class="gate-checks">
+          <div class="gate-check"><span class="vchip f">FAIL</span> 1 · Ember reservation — leaks into persistent chrome</div>
+          <div class="gate-check"><span class="vchip p">PASS</span> 5 · The Weld — present &amp; correct (minor: add scale)</div>
+          <div class="gate-check"><span class="vchip p">PASS</span> 15 · Anti-slop — no tropes found</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Sections">
+      <ol>
+        <li><a class="lede" href="#table">The 15 checks</a></li>
+        <li><a href="#ember">The ember leak, itemised</a></li>
+        <li><a href="#fixes">Top 3 highest-leverage fixes</a></li>
+        <li><a href="#safe">The "too safe" call-out</a></li>
+      </ol>
+    </nav>
+
+    <main>
+      <!-- TABLE -->
+      <section id="table">
+        <div class="sec-eyebrow"><span class="num">01</span> The 15 checks</div>
+        <h2 class="sec">Located, with the exact fix</h2>
+        <p class="sec-intro">Evidence cites the rendered learner kit and <code class="inline">forge.css</code> by selector.
+          <span class="v pass">PASS</span> 11 · <span class="v fail">FAIL</span> 4 · two passes carry a refinement
+          (<span class="v passr">PASS*</span>).</p>
+
+        <div class="tscroll">
+          <table class="ck">
+            <thead><tr><th class="qn">#</th><th>Check</th><th>Verdict</th><th class="ev">Located evidence</th><th class="fx">Fix</th></tr></thead>
+            <tbody>
+              <tr class="failrow"><td class="qn">1</td><td class="ck-name">Ember reserved (weld / step / 1 CTA)</td><td><span class="v fail">FAIL</span></td><td class="ev">At rest the intro frame carries <b>4 embers</b>: <code class="inline">.brand-spark .d</code> (logo diamond), <code class="inline">.brand-name b</code> ("Forge"), the primary CTA, and the bloom — plus <code class="inline">.diff-after .diff-head</code> ("Forged") and the <code class="inline">.verdict</code> sparkle elsewhere. The logo/labels are decoration.</td><td class="fx"><b>De-ember chrome:</b> brand diamond + "Forge" → <span class="tok">--ink</span>; "Forged" head → <span class="tok">--ink-subtle</span>; verdict icon → <span class="tok">--ink-subtle</span>. At rest, only bloom + the one CTA stay ember. See §03·1.</td></tr>
+              <tr><td class="qn">2</td><td class="ck-name">Canvas #050507 with depth</td><td><span class="v pass">PASS</span></td><td class="ev"><code class="inline">body{background:var(--canvas)}</code> = <span class="swatch" style="background:#050507"></span>#050507; appbar is a <code class="inline">color-mix(canvas 72%)</code> blur, not flat #000, no blue gradient.</td><td class="fx">—</td></tr>
+              <tr class="failrow"><td class="qn">3</td><td class="ck-name">Agent = working/streaming only</td><td><span class="v fail">FAIL</span></td><td class="ev">Shimmer + breathing dot use <span class="swatch" style="background:#5e6ad2"></span>--agent correctly, but <code class="inline">.cn-hint</code> paints a <b>static</b> CoachNote's rail+title agent-lavender — a persistent aside, not "Jarvis working." It competes with the live streaming signal.</td><td class="fx"><b>Neutralise the hint tone:</b> <code class="inline">.cn-hint</code> rail → <span class="tok">--ink-faint</span>, title → <span class="tok">--ink-subtle</span>. Reserve <span class="tok">--agent</span> for the sweep + dot only.</td></tr>
+              <tr><td class="qn">4</td><td class="ck-name">Two-accent legible from a still</td><td><span class="v passr">PASS*</span></td><td class="ev">Mid-moment a still is unambiguous: cool sweep + lavender label = thinking; warm cooling hairline = just-made. They're hue-opposed and temporally separated.</td><td class="fx">*Caveat: persistent logo-ember (see #1) puts orange in every still regardless of state — fixing #1 sharpens this.</td></tr>
+              <tr><td class="qn">5</td><td class="ck-name">The Weld (ember-hot → cool, scale+rise, staggered)</td><td><span class="v passr">PASS*</span></td><td class="ev"><code class="inline">@keyframes weld-cool</code> runs 1200ms ember-hot→hairline-warm→<span class="swatch" style="background:#23252a"></span>--hairline with a fading ember glow; <code class="inline">.weld-in</code> rises 10px, staggered <code class="inline">i·80ms</code> top-down. It resolves, never fades/pops.</td><td class="fx">*Missing the <b>0.98→1 scale</b> and rise is 10px not ~8px. Add <code class="inline">scale(.98)</code> to the welding state; set rise <b>8px</b>. See §03·3.</td></tr>
+              <tr><td class="qn">6</td><td class="ck-name">One orchestrated entrance</td><td><span class="v pass">PASS</span></td><td class="ev">Each surface is one top-down stagger (<code class="inline">Welded i</code> + the block weld); no looping/fidget micro-animations on settled content.</td><td class="fx">—</td></tr>
+              <tr class="failrow"><td class="qn">7</td><td class="ck-name">Streaming shimmer = top-hairline sweep</td><td><span class="v fail">FAIL</span></td><td class="ev"><code class="inline">.thinking-block</code> renders <b>skeleton rows</b> (<code class="inline">.skel</code>) — the exact thing the spec says shimmer must not be — plus a <b>2px</b> sweep (spec: 1px).</td><td class="fx"><b>Make thinking the sweep, not a skeleton:</b> drop <code class="inline">.skel</code> rows; shimmer = <b>1px</b> <span class="tok">--agent</span> gradient on the forming surface's top hairline only. See §03·2.</td></tr>
+              <tr><td class="qn">8</td><td class="ck-name">Live ticks spring (no hard jump)</td><td><span class="v pass">PASS</span></td><td class="ev">ProgressRing stroke uses <code class="inline">cubic-bezier(.34,1.56,.64,1)</code>; <code class="inline">.skill-fill</code> springs width 700ms. Values start 0 → animate.</td><td class="fx">—</td></tr>
+              <tr><td class="qn">9</td><td class="ck-name">One ember bloom, anchored, drifting</td><td><span class="v passr">PASS*</span></td><td class="ev">Single <code class="inline">.forge-bloom</code>, re-anchors on each forge, transitions 1.4s. One only, not an aura.</td><td class="fx">*It holds <code class="inline">opacity:0.7</code> permanently — spec wants it to <b>fade</b>. Drift it down to ~0.35 between forges so "warm light" pulses with activity.</td></tr>
+              <tr><td class="qn">10</td><td class="ck-name">Depth = hairlines + steps, no shadows</td><td><span class="v pass">PASS</span></td><td class="ev">Panels = 1px <code class="inline">--hairline</code> + <code class="inline">--surface-1/2/3</code> steps. The only shadows are <b>warm ember glows</b> (weld, CTA); the grey <code class="inline">--lift</code> token is defined but unused.</td><td class="fx">—</td></tr>
+              <tr><td class="qn">11</td><td class="ck-name">Grain ~0.025, near-invisible</td><td><span class="v pass">PASS</span></td><td class="ev"><code class="inline">.forge-grain{opacity:0.025; mix-blend:screen}</code> over the void — present, not noisy, not flat-black.</td><td class="fx">—</td></tr>
+              <tr class="failrow"><td class="qn">12</td><td class="ck-name">Type: a real display moment + full ramp</td><td><span class="v fail">FAIL</span></td><td class="ev">General Sans + JetBrains Mono ✓, three ink levels ✓, but the kit's <b>largest type is 24px</b> (<code class="inline">.block h2</code>). The 64/44/28 display tier the system defines is <b>never used</b> — there is no display-xl moment. The grotesque never gets to be characterful.</td><td class="fx"><b>Deploy the display tier:</b> intro hero → ~<b>44px</b> at <span class="tok">-0.02em</span>; the results score → a <b>64px</b> moment. See §03·3 &amp; §04.</td></tr>
+              <tr><td class="qn">13</td><td class="ck-name">In-place mutation (no page-swap)</td><td><span class="v pass">PASS</span></td><td class="ev">Verified live: answering ticks the ring, welds the next question into the same slot (<code class="inline">Weld key=index</code>). No spinner-replace, no navigation.</td><td class="fx">—</td></tr>
+              <tr><td class="qn">14</td><td class="ck-name">Ambient Jarvis, not a chat bubble</td><td><span class="v pass">PASS</span></td><td class="ev">Coach voice = in-surface <code class="inline">CoachNote</code>; presence = a breathing dot in the appbar; the v3 ask UI is a docked composer, not a floating bubble.</td><td class="fx">—</td></tr>
+              <tr><td class="qn">15</td><td class="ck-name">Anti-slop</td><td><span class="v pass">PASS</span></td><td class="ev">None found: no purple→blue hero, no gradient-on-white, no frosted content cards (the only blur is the functional sticky appbar), no neon decorative borders, <b>no emoji</b> (Lucide line icons), no SaaS hero-features template.</td><td class="fx">— (see §04 on the safe single-column)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- EMBER LEAK -->
+      <section id="ember">
+        <div class="sec-eyebrow"><span class="num">02</span> The ember leak, itemised</div>
+        <h2 class="sec">Every ember element in the kit, judged</h2>
+        <p class="sec-intro">The rule is binary: ember is the active weld, the active Step, the single primary CTA — and
+          the spec-sanctioned bloom. Anything else dilutes the one signal the brand sells. Here is the full census.</p>
+        <ul class="leak">
+          <li class="ok"><b>Active weld hairline</b> <span class="where">@keyframes weld-cool</span> — legitimate. This <em>is</em> the gesture.</li>
+          <li class="ok"><b>Primary CTA</b> <span class="where">.btn-primary</span> — legitimate, one per frame (Run / Practice / Forge / send).</li>
+          <li class="ok"><b>Active Step dot</b> <span class="where">.step.active</span> — legitimate (Stepper not in the live scenario, but correct).</li>
+          <li class="ok"><b>Radial bloom</b> <span class="where">.forge-bloom</span> — sanctioned by §5.1 as the brand's "single warm light source."</li>
+          <li><b>Logo diamond</b> <span class="where">.brand-spark .d</span> — <b>LEAK.</b> Persistent decorative ember in the header; present in every frame regardless of state.</li>
+          <li><b>"Forge" wordmark</b> <span class="where">.brand-name b</span> — <b>LEAK.</b> Decorative ember on static brand text.</li>
+          <li><b>"Forged" diff header</b> <span class="where">.diff-after .diff-head</span> — <b>LEAK.</b> A label, not an action; should match "Your prompt" in <span class="tok">--ink-subtle</span>.</li>
+          <li><b>Verdict sparkle icon</b> <span class="where">.verdict Icon color=--ember</span> — <b>LEAK.</b> Decorative accent on a static line.</li>
+          <li><b>SkillMap "ready" ring + edge</b> <span class="where">.smap-node.ready / .smap-edge.ready</span> — <b>LEAK.</b> Ember here means "opportunity," a 4th meaning; collides with "recency." Use a pulsing ring + dashed edge + size instead.</li>
+          <li><b>Composer focus icon</b> <span class="where">.composer:focus-within .c-icon</span> — minor leak; the focus ring already signals active. Keep the icon <span class="tok">--ink</span>.</li>
+        </ul>
+        <p style="color:var(--ink-subtle); font-size:14px;">Six decorative ember uses against four legitimate ones. On the
+          intro alone, four embers sit at rest. <b style="color:var(--ink)">The fix is entirely token-level and costs nothing
+          visually except discipline</b> — and it's the single highest-leverage move in this audit.</p>
+      </section>
+
+      <!-- FIXES -->
+      <section id="fixes">
+        <div class="sec-eyebrow"><span class="num">03</span> Top 3 highest-leverage fixes</div>
+        <h2 class="sec">Ranked by impact on brand distinctiveness</h2>
+
+        <div class="fix">
+          <div class="fix-head"><span class="fix-rank">1</span><p class="fix-title">De-ember the persistent chrome</p><span class="fix-tag">fixes gate · check 1, sharpens 4</span></div>
+          <div class="fix-body">
+            This is the make-or-break move. Right now ember lives in the logo and labels, so when a surface actually
+            welds, the warm flash has no contrast — the eye is already saturated with orange. Pull ember out of
+            everything persistent; let the <b>weld and the one CTA</b> be the only warm things that aren't the bloom.
+            <div class="diffrow">
+              <div class="cell was"><span class="h">Was — ember as brand</span>.brand-spark .d { background: <span class="e">var(--ember)</span> }<br>.brand-name b { color: <span class="e">var(--ember)</span> }<br>.diff-after .diff-head { color: <span class="e">var(--ember)</span> }</div>
+              <div class="cell now"><span class="h">Now — ember reserved</span>.brand-spark .d { background: var(--ink) }<br>.brand-name b { color: var(--ink) }<br>.diff-after .diff-head { color: var(--ink-subtle) }</div>
+            </div>
+            <p style="margin:14px 0 0; font-size:13.5px; color:var(--ink-subtle);">Net effect: at rest, the only ember in
+              frame is the drifting bloom; the instant Jarvis forges, the weld is the <em>only</em> new warm thing — the
+              signal lands. <b style="color:var(--ink)">Impact: highest.</b> It restores the brand's central claim.</p>
+          </div>
+        </div>
+
+        <div class="fix">
+          <div class="fix-head"><span class="fix-rank">2</span><p class="fix-title">Make "thinking" the hairline sweep — kill the skeleton</p><span class="fix-tag">fixes check 7, sharpens 3 &amp; 4</span></div>
+          <div class="fix-body">
+            The skeleton rows are generic loading-slop and they muddy the two-accent system: "working" should be a
+            single, unmistakable <b>cool</b> gesture, not a grey content placeholder. Replace the skeleton with the
+            spec's gesture — a <b>1px</b> <span class="tok">--agent</span> gradient sweeping the top hairline of the
+            forming surface, stopping the instant the first component lands.
+            <div class="diffrow">
+              <div class="cell was"><span class="h">Was</span>.thinking-block ::before height: <span class="e">2px</span><br>+ .skel rows (skeleton)</div>
+              <div class="cell now"><span class="h">Now</span>height: 1px on the surface's own top hairline<br>no skeleton — just the sweep, ~1.4s loop</div>
+            </div>
+            <p style="margin:14px 0 0; font-size:13.5px; color:var(--ink-subtle);">If a progressive mid-stream placeholder
+              is wanted (the UX track asked for it), gate it to <em>after</em> the first component lands — never as the
+              opening "thinking" signal. <b style="color:var(--ink)">Impact: high.</b> Cleans the cool half of the binary.</p>
+          </div>
+        </div>
+
+        <div class="fix">
+          <div class="fix-head"><span class="fix-rank">3</span><p class="fix-title">Deploy the display tier — give the grotesque a 44/64 moment</p><span class="fix-tag">fixes check 12, adds scale to 5</span></div>
+          <div class="fix-body">
+            General Sans is a characterful grotesque, but the kit caps at 24px — so it never reads as anything but a
+            tidy sans. The system <em>defines</em> 64/44/28; use it. Promote the intro hero to <b>~44px / -0.02em</b>,
+            and make the results score a real <b>64px</b> display moment (the number is the reward — let it be huge).
+            While here, complete the weld gesture: add <code class="inline">scale(.98)</code> and tighten the rise to 8px.
+            <div class="diffrow">
+              <div class="cell was"><span class="h">Was</span>.block h2 { font-size: <span class="e">24px</span> } /* the ceiling */<br>.weld-in welding { transform: translateY(<span class="e">10px</span>) }</div>
+              <div class="cell now"><span class="h">Now</span>.block h2.hero { font-size: 44px; letter-spacing:-.02em }<br>score label → ~64px · transform: translateY(8px) scale(.98)</div>
+            </div>
+            <p style="margin:14px 0 0; font-size:13.5px; color:var(--ink-subtle);"><b style="color:var(--ink)">Impact:
+              medium-high.</b> It's the difference between "a calm dark app" and "a workshop with a voice."</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- TOO SAFE -->
+      <section id="safe">
+        <div class="sec-eyebrow"><span class="num">04</span> The "too safe" call-out</div>
+        <h2 class="sec">Every surface is the same polite 860px card</h2>
+        <div class="callout">
+          <h3>Where it played it safe</h3>
+          <p>The whole kit is a single centred 860px column of equal-weight rounded cards, each topping out at a 24px
+            headline. That's the obvious, defensible reading of "single-column, content-led" — but the spec's actual
+            instruction is <b>"quiet chrome, LOUD content."</b> Nothing in this mockup is ever loud. The diagnostic
+            result — the emotional payoff, the moment the learner earns something — is rendered at the same scale and
+            rhythm as the intro blurb. The forge never produces an <em>event</em>; it produces another card.</p>
+          <p><b>The sharper alternative:</b> let a freshly-forged moment briefly own the frame. The results score becomes
+            a <b>64px+ display number</b> with deliberate asymmetry — ring pushed off-axis, the SkillMeters hung in
+            generous negative space rather than stacked in a tidy column. Break the centred rhythm <em>once</em>, on the
+            moment that matters, so the weld delivers a payload that looks different from everything around it. The
+            mockup treats variety as risk; here the spec was inviting contrast, and contrast is exactly what would make
+            "you can watch it being built" feel earned rather than asserted.</p>
+        </div>
+        <p style="color:var(--ink-subtle); font-size:14px;">The motion is right, the restraint is right, the tokens are
+          right. What's missing is the nerve to let one surface be three times bigger than the others. Fixes #1 and #3
+          together buy that nerve cheaply.</p>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    The Forge · principal visual &amp; interaction audit of The Living Forge · 11 pass · 4 fail · gate FAILS on ember (#1)
+    · de-ember chrome → ships
+  </footer>
+</div>
+</body>
+</html>

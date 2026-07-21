@@ -1,0 +1,363 @@
+/* ============================================================================
+   THE FORGE — SkillForge Design System (scoped build · v3)
+   ----------------------------------------------------------------------------
+   Ported from Claude Design's "the-forge-skillforge-design-system" bundle,
+   synced to the v3 / audit-revised kit (ui_kits/skillforge-learn-v3).
+   ALL tokens + component styles are scoped under `.forge-root` so this dark,
+   near-black system never leaks into the existing light-themed shadcn app.
+
+   v3 audit fixes folded in:
+   · De-embered chrome (logo/wordmark/labels → --ink) — ember reserved for weld/step/CTA
+   · Agent text → --agent-hot (AA at small sizes); raw --agent only on rail + shimmer
+   · CoachNote hint = neutral ink (not --agent)
+   · Thinking = a 1px --agent top-hairline sweep (not a skeleton); display tier (42px hero)
+   · Token-derived tints via color-mix (no raw hex); quiz/diff non-color cues
+   · SkillMap "ready" = neutral pulse + dashed edge + size (NOT ember)
+   · Reduced-motion keeps a static warm hairline so the "just-made" chroma survives
+   · New: composer (front door), stall/retry, idle nudge, echoed intent
+   ========================================================================== */
+
+@import url("https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&f[]=switzer@400,500,600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+/* ---- TOKENS (scoped) ----------------------------------------------------- */
+.forge-root {
+  --canvas:        #050507;
+  --surface-1:     #0f1011;
+  --surface-2:     #141516;
+  --surface-3:     #1b1d1f;
+  --hairline:      #23252a;
+  --hairline-warm: #2a2320;
+
+  --ink:           #f7f8f8;
+  --ink-muted:     #d0d6e0;
+  --ink-subtle:    #8a8f98;
+  --ink-faint:     #5b5f66;
+
+  --ember:         #ff6b35;
+  --ember-hot:     #ff8a5c;
+  --ember-glow:    #ff6b3533;
+  --ember-ink:     #1a0d07;
+
+  --agent:         #5e6ad2;
+  --agent-hot:     #7c87e8;
+  --agent-glow:    #5e6ad233;
+
+  --success:       #27a644;
+  --success-glow:  #27a64433;
+  --warn:          #e5a13a;
+  --warn-glow:     #e5a13a33;
+  --danger:        #e5484d;
+  --danger-glow:   #e5484d33;
+
+  --font-display: "General Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-body:    "Switzer", ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+
+  --fs-display-xl: 64px; --fs-display: 44px; --fs-headline: 28px; --fs-card-title: 22px;
+  --fs-subhead: 20px; --fs-body: 16px; --fs-body-lg: 18px; --fs-caption: 13px; --fs-micro: 11px;
+
+  --fw-regular: 400; --fw-medium: 500; --fw-semi: 600; --fw-bold: 700;
+  --track-display: -0.02em; --track-tight: -0.01em; --track-normal: 0; --track-caps: 0.06em;
+  --lh-tight: 1.1; --lh-snug: 1.25; --lh-body: 1.5;
+
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px;
+  --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+
+  --r-xs: 4px; --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 24px; --r-pill: 999px;
+
+  --glow-ember: 0 0 0 1px var(--ember), 0 0 24px -2px var(--ember-glow);
+  --glow-agent: 0 0 0 1px var(--agent), 0 0 24px -2px var(--agent-glow);
+  --glow-focus: 0 0 0 3px var(--ember-glow);
+
+  --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 150ms; --dur-base: 260ms; --dur-weld: 1200ms;
+
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+}
+.forge-root *, .forge-root *::before, .forge-root *::after { box-sizing: border-box; }
+
+/* ---- TYPE HELPERS (the semantic Text enum) ------------------------------ */
+.forge-root .t-eyebrow { font-family: var(--font-body); font-size: 11px; font-weight: 600;
+  letter-spacing: var(--track-caps); text-transform: uppercase; color: var(--ink-subtle); }
+.forge-root .block .t-eyebrow { display: block; margin-bottom: 10px; }
+.forge-root .t-body { font-family: var(--font-body); font-size: var(--fs-body); color: var(--ink-muted); }
+.forge-root .t-caption { font-family: var(--font-body); font-size: var(--fs-caption); color: var(--ink-subtle); }
+
+/* ---- ATMOSPHERE --------------------------------------------------------- */
+.forge-root .forge-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.forge-root .forge-grain { position: absolute; inset: -50%; background-image: url("/forge/grain.svg");
+  background-size: 220px; opacity: 0.025; mix-blend-mode: screen; }
+.forge-root .forge-bloom {
+  position: absolute; width: 720px; height: 720px; border-radius: 50%;
+  background: radial-gradient(circle, var(--ember-glow) 0%, #ff6b3512 38%, transparent 68%);
+  filter: blur(14px); transform: translate(-50%, -50%);
+  transition: left 1.4s var(--ease-out), top 1.4s var(--ease-out), opacity 1.4s var(--ease-out);
+  opacity: 0.7;
+}
+
+/* ---- APP FRAME ---------------------------------------------------------- */
+.forge-root .app { position: relative; z-index: 1; max-width: 860px; margin: 0 auto;
+  min-height: 100vh; display: flex; flex-direction: column; }
+.forge-root .appbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center;
+  justify-content: space-between; padding: 16px 28px;
+  background: color-mix(in srgb, var(--canvas) 72%, transparent);
+  backdrop-filter: blur(12px); border-bottom: 1px solid var(--hairline); }
+.forge-root .brand { display: flex; align-items: center; gap: 11px; }
+.forge-root .brand-spark { width: 26px; height: 26px; display: grid; place-items: center; flex: none; }
+/* logo is NOT ember — ember reserved for weld/step/CTA only */
+.forge-root .brand-spark .d { width: 15px; height: 15px; border-radius: 4px; transform: rotate(45deg);
+  background: var(--ink); }
+.forge-root .brand-name { font-family: var(--font-display); font-weight: 600; font-size: 17px;
+  letter-spacing: -0.02em; color: var(--ink); }
+.forge-root .brand-name b { color: var(--ink); font-weight: 600; }
+.forge-root .surface-col { flex: 1; padding: 28px 28px 24px; display: flex; flex-direction: column; gap: 20px; }
+
+/* ---- COMPOSER (learner initiation / front door) ------------------------- */
+.forge-root .composer-dock { position: sticky; bottom: 0; z-index: 15; padding: 14px 28px 22px;
+  background: linear-gradient(to top, var(--canvas) 62%, transparent); }
+.forge-root .composer { display: flex; align-items: center; gap: 10px; background: var(--surface-2);
+  border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 9px 9px 9px 15px;
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out); }
+.forge-root .composer:focus-within { background: var(--surface-3); border-color: #2c2f34; box-shadow: var(--glow-focus); }
+.forge-root .composer.muted { background: var(--surface-1); }
+.forge-root .composer .c-icon { color: var(--ink-subtle); display: inline-flex; flex: none; }
+.forge-root .composer:focus-within .c-icon { color: var(--ink); }
+.forge-root .composer input { flex: 1; min-width: 0; background: none; border: none; outline: none;
+  color: var(--ink); font-family: var(--font-body); font-size: 15px; }
+.forge-root .composer input::placeholder { color: var(--ink-subtle); }
+.forge-root .composer input:disabled { color: var(--ink-faint); }
+.forge-root .composer .send { background: var(--ember); color: var(--ember-ink); border: none;
+  border-radius: var(--r-sm); width: 34px; height: 34px; display: grid; place-items: center;
+  cursor: pointer; flex: none; transition: background var(--dur-fast) var(--ease-out); }
+.forge-root .composer .send:hover:not(:disabled) { background: var(--ember-hot); }
+.forge-root .composer .send:disabled { background: var(--surface-3); color: var(--ink-faint); cursor: not-allowed; }
+
+/* ---- ECHOED INTENT (learner's ask, in flow) ----------------------------- */
+.forge-root .echo-line { align-self: flex-end; max-width: 80%; background: var(--surface-3);
+  border: 1px solid var(--hairline); border-radius: 14px 14px 4px 14px; padding: 10px 15px;
+  font-size: 14.5px; color: var(--ink-muted); line-height: 1.45; }
+
+/* ---- STREAMING ESCALATION caption --------------------------------------- */
+.forge-root .thinking-caption { display: flex; align-items: center; gap: 9px; margin-top: 10px;
+  font-size: 13px; color: var(--agent-hot); font-family: var(--font-body); }
+.forge-root .thinking-caption .breath-dot { width: 7px; height: 7px; border-radius: 50%;
+  background: var(--agent); animation: fg-pulse-agent 1.1s var(--ease-out) infinite; }
+
+/* ---- IDLE NUDGE (additive, never reflows focused content) --------------- */
+.forge-root .nudge-wrap { border: 1px dashed var(--hairline-warm); border-radius: var(--r-lg);
+  padding: 16px 18px; background: color-mix(in srgb, var(--surface-1), var(--ember) 3%); }
+
+/* ---- JARVIS PRESENCE ---------------------------------------------------- */
+.forge-root .presence { display: flex; align-items: center; gap: 9px; }
+.forge-root .presence-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ink-subtle); flex: none; }
+.forge-root .presence.idle .presence-dot { background: var(--ink-subtle); animation: fg-breathe 3.2s var(--ease-out) infinite; }
+.forge-root .presence.thinking .presence-dot { background: var(--agent);
+  box-shadow: 0 0 0 0 var(--agent-glow); animation: fg-pulse-agent 1.1s var(--ease-out) infinite; }
+.forge-root .presence.forging .presence-dot { background: var(--ember);
+  box-shadow: 0 0 12px 1px var(--ember-glow); animation: fg-pulse-ember 0.9s var(--ease-out) infinite; }
+.forge-root .presence-label { font-size: 13px; color: var(--ink-subtle); font-weight: 500; }
+.forge-root .presence.thinking .presence-label { color: var(--agent-hot); } /* AA at 13px */
+.forge-root .presence.forging .presence-label { color: var(--ember); }
+
+@keyframes fg-breathe { 0%,100%{opacity:.5} 50%{opacity:1} }
+@keyframes fg-pulse-agent { 0%{box-shadow:0 0 0 0 var(--agent-glow)} 100%{box-shadow:0 0 0 8px transparent} }
+@keyframes fg-pulse-ember { 0%{box-shadow:0 0 0 0 var(--ember-glow)} 100%{box-shadow:0 0 0 9px transparent} }
+
+/* ---- SURFACE BLOCK + THE WELD ------------------------------------------ */
+.forge-root .block { background: var(--surface-1); border: 1px solid var(--hairline);
+  border-radius: var(--r-lg); padding: 22px 24px; position: relative; }
+.forge-root .block.flush { background: transparent; border: none; padding: 0; }
+.forge-root .block.weld { animation: fg-weld-cool var(--dur-weld) var(--ease-out) forwards; }
+@keyframes fg-weld-cool {
+  0%   { border-color: var(--ember-hot); box-shadow: 0 0 0 1px var(--ember-hot), 0 0 28px -4px var(--ember-glow); }
+  60%  { border-color: var(--hairline-warm); box-shadow: 0 0 0 1px transparent, 0 0 14px -6px var(--ember-glow); }
+  100% { border-color: var(--hairline); box-shadow: none; }
+}
+.forge-root .weld-in { opacity: 1; transform: none; transition: transform 520ms var(--ease-out); }
+@media (prefers-reduced-motion: no-preference) {
+  /* full weld gesture — 0.98→1 scale + ~8px rise */
+  .forge-root [data-welding="true"] .weld-in { transform: translateY(8px) scale(0.98); }
+}
+
+/* Streaming shimmer — a 1px --agent sweep on the surface's TOP hairline (NOT a skeleton) */
+.forge-root .thinking-block { background: var(--surface-1); border: 1px solid var(--hairline);
+  border-radius: var(--r-lg); padding: 20px 24px; position: relative; overflow: hidden;
+  min-height: 56px; display: flex; align-items: center; }
+.forge-root .thinking-block::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--agent-hot), transparent);
+  background-size: 50% 100%; background-repeat: no-repeat; animation: fg-shimmer 1.4s linear infinite; }
+.forge-root .forming-label { font-family: var(--font-body); font-size: 13px; color: var(--ink-subtle); }
+@keyframes fg-shimmer { 0% { background-position: -60% 0; } 100% { background-position: 160% 0; } }
+
+/* ---- TYPOGRAPHY IN-SURFACE --------------------------------------------- */
+.forge-root .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-subtle); margin-bottom: 8px; }
+.forge-root .block h2 { font-family: var(--font-display); font-weight: 600; font-size: 24px;
+  letter-spacing: -0.01em; color: var(--ink); margin: 0 0 6px; }
+/* a real display moment — let the grotesque be characterful */
+.forge-root .block h2.hero { font-size: 42px; line-height: 1.04; letter-spacing: -0.02em; margin: 0 0 10px; }
+@media (max-width: 560px) { .forge-root .block h2.hero { font-size: 32px; } }
+.forge-root .block h3 { font-family: var(--font-display); font-weight: 500; font-size: 19px;
+  letter-spacing: -0.01em; color: var(--ink); margin: 0; }
+.forge-root .prose { font-family: var(--font-body); font-size: 16px; line-height: 1.55; color: var(--ink-muted); margin: 0; }
+.forge-root .prose + .prose { margin-top: 10px; }
+.forge-root .prose code { font-family: var(--font-mono); font-size: 13px; background: var(--surface-3);
+  padding: 1px 6px; border-radius: var(--r-xs); color: var(--ink); }
+.forge-root .prose strong { color: var(--ink); font-weight: 600; }
+.forge-root .prose em { color: var(--ink); font-style: italic; }
+
+/* ---- BUTTONS ------------------------------------------------------------ */
+.forge-root .btn { font-family: var(--font-display); font-weight: 500; font-size: 15px; letter-spacing: -0.01em;
+  border-radius: var(--r-sm); padding: 10px 17px; border: 1px solid transparent; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+  transition: all var(--dur-fast) var(--ease-out); }
+.forge-root .btn:active { transform: scale(0.98); }
+.forge-root .btn-primary { background: var(--ember); color: var(--ember-ink); box-shadow: 0 0 20px -6px var(--ember-glow); }
+.forge-root .btn-primary:hover { background: var(--ember-hot); }
+.forge-root .btn-secondary { background: var(--surface-3); color: var(--ink); border-color: var(--hairline); }
+.forge-root .btn-secondary:hover { background: var(--surface-2); border-color: #2c2f34; }
+.forge-root .btn-ghost { background: transparent; color: var(--ink-muted); }
+.forge-root .btn-ghost:hover { color: var(--ink); background: var(--surface-2); }
+.forge-root .btn:disabled { background: var(--surface-2); color: var(--ink-faint); cursor: not-allowed; box-shadow: none; }
+.forge-root .btn:focus-visible { outline: none; box-shadow: var(--glow-focus); }
+.forge-root .btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 18px; }
+
+/* ---- COACHNOTE ---------------------------------------------------------- */
+.forge-root .coachnote { display: flex; gap: 12px; border-radius: var(--r-md); padding: 13px 15px;
+  background: var(--surface-1); border: 1px solid var(--hairline); }
+.forge-root .coachnote .rail { width: 3px; border-radius: 2px; flex: none; align-self: stretch; background: var(--cn); }
+.forge-root .coachnote .cn-title { font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
+  text-transform: uppercase; margin-bottom: 3px; color: var(--cn-text, var(--cn)); }
+.forge-root .coachnote .cn-body { font-size: 14px; line-height: 1.45; color: var(--ink-muted); }
+/* hint is NEUTRAL ink — --agent is reserved for live streaming + the breathing dot */
+.forge-root .cn-hint   { --cn: var(--ink-faint); --cn-text: var(--ink-subtle); }
+.forge-root .cn-nudge  { --cn: var(--ember);   --cn-text: var(--ember); }
+.forge-root .cn-praise { --cn: var(--success); --cn-text: var(--success); }
+.forge-root .cn-warn   { --cn: var(--warn);    --cn-text: var(--warn); }
+
+/* ---- QUIZCARD ----------------------------------------------------------- */
+.forge-root .quiz-prompt { font-family: var(--font-display); font-weight: 500; font-size: 20px;
+  letter-spacing: -0.01em; color: var(--ink); line-height: 1.35; margin: 0 0 16px; }
+.forge-root .choices { display: flex; flex-direction: column; gap: 10px; }
+.forge-root .choice { display: flex; align-items: center; gap: 12px; text-align: left; width: 100%;
+  border: 1px solid var(--hairline); background: var(--surface-1); border-radius: var(--r-md);
+  padding: 13px 15px; font-family: var(--font-body); font-size: 15px; color: var(--ink-muted);
+  cursor: pointer; transition: all var(--dur-fast) var(--ease-out); }
+.forge-root .choice:hover { background: var(--surface-2); color: var(--ink); }
+.forge-root .choice .key { width: 24px; height: 24px; border-radius: 6px; border: 1px solid var(--hairline);
+  font-family: var(--font-mono); font-size: 12px; display: grid; place-items: center; color: var(--ink-subtle); flex: none; }
+.forge-root .choice .choice-label { flex: 1; }
+.forge-root .choice .ch-mark { margin-left: auto; flex: none; }
+.forge-root .choice.selected { border-color: var(--ember); color: var(--ink); background: color-mix(in srgb, var(--surface-1), var(--ember) 8%); }
+.forge-root .choice.selected .key { background: var(--ember); color: var(--ember-ink); border-color: var(--ember); }
+.forge-root .choice.correct { border-color: var(--success); background: color-mix(in srgb, var(--surface-1), var(--success) 10%); color: var(--ink); }
+.forge-root .choice.correct .key { background: var(--success); color: var(--canvas); border-color: var(--success); }
+.forge-root .choice.wrong { border-color: var(--danger); background: color-mix(in srgb, var(--surface-1), var(--danger) 10%); }
+.forge-root .choice.wrong .key { background: var(--danger); color: var(--ink); border-color: var(--danger); }
+.forge-root .choice.dim { opacity: 0.5; }
+.forge-root .choice:disabled { cursor: default; }
+
+/* ---- STEPPER ------------------------------------------------------------ */
+.forge-root .stepper { display: flex; flex-direction: column; }
+.forge-root .step { display: flex; gap: 14px; }
+.forge-root .step-rail { display: flex; flex-direction: column; align-items: center; flex: none; }
+.forge-root .step-dot { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--hairline);
+  display: grid; place-items: center; flex: none; background: var(--surface-1); }
+.forge-root .step-line { width: 1.5px; flex: 1; background: var(--hairline); margin: 4px 0; min-height: 14px; }
+.forge-root .step.done .step-dot { border-color: var(--success); background: var(--success); }
+.forge-root .step.active .step-dot { border-color: var(--ember); box-shadow: 0 0 0 4px var(--ember-glow); }
+.forge-root .step.active .step-dot .core { width: 8px; height: 8px; border-radius: 50%; background: var(--ember); }
+.forge-root .step-title { font-family: var(--font-display); font-weight: 500; font-size: 16px; color: var(--ink-muted); }
+.forge-root .step.active .step-title { color: var(--ink); }
+.forge-root .step.pending .step-title { color: var(--ink-subtle); }
+.forge-root .step-body { padding: 2px 0 18px; }
+
+/* ---- PROGRESSRING / SKILLMETER ----------------------------------------- */
+.forge-root .metric-label { font-family: var(--font-body); font-size: 13px; color: var(--ink-muted); }
+.forge-root .skill-track { height: 8px; background: var(--surface-3); border-radius: var(--r-pill); overflow: hidden; }
+.forge-root .skill-fill { height: 100%; border-radius: var(--r-pill); transition: width 700ms var(--ease-spring); }
+.forge-root .skill-delta { font-family: var(--font-mono); font-size: 12px; color: var(--success);
+  display: inline-flex; align-items: center; gap: 3px; } /* ▲ = non-color cue */
+.forge-root .skill-delta span { font-size: 9px; }
+
+/* ---- CODEBLOCK ---------------------------------------------------------- */
+.forge-root .codeblock { background: var(--canvas); border: 1px solid var(--hairline); border-radius: var(--r-md); overflow: hidden; }
+.forge-root .cb-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px;
+  border-bottom: 1px solid var(--hairline); }
+.forge-root .cb-lang { font-family: var(--font-mono); font-size: 11px; color: var(--ink-subtle); letter-spacing: 0.04em; }
+.forge-root .cb-copy { font-family: var(--font-body); font-size: 12px; color: var(--ink-subtle); background: none;
+  border: none; cursor: pointer; display: inline-flex; gap: 5px; align-items: center; }
+.forge-root .cb-copy:hover { color: var(--ink); }
+.forge-root .cb-code { margin: 0; padding: 14px 16px; font-family: var(--font-mono); font-size: 13.5px;
+  line-height: 1.7; color: var(--ink-muted); overflow-x: auto; }
+
+/* ---- PROMPTDIFF --------------------------------------------------------- */
+.forge-root .diff { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.forge-root .diff-col { border: 1px solid var(--hairline); border-radius: var(--r-md); overflow: hidden; }
+.forge-root .diff-head { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 8px 12px; border-bottom: 1px solid var(--hairline); }
+.forge-root .diff-before .diff-head { color: var(--ink-subtle); }
+.forge-root .diff-after .diff-head { color: var(--ink-subtle); }
+.forge-root .diff-text { padding: 12px; font-family: var(--font-mono); font-size: 13px; line-height: 1.6;
+  color: var(--ink-muted); white-space: pre-wrap; }
+.forge-root .diff-text .add { background: color-mix(in srgb, var(--surface-1), var(--success) 14%); color: var(--success);
+  border-radius: 3px; padding: 0 2px; }
+.forge-root .diff-text .add .diff-mark { font-weight: 700; margin-right: 1px; } /* non-color cue */
+.forge-root .diff-text .del { background: color-mix(in srgb, var(--surface-1), var(--danger) 14%); color: var(--danger);
+  border-radius: 3px; padding: 0 2px; text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+.forge-root .verdict { display: flex; gap: 9px; align-items: flex-start; margin-top: 12px; font-size: 14px;
+  color: var(--ink-muted); line-height: 1.45; }
+.forge-root .diff-edit { width: 100%; background: var(--surface-1); border: 1px solid var(--hairline);
+  border-radius: var(--r-sm); padding: 11px 13px; color: var(--ink); font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.6; resize: vertical; min-height: 76px; margin-top: 12px; }
+.forge-root .diff-edit:focus { outline: none; border-color: var(--ember); box-shadow: var(--glow-focus); }
+
+/* ---- REVEAL ------------------------------------------------------------- */
+.forge-root .reveal { border: 1px solid var(--hairline); border-radius: var(--r-md); overflow: hidden; }
+.forge-root .reveal-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; border: none; text-align: left; padding: 13px 15px; cursor: pointer;
+  font-family: var(--font-display); font-weight: 500; font-size: 16px; color: var(--ink); background: var(--surface-1); }
+.forge-root .reveal-summary:hover { background: var(--surface-2); }
+.forge-root .reveal-chev { transition: transform var(--dur-base) var(--ease-out); color: var(--ink-subtle); display: inline-flex; }
+.forge-root .reveal[data-open="true"] .reveal-chev { transform: rotate(90deg); }
+.forge-root .reveal-body { padding: 0 15px 15px; }
+
+/* ---- SKILLMAP ----------------------------------------------------------- */
+.forge-root .skillmap { position: relative; width: 100%; height: 340px; }
+.forge-root .smap-edge { stroke: var(--hairline); stroke-width: 1.5; }
+/* "ready" is NOT ember (that means recency) — neutral pulse + dashed edge + size */
+.forge-root .smap-edge.ready { stroke: var(--ink-subtle); stroke-opacity: 0.6; stroke-dasharray: 3 4; }
+.forge-root .smap-node { cursor: pointer; }
+.forge-root .smap-node circle { transition: all var(--dur-base) var(--ease-out); }
+.forge-root .smap-node:hover circle.fill { filter: brightness(1.25); }
+.forge-root .smap-node:focus-visible { outline: none; }
+.forge-root .smap-node:focus-visible circle.fill { stroke: var(--ink); stroke-width: 2.5; }
+.forge-root .smap-node text { font-family: var(--font-body); font-size: 12px; fill: var(--ink-muted);
+  text-anchor: middle; pointer-events: none; }
+.forge-root .smap-node.ready circle.fill { stroke: var(--ink); stroke-width: 2; animation: fg-ready-pulse 2.4s var(--ease-out) infinite; }
+@keyframes fg-ready-pulse { 0%,100% { stroke-opacity: 1; } 50% { stroke-opacity: 0.35; } }
+.forge-root .smap-node.ready text { fill: var(--ink); }
+
+/* ---- MISC --------------------------------------------------------------- */
+.forge-root .icon { display: inline-flex; }
+.forge-root .icon svg { width: 100%; height: 100%; display: block; }
+.forge-root .divider { height: 1px; background: var(--hairline); border: none; margin: 4px 0; }
+
+/* ---- REDUCED MOTION ----------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  /* keep a STATIC warm hairline so "agent just made this" survives without motion */
+  .forge-root .block.weld { animation: none; border-color: var(--hairline-warm); }
+  .forge-root .weld-in { transition: none; opacity: 1; transform: none; }
+  .forge-root [data-welding="true"] .weld-in { opacity: 1; transform: none; }
+  .forge-root .thinking-block::before { animation: none; background: var(--agent); top: 0; height: 2px; }
+  .forge-root .presence-dot, .forge-root .skill-fill, .forge-root .smap-node.ready circle.fill,
+  .forge-root .thinking-caption .breath-dot { animation: none !important; }
+}
