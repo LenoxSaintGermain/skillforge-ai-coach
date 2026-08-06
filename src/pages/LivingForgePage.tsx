@@ -251,6 +251,17 @@ export default function LivingForgePage() {
     }
   }
 
+  function resetSurface() {
+    if (busy) return;
+    setDm(INITIAL_DM);
+    setEntries([{ id: "e1", kind: "intro" }]);
+    idRef.current = 1;
+    askRef.current = 0;
+    setPresence("idle");
+    setComposer("");
+    armIdle();
+  }
+
   return (
     <div className="forge-root">
       <div className="app">
@@ -263,7 +274,13 @@ export default function LivingForgePage() {
             <span className="brand-spark"><span className="d" /></span>
             <span className="brand-name">Skill<b>Forge</b></span>
           </div>
-          <Presence state={presence} name="Jarvis" />
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <button className="forge-reset-btn" onClick={resetSurface} title="Reset simulation to initial state">
+              <Icon name="rotate-ccw" size={13} />
+              <span>Reset Surface</span>
+            </button>
+            <Presence state={presence} name="Jarvis" />
+          </div>
         </header>
         <main className="surface-col">
           {entries.map((e) => <div key={e.id}>{renderEntry(e)}</div>)}

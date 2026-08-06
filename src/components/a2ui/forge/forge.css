@@ -117,6 +117,17 @@
 .forge-root .brand-name { font-family: var(--font-display); font-weight: 600; font-size: 17px;
   letter-spacing: -0.02em; color: var(--ink); }
 .forge-root .brand-name b { color: var(--ink); font-weight: 600; }
+.forge-root .forge-reset-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface-2); border: 1px solid var(--hairline);
+  color: var(--ink-subtle); font-family: var(--font-body);
+  font-size: var(--fs-caption); font-weight: var(--fw-medium);
+  padding: 5px 12px; border-radius: var(--r-pill); cursor: pointer;
+  transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
+}
+.forge-root .forge-reset-btn:hover {
+  background: var(--surface-3); color: var(--ink); border-color: var(--ink-faint);
+}
 .forge-root .surface-col { flex: 1; padding: 28px 28px 24px; display: flex; flex-direction: column; gap: 20px; }
 
 /* ---- COMPOSER (learner initiation / front door) ------------------------- */
